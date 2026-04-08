@@ -457,11 +457,15 @@ async function chatRoutes(app) {
   fs.mkdirSync(PRIVATE_UPLOADS_DIR, { recursive: true });
 
   app.get('/sw.js', async (request, reply) =>
-    reply.type('application/javascript').header('Service-Worker-Allowed', '/')
+    reply.type('application/javascript')
+      .header('Service-Worker-Allowed', '/')
+      .header('Cache-Control', 'no-store')
       .send(fs.readFileSync(path.join(process.cwd(), 'public', 'sw.js'), 'utf8')));
 
   app.get('/chat/manifest.json', async (request, reply) =>
-    reply.type('application/manifest+json').send({
+    reply.type('application/manifest+json')
+      .header('Cache-Control', 'no-store')
+      .send({
       name: 'Chat Tongatron', short_name: 'Chat', description: 'Chat privata in tempo reale',
       start_url: '/chat', scope: '/', display: 'standalone', orientation: 'portrait',
       background_color: '#f0f0f0', theme_color: '#3b82f6',
@@ -619,7 +623,7 @@ async function chatRoutes(app) {
   });
 
   app.get('/chat/console', async (request, reply) => {
-    return reply.type('text/html').send(
+    return reply.type('text/html').header('Cache-Control', 'no-store').send(
       fs.readFileSync(path.join(process.cwd(), 'public', 'chat-console.html'), 'utf8')
     );
   });
@@ -683,7 +687,9 @@ async function chatRoutes(app) {
   });
 
   app.get('/chat', async (request, reply) =>
-    reply.type('text/html').send(fs.readFileSync(path.join(process.cwd(), 'public', 'chat.html'), 'utf8')));
+    reply.type('text/html')
+      .header('Cache-Control', 'no-store')
+      .send(fs.readFileSync(path.join(process.cwd(), 'public', 'chat.html'), 'utf8')));
 
   app.get('/chat/images/:filename', async (request, reply) => {
     const username = requireAuth(request, reply);
