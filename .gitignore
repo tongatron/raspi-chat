@@ -8,3 +8,8 @@ config/chat-users.json
 public/backgrounds/*.jpg
 public/backgrounds/*.png
 public/*.apk
+android-chat/.gradle/
+android-chat/build/
+android-chat/app/build/
+android-chat/local.properties
+android-chat/app/google-services.json

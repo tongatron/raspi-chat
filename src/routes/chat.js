@@ -670,6 +670,12 @@ async function chatRoutes(app) {
       .send(fs.createReadStream(filePath));
   });
 
+  app.get('/chat/app', async (request, reply) => {
+    return reply.type('text/html').header('Cache-Control', 'no-store').send(
+      fs.readFileSync(path.join(process.cwd(), 'public', 'chat-app.html'), 'utf8')
+    );
+  });
+
   app.get('/chat/preview', async (request, reply) => {
     const username = requireAuth(request, reply);
     if (!username) return;

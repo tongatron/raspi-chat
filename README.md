@@ -16,6 +16,7 @@ URL pubblico attuale:
 - chat realtime via WebSocket
 - frontend web in file statico unico
 - PWA con service worker e manifest
+- wrapper Android WebView con FCM
 - upload immagini e sfondi personalizzati
 - notifiche Web Push e Firebase Cloud Messaging
 - configurazione utenti esterna al codice
@@ -84,6 +85,9 @@ Il progetto e' in uso reale sulla Raspberry e al momento funziona con questo ass
 - `public/sw.js`
   Service worker per push notification e riapertura della chat.
 
+- `android-chat/`
+  Wrapper Android della chat, con WebView, picker file e FCM.
+
 ### Configurazione
 
 - `config/chat-users.example.json`
@@ -91,6 +95,9 @@ Il progetto e' in uso reale sulla Raspberry e al momento funziona con questo ass
 
 - `config/chat-users.json`
   File reale non versionato con gli utenti e le password in chiaro da convertire in hash nel DB all'avvio.
+
+- `public/chat-tongatron.apk`
+  APK debug pubblicabile via `GET /chat/download-app`.
 
 ## Modello di autenticazione
 
@@ -214,6 +221,8 @@ Variabili supportate:
 - `config/chat-users.json`
 - `firebase-service-account.json`
 - eventuale `google-services.json` dell'app Android esterna
+- `android-chat/app/google-services.json`
+- `android-chat/local.properties`
 
 ## Setup
 
@@ -283,6 +292,26 @@ sudo systemctl restart fastify-api
 journalctl -u fastify-api -f
 ```
 
+## App Android
+
+Il wrapper Android ora vive dentro questa repo:
+
+`android-chat/`
+
+APK pubblica attuale:
+
+`https://chat.tongatron.org/chat/download-app`
+
+Pagina condivisibile con avviso prima del download:
+
+`https://chat.tongatron.org/chat/app`
+
+Nota pratica:
+
+- il link scarica direttamente un file APK Android
+- su molti telefoni Android comparira' un avviso perche' l'app non arriva dal Play Store
+- per rigenerare l'APK serve anche `android-chat/app/google-services.json`, che resta locale e non versionato
+
 ## Verifiche manuali utili
 
 ### Smoke test base
@@ -313,10 +342,17 @@ Deve rispondere `401` senza credenziali.
 
 ```text
 cabras-chat/
+├── android-chat/
+│   ├── app/
+│   ├── gradle/
+│   ├── build.gradle
+│   ├── gradle.properties
+│   └── settings.gradle
 ├── config/
 │   └── chat-users.example.json
 ├── public/
 │   ├── chat.html
+│   ├── chat-tongatron.apk
 │   ├── sw.js
 │   ├── icon.png
 │   ├── icon-192.png
@@ -340,15 +376,13 @@ cabras-chat/
 
 ## Confini del repo
 
-Questa repo copre il progetto chat web/PWA e il suo backend.
+Questa repo copre il progetto chat web/PWA, il backend e il wrapper Android.
 
 Non copre in modo completo:
 
 - l'infrastruttura generale della Raspberry
 - la dashboard risorse
 - altri servizi ospitati sulla stessa macchina
-- l'app Android wrapper se mantenuta in un'altra repo
-
 Se esiste documentazione operativa in altre repo, dovrebbe linkare qui per tutto cio' che riguarda la chat.
 
 ## Stato test
