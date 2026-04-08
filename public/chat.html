@@ -170,7 +170,6 @@
       border-color: rgba(229,239,252,.14);
       box-shadow: 0 12px 26px rgba(0,0,0,.28);
     }
-    body.theme-dark #view-switch,
     body.theme-dark .private-card,
     body.theme-dark .private-list,
     body.theme-dark .private-item {
@@ -418,7 +417,8 @@
     }
     #notif-btn { opacity: .56; }
     #notif-btn:hover { opacity: 1; }
-    #console-btn {
+    #console-btn,
+    #archive-btn {
       display: none;
       height: 42px;
       border: none;
@@ -434,7 +434,12 @@
       justify-content: center;
       transition: transform .18s ease, background .18s ease, color .18s ease;
     }
-    #console-btn:hover { transform: translateY(-1px); background: rgba(15,34,59,.10); color: var(--ink); }
+    #console-btn:hover,
+    #archive-btn:hover { transform: translateY(-1px); background: rgba(15,34,59,.10); color: var(--ink); }
+    #archive-btn.active {
+      background: var(--primary-soft);
+      color: var(--primary-strong);
+    }
     #logout-btn {
       height: 42px;
       border: none;
@@ -448,35 +453,6 @@
       transition: transform .18s ease, background .18s ease, color .18s ease;
     }
     #logout-btn:hover { transform: translateY(-1px); background: rgba(15,34,59,.10); color: var(--ink); }
-    #view-switch {
-      display: none;
-      align-items: center;
-      gap: 8px;
-      padding: 4px;
-      border-radius: 18px;
-      background: var(--surface);
-      border: 1px solid rgba(255,255,255,.70);
-      box-shadow: var(--shadow-soft);
-      width: fit-content;
-    }
-    .view-tab {
-      border: none;
-      background: transparent;
-      color: var(--muted);
-      font: inherit;
-      font-size: .9rem;
-      font-weight: 700;
-      padding: 10px 14px;
-      border-radius: 14px;
-      cursor: pointer;
-      transition: background .18s ease, color .18s ease, transform .18s ease;
-    }
-    .view-tab.active {
-      background: var(--primary-soft);
-      color: var(--primary-strong);
-    }
-    .view-tab:hover { transform: translateY(-1px); }
-
     /* Messages */
     #chat-main-view { display: contents; }
     #messages {
@@ -1046,13 +1022,12 @@
         font-size: 1rem;
       }
       #console-btn,
+      #archive-btn,
       #logout-btn {
         height: 38px;
         padding: 0 12px;
         font-size: .8rem;
       }
-      #view-switch { width: 100%; justify-content: stretch; }
-      .view-tab { flex: 1; text-align: center; }
       #messages { border-radius: 24px; padding: 14px 12px 18px; }
       .msg-wrap { max-width: 86%; }
       #reply-bar, #image-preview, #notif-banner { border-radius: 16px; }
@@ -1165,15 +1140,12 @@
     </div>
     <div class="header-actions">
       <a id="console-btn" href="/chat/console">Console</a>
+      <button id="archive-btn" type="button">Archivio</button>
       <button class="toolbar-btn" id="theme-btn" title="Passa al tema scuro" aria-label="Passa al tema scuro">◐</button>
       <button class="toolbar-btn" id="notif-btn" title="Attiva notifiche">&#x1f514;</button>
       <button id="logout-btn" title="Esci">Esci</button>
     </div>
   </header>
-  <div id="view-switch">
-    <button class="view-tab active" id="chat-view-tab" type="button">Chat</button>
-    <button class="view-tab" id="private-view-tab" type="button">Archivio</button>
-  </div>
   <div id="notif-banner" onclick="enablePush()">Tocca qui per attivare le notifiche</div>
   <div id="debug-log"></div>
   <div id="chat-main-view">
@@ -1423,8 +1395,8 @@ function joinAs(name, token) {
   canUsePrivateTransfers = name === 'Giovanni';
   document.getElementById('login').style.display = 'none';
   document.getElementById('chat').style.display = 'flex';
-  document.getElementById('view-switch').style.display = canUsePrivateTransfers ? 'inline-flex' : 'none';
   document.getElementById('console-btn').style.display = canUsePrivateTransfers ? 'inline-flex' : 'none';
+  document.getElementById('archive-btn').style.display = canUsePrivateTransfers ? 'inline-flex' : 'none';
   initScrollListener();
   restoreTheme();
   setView('chat');
@@ -1711,8 +1683,13 @@ function setView(view) {
   currentView = nextView;
   document.getElementById('chat-main-view').style.display = nextView === 'chat' ? 'contents' : 'none';
   document.getElementById('private-transfer-view').style.display = nextView === 'private' ? 'flex' : 'none';
-  document.getElementById('chat-view-tab').classList.toggle('active', nextView === 'chat');
-  document.getElementById('private-view-tab').classList.toggle('active', nextView === 'private');
+  var archiveBtn = document.getElementById('archive-btn');
+  if (archiveBtn) {
+    archiveBtn.classList.toggle('active', nextView === 'private');
+    archiveBtn.textContent = nextView === 'private' ? 'Chat' : 'Archivio';
+    archiveBtn.title = nextView === 'private' ? 'Torna alla chat' : 'Apri archivio';
+    archiveBtn.setAttribute('aria-label', archiveBtn.title);
+  }
 }
 
 function formatBytes(bytes) {
@@ -1794,7 +1771,7 @@ async function loadPrivateTransfers() {
     var res = await authFetch('/chat/private-transfers');
     if (res.status === 403) {
       canUsePrivateTransfers = false;
-      document.getElementById('view-switch').style.display = 'none';
+      document.getElementById('archive-btn').style.display = 'none';
       setView('chat');
       return;
     }
@@ -1892,11 +1869,11 @@ function restoreTheme() {
   setTheme(localStorage.getItem('chat-theme') || 'light');
 }
 
-document.getElementById('chat-view-tab').onclick = function() { setView('chat'); };
-document.getElementById('private-view-tab').onclick = function() {
+document.getElementById('archive-btn').onclick = function() {
   if (!canUsePrivateTransfers) return;
-  setView('private');
-  loadPrivateTransfers();
+  var nextView = currentView === 'private' ? 'chat' : 'private';
+  setView(nextView);
+  if (nextView === 'private') loadPrivateTransfers();
 };
 document.getElementById('private-file-input').onchange = async function() {
   var file = this.files[0];
