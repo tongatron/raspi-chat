@@ -1,0 +1,9 @@
+node_modules/
+.env
+npm-debug.log*
+data/
+firebase-service-account.json
+.DS_Store
+public/backgrounds/*.jpg
+public/backgrounds/*.png
+public/*.apk

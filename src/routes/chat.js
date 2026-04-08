@@ -1,0 +1,432 @@
+'use strict';
+
+const path = require('node:path');
+const fs = require('node:fs');
+const crypto = require('node:crypto');
+const { pipeline } = require('node:stream/promises');
+const webpush = require('web-push');
+const admin = require('firebase-admin');
+const Database = require('better-sqlite3');
+
+webpush.setVapidDetails(
+  process.env.VAPID_EMAIL,
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
+
+const serviceAccountPath = path.join(process.cwd(), 'firebase-service-account.json');
+if (fs.existsSync(serviceAccountPath)) {
+  admin.initializeApp({ credential: admin.credential.cert(require(serviceAccountPath)) });
+  console.log('[FCM] Firebase Admin initialized');
+} else {
+  console.log('[FCM] No service account found, FCM disabled');
+}
+
+const UPLOADS_DIR = path.join(process.cwd(), 'data', 'uploads');
+const DB_PATH = path.join(process.cwd(), 'data', 'chat.db');
+
+const db = new Database(DB_PATH);
+db.pragma('journal_mode = WAL');
+db.exec(`
+  CREATE TABLE IF NOT EXISTS messages (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    text TEXT,
+    image_url TEXT,
+    timestamp TEXT NOT NULL,
+    reply_to_id TEXT
+  );
+  CREATE TABLE IF NOT EXISTS message_reads (
+    message_id TEXT NOT NULL,
+    username TEXT NOT NULL,
+    PRIMARY KEY (message_id, username)
+  );
+  CREATE TABLE IF NOT EXISTS users (
+    username TEXT PRIMARY KEY,
+    hash TEXT NOT NULL
+  );
+`);
+// Migration: add reply_to_id if missing (existing installs)
+try { db.exec('ALTER TABLE messages ADD COLUMN reply_to_id TEXT'); } catch(e) {}
+
+const SEED_USERS = [
+  { username: 'Giovanni', password: 'morso' },
+  { username: 'Cabras',   password: 'marco'  },
+  { username: 'Test',     password: 'morso'  },
+  { username: 'OpenClaw', password: 'openclaw' },
+];
+const insertUser = db.prepare('INSERT OR IGNORE INTO users (username, hash) VALUES (?, ?)');
+for (const u of SEED_USERS) {
+  const salt = crypto.randomBytes(16);
+  const hash = crypto.scryptSync(u.password, salt, 64);
+  insertUser.run(u.username, salt.toString('hex') + ':' + hash.toString('hex'));
+}
+console.log('[Auth] Users seeded');
+
+const TOKEN_SECRET = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+
+function generateToken(username) {
+  return crypto.createHmac('sha256', TOKEN_SECRET).update(username).digest('hex');
+}
+function validateToken(username, token) {
+  if (!username || !token) return false;
+  try {
+    const expected = Buffer.from(generateToken(username));
+    const given    = Buffer.from(token);
+    if (expected.length !== given.length) return false;
+    return crypto.timingSafeEqual(expected, given);
+  } catch { return false; }
+}
+
+const HISTORY_SQL = `
+  SELECT m.id, m.username, m.text, m.image_url AS imageUrl, m.timestamp, m.reply_to_id AS replyToId,
+         rm.username AS replyUsername, rm.text AS replyText, rm.image_url AS replyImageUrl,
+         GROUP_CONCAT(r.username) AS readBy
+  FROM messages m
+  LEFT JOIN message_reads r ON r.message_id = m.id
+  LEFT JOIN messages rm ON rm.id = m.reply_to_id
+  GROUP BY m.id
+`;
+
+const stmts = {
+  insertMessage: db.prepare('INSERT INTO messages (id, username, text, image_url, timestamp, reply_to_id) VALUES (?, ?, ?, ?, ?, ?)'),
+  getHistory:    db.prepare(HISTORY_SQL + ' ORDER BY m.timestamp DESC LIMIT 100'),
+  getPage:       db.prepare(HISTORY_SQL + ' HAVING m.timestamp < ? ORDER BY m.timestamp DESC LIMIT ?'),
+  insertRead:    db.prepare('INSERT OR IGNORE INTO message_reads (message_id, username) VALUES (?, ?)'),
+  deleteMessage: db.prepare('DELETE FROM messages WHERE id = ? AND username = ?'),
+  deleteReads:   db.prepare('DELETE FROM message_reads WHERE message_id = ?'),
+  getUser:       db.prepare('SELECT hash FROM users WHERE username = ?'),
+  getById:       db.prepare('SELECT id, username, text, image_url AS imageUrl FROM messages WHERE id = ?'),
+};
+
+function formatRow(row) {
+  return {
+    type: 'message',
+    id: row.id,
+    username: row.username,
+    text: row.text || '',
+    imageUrl: row.imageUrl || null,
+    timestamp: row.timestamp,
+    readBy: row.readBy ? row.readBy.split(',') : [],
+    replyTo: row.replyToId ? {
+      id: row.replyToId,
+      username: row.replyUsername || '',
+      text: row.replyText || '',
+      imageUrl: row.replyImageUrl || null,
+    } : null,
+  };
+}
+
+function loadHistory() {
+  return stmts.getHistory.all().reverse().map(formatRow);
+}
+
+const clients   = new Map();
+const pushSubs  = new Map();
+const fcmTokens = new Map();
+
+function broadcast(msg) {
+  const raw = JSON.stringify(msg);
+  for (const { ws } of clients.values()) {
+    if (ws.readyState === 1) ws.send(raw);
+  }
+}
+function broadcastOnline() { broadcast({ type: 'online', users: onlineUsers() }); }
+function onlineUsers() { return [...new Set([...clients.values()].filter(c => c.username).map(c => c.username))]; }
+
+async function sendWebPush(msg, senderUsername) {
+  const payload = JSON.stringify({ title: msg.username, body: msg.text ? msg.text.slice(0, 100) : '📎 Immagine', url: '/chat' });
+  for (const [username, sub] of pushSubs) {
+    if (username === senderUsername) continue;
+    try { await webpush.sendNotification(sub, payload); }
+    catch (err) { if (err.statusCode === 410 || err.statusCode === 404) pushSubs.delete(username); }
+  }
+}
+async function sendFCMPush(msg, senderUsername) {
+  if (!admin.apps.length) return;
+  for (const [username, token] of fcmTokens) {
+    if (username === senderUsername) continue;
+    try {
+      await admin.messaging().send({
+        token,
+        data: { title: msg.username, body: msg.text ? msg.text.slice(0, 100) : '📎 Immagine' },
+        android: { priority: 'high', notification: { title: msg.username, body: msg.text ? msg.text.slice(0, 100) : '📎 Immagine', channelId: 'chat_messages', sound: 'default' } }
+      });
+    } catch (err) {
+      if (err.code === 'messaging/registration-token-not-registered') fcmTokens.delete(username);
+    }
+  }
+}
+async function sendAllPush(msg, senderUsername) {
+  await Promise.all([sendWebPush(msg, senderUsername), sendFCMPush(msg, senderUsername)]);
+}
+
+function extractMeta(html, baseUrl) {
+  const og = (prop) => {
+    const m = html.match(new RegExp(`<meta[^>]+property=["']og:${prop}["'][^>]+content=["']([^"']{1,500})["']`, 'i'))
+      || html.match(new RegExp(`<meta[^>]+content=["']([^"']{1,500})["'][^>]+property=["']og:${prop}["']`, 'i'));
+    return m ? m[1].trim() : null;
+  };
+  const meta = (name) => {
+    const m = html.match(new RegExp(`<meta[^>]+name=["']${name}["'][^>]+content=["']([^"']{1,500})["']`, 'i'))
+      || html.match(new RegExp(`<meta[^>]+content=["']([^"']{1,500})["'][^>]+name=["']${name}["']`, 'i'));
+    return m ? m[1].trim() : null;
+  };
+  const titleM = html.match(/<title[^>]*>([^<]{1,200})<\/title>/i);
+  const title = og('title') || meta('twitter:title') || (titleM ? titleM[1].trim() : null);
+  const description = og('description') || meta('description') || meta('twitter:description');
+  let image = og('image') || meta('twitter:image');
+  if (image && image.startsWith('/')) { const base = new URL(baseUrl); image = `${base.protocol}//${base.host}${image}`; }
+  const siteName = og('site_name');
+  const favicon = (() => {
+    const m = html.match(/<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)["']/i)
+      || html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*icon[^"']*["']/i);
+    if (!m) return null;
+    const href = m[1];
+    if (href.startsWith('http')) return href;
+    const base = new URL(baseUrl);
+    return href.startsWith('/') ? `${base.protocol}//${base.host}${href}` : `${base.protocol}//${base.host}/${href}`;
+  })();
+  const decode = s => s ? s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"') : s;
+  return { title: decode(title), description: decode(description), image: decode(image), siteName: decode(siteName), favicon, url: baseUrl };
+}
+
+async function chatRoutes(app) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+  app.get('/sw.js', async (request, reply) =>
+    reply.type('application/javascript').header('Service-Worker-Allowed', '/')
+      .send(fs.readFileSync(path.join(process.cwd(), 'public', 'sw.js'), 'utf8')));
+
+  app.get('/chat/manifest.json', async (request, reply) =>
+    reply.type('application/manifest+json').send({
+      name: 'Chat Tongatron', short_name: 'Chat', description: 'Chat privata in tempo reale',
+      start_url: '/chat', scope: '/', display: 'standalone', orientation: 'portrait',
+      background_color: '#f0f0f0', theme_color: '#3b82f6',
+      icons: [
+        { src: '/chat/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/chat/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+        { src: '/chat/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: '/chat/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+    }));
+
+  app.get('/chat/icon-:size.png', async (request, reply) => {
+    const filePath = path.join(process.cwd(), 'public', `icon-${request.params.size}.png`);
+    if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
+    return reply.type('image/png').send(fs.createReadStream(filePath));
+  });
+
+  app.post('/chat/login', async (request, reply) => {
+    const { username, password } = request.body || {};
+    if (!username || !password) return reply.code(400).send({ error: 'Dati mancanti' });
+    const user = stmts.getUser.get(username);
+    if (!user) return reply.code(401).send({ error: 'Credenziali non valide' });
+    const [saltHex, hashHex] = user.hash.split(':');
+    const inputHash  = crypto.scryptSync(password, Buffer.from(saltHex, 'hex'), 64);
+    const storedHash = Buffer.from(hashHex, 'hex');
+    if (!crypto.timingSafeEqual(inputHash, storedHash)) return reply.code(401).send({ error: 'Credenziali non valide' });
+    return { token: generateToken(username) };
+  });
+
+  // Pagination endpoint
+  app.get('/chat/messages', async (request, reply) => {
+    const { before } = request.query;
+    if (!before) return reply.code(400).send({ error: 'before richiesto' });
+    const limit = Math.min(parseInt(request.query.limit) || 50, 100);
+    const rows = stmts.getPage.all(before, limit);
+    return rows.reverse().map(formatRow);
+  });
+
+  app.post('/chat/push-subscribe', async (request, reply) => {
+    const { username, subscription } = request.body;
+    if (!username || !subscription) return reply.code(400).send({ error: 'Dati mancanti' });
+    pushSubs.set(username, subscription);
+    return { ok: true };
+  });
+  app.delete('/chat/push-unsubscribe', async (request, reply) => {
+    pushSubs.delete(request.body.username);
+    return { ok: true };
+  });
+  app.get('/chat/vapid-public-key', async () => ({ key: process.env.VAPID_PUBLIC_KEY }));
+
+  app.post('/chat/fcm-register', async (request, reply) => {
+    const { username, token } = request.body;
+    if (!username || !token) return reply.code(400).send({ error: 'Dati mancanti' });
+    fcmTokens.set(username, token);
+    return { ok: true };
+  });
+
+  app.get('/chat/test-push', async (request, reply) => {
+    const { to } = request.query;
+    const info = {
+      webPushSubs: pushSubs.size, webPushUsers: [...pushSubs.keys()],
+      fcmSubs: fcmTokens.size, fcmUsers: [...fcmTokens.keys()],
+      vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
+      fcmConfigured: admin.apps.length > 0,
+    };
+    if (to && fcmTokens.has(to)) {
+      try {
+        await admin.messaging().send({ token: fcmTokens.get(to), android: { priority: 'high', notification: { title: 'Test', body: 'Notifica di test!', channelId: 'chat_messages' } } });
+        info.fcmTestResult = 'sent';
+      } catch (e) { info.fcmTestResult = 'error: ' + e.message; }
+    }
+    return info;
+  });
+
+
+  const BACKGROUNDS_DIR = path.join(process.cwd(), 'public', 'backgrounds');
+  fs.mkdirSync(BACKGROUNDS_DIR, { recursive: true });
+
+  // List available backgrounds
+  app.get('/chat/backgrounds', async (request, reply) => {
+    const files = fs.readdirSync(BACKGROUNDS_DIR)
+      .filter(f => /\.(jpe?g|png|webp)$/i.test(f))
+      .map(f => ({ name: f, url: '/chat/backgrounds/' + f }));
+    return files;
+  });
+
+  // Serve background images
+  app.get('/chat/backgrounds/:filename', async (request, reply) => {
+    const filename = path.basename(request.params.filename);
+    const filePath = path.join(BACKGROUNDS_DIR, filename);
+    if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
+    const ext = path.extname(filename).slice(1).toLowerCase();
+    const mime = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[ext] || 'application/octet-stream';
+    return reply.type(mime).send(fs.createReadStream(filePath));
+  });
+
+  // Upload a new background (authenticated users only)
+  app.post('/chat/backgrounds/upload', async (request, reply) => {
+    const data = await request.file({ limits: { fileSize: 20 * 1024 * 1024 } });
+    if (!data) return reply.code(400).send({ error: 'Nessun file' });
+    const ext = path.extname(data.filename).toLowerCase();
+    if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) return reply.code(400).send({ error: 'Formato non supportato' });
+    const filename = Date.now() + '-bg' + ext;
+    const filePath = path.join(BACKGROUNDS_DIR, filename);
+    const { pipeline: pl } = require('node:stream/promises');
+    await pl(data.file, fs.createWriteStream(filePath));
+    return { url: '/chat/backgrounds/' + filename, name: filename };
+  });
+
+  app.get('/chat/download-app', async (request, reply) => {
+    const filePath = path.join(process.cwd(), 'public', 'chat-tongatron.apk');
+    return reply.type('application/vnd.android.package-archive')
+      .header('Content-Disposition', 'attachment; filename=ChatTongatron.apk')
+      .send(fs.createReadStream(filePath));
+  });
+
+  app.get('/chat/preview', async (request, reply) => {
+    const { url } = request.query;
+    if (!url || !/^https?:\/\/.+/i.test(url)) return reply.code(400).send({ error: 'URL non valido' });
+    try {
+      const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0 (compatible; ChatPreview/1.0)', accept: 'text/html' }, signal: AbortSignal.timeout(6000) });
+      if (!(res.headers.get('content-type') || '').includes('text/html')) return reply.send({ url });
+      return reply.send(extractMeta((await res.text()).slice(0, 80000), url));
+    } catch { return reply.send({ url }); }
+  });
+
+  app.get('/chat', async (request, reply) =>
+    reply.type('text/html').send(fs.readFileSync(path.join(process.cwd(), 'public', 'chat.html'), 'utf8')));
+
+  app.get('/chat/images/:filename', async (request, reply) => {
+    const filename = path.basename(request.params.filename);
+    const filePath = path.join(UPLOADS_DIR, filename);
+    if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
+    const ext = path.extname(filename).slice(1).toLowerCase();
+    const mime = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' }[ext] || 'application/octet-stream';
+    return reply.type(mime).send(fs.createReadStream(filePath));
+  });
+
+  app.post('/chat/upload', async (request, reply) => {
+    const data = await request.file({ limits: { fileSize: 10 * 1024 * 1024 } });
+    if (!data) return reply.code(400).send({ error: 'Nessun file' });
+    const ext = path.extname(data.filename).toLowerCase();
+    if (!['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) return reply.code(400).send({ error: 'Formato non supportato' });
+    const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`;
+    await pipeline(data.file, fs.createWriteStream(path.join(UPLOADS_DIR, filename)));
+    return { url: `/chat/images/${filename}` };
+  });
+
+  app.get('/chat/ws', { websocket: true }, (socket) => {
+    const id = crypto.randomUUID();
+    clients.set(id, { ws: socket, username: null });
+
+    socket.send(JSON.stringify({ type: 'history', messages: loadHistory() }));
+
+    socket.on('message', (raw) => {
+      let msg;
+      try { msg = JSON.parse(raw.toString()); } catch { return; }
+      const client = clients.get(id);
+
+      if (msg.type === 'join') {
+        const username = String(msg.username || '').trim().slice(0, 30);
+        if (!username) return;
+        if (!validateToken(username, msg.token)) {
+          socket.send(JSON.stringify({ type: 'auth_error' }));
+          socket.close();
+          return;
+        }
+        client.username = username;
+        if (msg.fcmToken) { fcmTokens.set(username, msg.fcmToken); }
+        broadcastOnline();
+        return;
+      }
+
+      if (!client?.username) return;
+
+      if (msg.type === 'typing') {
+        const out = JSON.stringify({ type: 'typing', username: client.username });
+        for (const [cid, c] of clients) {
+          if (cid !== id && c.ws.readyState === 1) c.ws.send(out);
+        }
+        return;
+      }
+
+      if (msg.type === 'read') {
+        const ids = Array.isArray(msg.ids) ? msg.ids : [];
+        const insertMany = db.transaction((ids, username) => {
+          for (const msgId of ids) stmts.insertRead.run(msgId, username);
+        });
+        insertMany(ids, client.username);
+        broadcast({ type: 'read', ids, reader: client.username });
+        return;
+      }
+
+      if (msg.type === 'delete') {
+        const msgId = msg.id ? String(msg.id).slice(0, 36) : null;
+        if (!msgId) return;
+        const result = stmts.deleteMessage.run(msgId, client.username);
+        if (result.changes > 0) {
+          stmts.deleteReads.run(msgId);
+          broadcast({ type: 'deleted', id: msgId });
+        }
+        return;
+      }
+
+      if (msg.type === 'message') {
+        const text = String(msg.text || '').trim().slice(0, 2000);
+        const imageUrl = msg.imageUrl ? String(msg.imageUrl) : null;
+        const replyToId = msg.replyToId ? String(msg.replyToId).slice(0, 36) : null;
+        if (!text && !imageUrl) return;
+        let replyTo = null;
+        if (replyToId) {
+          const replied = stmts.getById.get(replyToId);
+          if (replied) replyTo = { id: replied.id, username: replied.username, text: replied.text || '', imageUrl: replied.imageUrl || null };
+        }
+        const out = { type: 'message', id: crypto.randomUUID(), username: client.username, text, imageUrl, timestamp: new Date().toISOString(), readBy: [], replyTo };
+        stmts.insertMessage.run(out.id, out.username, out.text, out.imageUrl, out.timestamp, replyToId);
+        broadcast(out);
+        sendAllPush(out, client.username);
+      }
+    });
+
+    socket.on('close', () => {
+      const client = clients.get(id);
+      clients.delete(id);
+      if (client?.username) broadcastOnline();
+    });
+  });
+}
+
+module.exports = chatRoutes;
