@@ -247,12 +247,28 @@
       target.appendChild(row);
     }
 
+    function authHeaders(headers) {
+      var out = Object.assign({}, headers || {});
+      var username = localStorage.getItem('chat-user');
+      var token = localStorage.getItem('chat-token');
+      if (username && token) {
+        out['X-Chat-Username'] = username;
+        out['X-Chat-Token'] = token;
+      }
+      return out;
+    }
+
     async function loadConsole() {
       var status = document.getElementById('status-line');
       var grid = document.getElementById('console-grid');
       status.textContent = 'Aggiorno dati...';
       try {
-        var res = await fetch('/chat/console/data');
+        var res = await fetch('/chat/console/data', { headers: authHeaders() });
+        if (res.status === 401 || res.status === 403) {
+          status.textContent = 'Sessione non valida o accesso non consentito. Torna alla chat e rientra come Giovanni.';
+          grid.hidden = true;
+          return;
+        }
         if (!res.ok) throw new Error('Console non disponibile');
         var data = await res.json();
 

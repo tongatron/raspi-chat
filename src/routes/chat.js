@@ -619,8 +619,6 @@ async function chatRoutes(app) {
   });
 
   app.get('/chat/console', async (request, reply) => {
-    const username = requirePrivateAccess(request, reply);
-    if (!username) return;
     return reply.type('text/html').send(
       fs.readFileSync(path.join(process.cwd(), 'public', 'chat-console.html'), 'utf8')
     );
