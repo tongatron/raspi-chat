@@ -113,7 +113,6 @@
     body.theme-dark .selected-user,
     body.theme-dark .user-btn,
     body.theme-dark .pwd-input,
-    body.theme-dark #load-more-btn,
     body.theme-dark .toolbar-btn,
     body.theme-dark #logout-btn,
     body.theme-dark #attach-btn,
@@ -127,7 +126,6 @@
     body.theme-dark .selected-user,
     body.theme-dark .user-btn,
     body.theme-dark .pwd-input,
-    body.theme-dark #load-more-btn,
     body.theme-dark .toolbar-btn,
     body.theme-dark #logout-btn,
     body.theme-dark #attach-btn,
@@ -141,7 +139,6 @@
     body.theme-dark #attach-btn:hover,
     body.theme-dark #console-btn:hover,
     body.theme-dark #logout-btn:hover,
-    body.theme-dark #load-more-btn:hover,
     body.theme-dark #image-preview button:hover,
     body.theme-dark #reply-cancel:hover,
     body.theme-dark .reply-btn:hover,
@@ -612,40 +609,6 @@
       flex-shrink: 0;
     }
     #reply-cancel:hover { background: rgba(15,34,59,.06); color: var(--ink); }
-
-    /* Load more */
-    #load-more-wrap {
-      display: none;
-      align-self: center;
-      justify-content: center;
-      width: 100%;
-      padding: 4px 0 2px;
-      text-align: center;
-    }
-    #load-more-btn {
-      min-width: min(100%, 320px);
-      background: rgba(255,255,255,.88);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      padding: 8px 18px;
-      font-size: .85rem;
-      color: var(--primary);
-      cursor: pointer;
-      font-weight: 700;
-      transition: transform .15s ease, background .15s ease;
-      box-shadow: var(--shadow-soft);
-    }
-    #load-more-btn:hover { transform: translateY(-1px); background: var(--primary-soft); }
-    #load-more-btn:disabled { opacity: .5; cursor: default; }
-    #load-more-wrap.done #load-more-btn {
-      color: var(--muted);
-      background: rgba(255,255,255,.72);
-      box-shadow: none;
-    }
-    #load-more-wrap.done #load-more-btn:hover {
-      transform: none;
-      background: rgba(255,255,255,.72);
-    }
 
     /* Input area */
     #input-area {
@@ -1166,7 +1129,6 @@
   <div id="notif-banner" onclick="enablePush()">Tocca qui per attivare le notifiche</div>
   <div id="debug-log"></div>
   <div id="chat-main-view">
-  <div id="load-more-wrap"><button id="load-more-btn" onclick="loadMoreMessages()">Carica altri messaggi</button></div>
   <div id="messages"><div id="typing-indicator"></div></div>
   <div id="image-preview"><img id="preview-img" src="" alt="" /><span id="preview-name"></span><button id="remove-img">&#x2715;</button></div>
   <div id="reply-bar">
@@ -1285,43 +1247,14 @@ function scrollToMessage(id) {
 }
 
 // Pagination
-function setLoadMoreState(state) {
-  var wrap = document.getElementById('load-more-wrap');
-  var btn = document.getElementById('load-more-btn');
-  if (!wrap || !btn) return;
-
-  if (state === 'hidden') {
-    wrap.style.display = 'none';
-    wrap.classList.remove('done');
-    btn.disabled = false;
-    btn.textContent = 'Carica altri messaggi';
-    return;
-  }
-
-  wrap.style.display = 'flex';
-  if (state === 'done') {
-    wrap.classList.add('done');
-    btn.disabled = true;
-    btn.textContent = 'Nessun altro messaggio';
-    return;
-  }
-
-  wrap.classList.remove('done');
-  btn.disabled = false;
-  btn.textContent = 'Carica altri messaggi';
-}
-
 async function loadMoreMessages() {
   if (loadingMore || !hasMore || !oldestTimestamp) return;
   loadingMore = true;
-  var btn = document.getElementById('load-more-btn');
-  btn.disabled = true; btn.textContent = 'Carico...';
   try {
     var res = await authFetch('/chat/messages?before=' + encodeURIComponent(oldestTimestamp) + '&limit=50');
     var messages = await res.json();
     if (!messages.length) {
       hasMore = false;
-      setLoadMoreState('done');
       return;
     }
     var container = document.getElementById('messages');
@@ -1336,11 +1269,9 @@ async function loadMoreMessages() {
     container.scrollTop += container.scrollHeight - oldHeight;
     if (messages.length < 50) {
       hasMore = false;
-      setLoadMoreState('done');
     }
   } catch(e) {}
   loadingMore = false;
-  if (hasMore) setLoadMoreState('ready');
 }
 
 // Auto-load on scroll near top
@@ -1532,13 +1463,7 @@ function handleMsg(msg) {
       trackTimestamp(m.timestamp);
       if (m.username !== myName && (!m.readBy || m.readBy.indexOf(myName) === -1)) unreadIds.push(m.id);
     });
-    // Show load-more if we got a full page
-    if (msg.messages.length >= 100) {
-      setLoadMoreState('ready');
-    } else {
-      hasMore = false;
-      setLoadMoreState('done');
-    }
+    hasMore = msg.messages.length >= 100;
     scrollBottom();
     if (unreadIds.length && ws.readyState === 1) ws.send(JSON.stringify({ type: 'read', ids: unreadIds }));
   }
