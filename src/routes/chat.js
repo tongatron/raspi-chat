@@ -3,6 +3,8 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
+const os = require('node:os');
+const { execFileSync } = require('node:child_process');
 const { pipeline } = require('node:stream/promises');
 const webpush = require('web-push');
 const admin = require('firebase-admin');
@@ -249,6 +251,7 @@ const stmts = {
   getById:       db.prepare('SELECT id, username, text, image_url AS imageUrl FROM messages WHERE id = ?'),
   syncUser:      db.prepare('INSERT INTO users (username, hash) VALUES (?, ?) ON CONFLICT(username) DO UPDATE SET hash = excluded.hash'),
   countUsers:    db.prepare('SELECT COUNT(*) AS count FROM users'),
+  countMessages: db.prepare('SELECT COUNT(*) AS count FROM messages'),
   insertPrivateTransfer: db.prepare(`
     INSERT INTO private_transfers (id, username, original_name, stored_name, mime_type, size_bytes, note, timestamp)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -266,6 +269,11 @@ const stmts = {
            mime_type AS mimeType, size_bytes AS sizeBytes, note, timestamp
     FROM private_transfers
     WHERE username = ? AND stored_name = ?
+  `),
+  countPrivateTransfers: db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM private_transfers
+    WHERE username = ?
   `),
 };
 
@@ -327,6 +335,51 @@ function formatPrivateTransfer(row) {
     hasFile: !!row.storedName,
     downloadUrl: row.storedName ? `/chat/private-files/${encodeURIComponent(row.storedName)}` : null,
   };
+}
+
+function readCommand(command, args) {
+  try {
+    return execFileSync(command, args, { encoding: 'utf8', timeout: 2000 }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function readTemperatureC() {
+  const vcgencmd = readCommand('vcgencmd', ['measure_temp']);
+  if (vcgencmd) {
+    const match = vcgencmd.match(/temp=([\d.]+)/i);
+    if (match) return Number(match[1]);
+  }
+
+  try {
+    const raw = fs.readFileSync('/sys/class/thermal/thermal_zone0/temp', 'utf8').trim();
+    if (raw) return Number(raw) / 1000;
+  } catch {}
+
+  return null;
+}
+
+function readDiskUsage(targetPath) {
+  try {
+    const stats = fs.statfsSync(targetPath);
+    const total = Number(stats.bsize) * Number(stats.blocks);
+    const free = Number(stats.bsize) * Number(stats.bavail);
+    const used = Math.max(total - free, 0);
+    return { total, used, free };
+  } catch {
+    return null;
+  }
+}
+
+function formatUptimeSeconds(totalSeconds) {
+  const value = Math.max(Math.floor(totalSeconds || 0), 0);
+  const days = Math.floor(value / 86400);
+  const hours = Math.floor((value % 86400) / 3600);
+  const minutes = Math.floor((value % 3600) / 60);
+  if (days) return `${days}g ${hours}h ${minutes}m`;
+  if (hours) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 }
 
 const clients   = new Map();
@@ -563,6 +616,72 @@ async function chatRoutes(app) {
       if (!(res.headers.get('content-type') || '').includes('text/html')) return reply.send({ url });
       return reply.send(extractMeta((await res.text()).slice(0, 80000), url));
     } catch { return reply.send({ url }); }
+  });
+
+  app.get('/chat/console', async (request, reply) => {
+    const username = requirePrivateAccess(request, reply);
+    if (!username) return;
+    return reply.type('text/html').send(
+      fs.readFileSync(path.join(process.cwd(), 'public', 'chat-console.html'), 'utf8')
+    );
+  });
+
+  app.get('/chat/console/data', async (request, reply) => {
+    const username = requirePrivateAccess(request, reply);
+    if (!username) return;
+
+    const memTotal = os.totalmem();
+    const memFree = os.freemem();
+    const disk = readDiskUsage(process.cwd());
+    const online = onlineUsers();
+    const chatHealth = {
+      ok: true,
+      usersOnline: online,
+      onlineCount: online.length,
+      messageCount: stmts.countMessages.get().count,
+      privateTransferCount: stmts.countPrivateTransfers.get(username).count,
+      pushSubscriptions: pushSubs.size,
+      fcmTokens: fcmTokens.size,
+      vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
+      fcmConfigured: admin.apps.length > 0,
+    };
+
+    return {
+      generatedAt: new Date().toISOString(),
+      raspberry: {
+        hostname: os.hostname(),
+        platform: `${os.platform()} ${os.release()}`,
+        arch: os.arch(),
+        uptimeSeconds: os.uptime(),
+        uptimeHuman: formatUptimeSeconds(os.uptime()),
+        processUptimeSeconds: process.uptime(),
+        processUptimeHuman: formatUptimeSeconds(process.uptime()),
+        node: process.version,
+        cpuModel: os.cpus()[0]?.model || null,
+        cpuCount: os.cpus().length,
+        loadAvg: os.loadavg(),
+        temperatureC: readTemperatureC(),
+        memory: {
+          total: memTotal,
+          free: memFree,
+          used: memTotal - memFree,
+        },
+        disk,
+        localIps: Object.values(os.networkInterfaces())
+          .flat()
+          .filter(Boolean)
+          .filter((item) => item.family === 'IPv4' && !item.internal)
+          .map((item) => item.address),
+      },
+      chat: chatHealth,
+      tests: {
+        authCookiePresent: !!getCookieAuth(request),
+        localAccess: isLocalAccess(request),
+        sqliteOk: true,
+        uploadRemoteLimitMb: 250,
+        uploadLocalLimitMb: 1024,
+      },
+    };
   });
 
   app.get('/chat', async (request, reply) =>

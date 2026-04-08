@@ -139,6 +139,7 @@
     body.theme-dark .user-btn:hover,
     body.theme-dark .toolbar-btn:hover,
     body.theme-dark #attach-btn:hover,
+    body.theme-dark #console-btn:hover,
     body.theme-dark #logout-btn:hover,
     body.theme-dark #load-more-btn:hover,
     body.theme-dark #image-preview button:hover,
@@ -417,6 +418,23 @@
     }
     #notif-btn { opacity: .56; }
     #notif-btn:hover { opacity: 1; }
+    #console-btn {
+      display: none;
+      height: 42px;
+      border: none;
+      border-radius: 999px;
+      padding: 0 16px;
+      background: rgba(15,34,59,.06);
+      color: var(--muted);
+      font-size: .88rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      align-items: center;
+      justify-content: center;
+      transition: transform .18s ease, background .18s ease, color .18s ease;
+    }
+    #console-btn:hover { transform: translateY(-1px); background: rgba(15,34,59,.10); color: var(--ink); }
     #logout-btn {
       height: 42px;
       border: none;
@@ -993,6 +1011,7 @@
       header { padding: 12px 14px; border-radius: 22px; }
       .header-mark { width: 42px; height: 42px; border-radius: 14px; }
       .header-actions { gap: 8px; }
+      #console-btn { padding: 0 14px; }
       #logout-btn { padding: 0 14px; }
       #view-switch { width: 100%; justify-content: stretch; }
       .view-tab { flex: 1; text-align: center; }
@@ -1056,6 +1075,7 @@
       </div>
     </div>
     <div class="header-actions">
+      <a id="console-btn" href="/chat/console">Console</a>
       <button class="toolbar-btn" id="theme-btn" title="Passa al tema scuro" aria-label="Passa al tema scuro">◐</button>
       <button class="toolbar-btn" id="notif-btn" title="Attiva notifiche">&#x1f514;</button>
       <button id="logout-btn" title="Esci">Esci</button>
@@ -1315,6 +1335,7 @@ function joinAs(name, token) {
   document.getElementById('login').style.display = 'none';
   document.getElementById('chat').style.display = 'flex';
   document.getElementById('view-switch').style.display = canUsePrivateTransfers ? 'inline-flex' : 'none';
+  document.getElementById('console-btn').style.display = canUsePrivateTransfers ? 'inline-flex' : 'none';
   initScrollListener();
   restoreTheme();
   setView('chat');
