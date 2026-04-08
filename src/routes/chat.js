@@ -23,8 +23,12 @@ if (fs.existsSync(serviceAccountPath)) {
 }
 
 const UPLOADS_DIR = path.join(process.cwd(), 'data', 'uploads');
+const PRIVATE_UPLOADS_DIR = path.join(process.cwd(), 'data', 'private-transfers');
 const DB_PATH = path.join(process.cwd(), 'data', 'chat.db');
 const CHAT_USERS_FILE = process.env.CHAT_USERS_FILE || path.join(process.cwd(), 'config', 'chat-users.json');
+const PRIVATE_TRANSFER_OWNER = normalizeUsername(process.env.PRIVATE_TRANSFER_OWNER || 'Giovanni');
+const PRIVATE_TRANSFER_MAX_MB = Math.max(parseInt(process.env.PRIVATE_TRANSFER_MAX_MB || '512', 10) || 512, 50);
+const PRIVATE_TRANSFER_MAX_BYTES = PRIVATE_TRANSFER_MAX_MB * 1024 * 1024;
 
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
@@ -45,6 +49,16 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
     hash TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS private_transfers (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    stored_name TEXT NOT NULL,
+    mime_type TEXT,
+    size_bytes INTEGER NOT NULL,
+    note TEXT,
+    timestamp TEXT NOT NULL
   );
 `);
 // Migration: add reply_to_id if missing (existing installs)
@@ -165,6 +179,40 @@ function requireAuth(request, reply) {
   return username;
 }
 
+function requirePrivateAccess(request, reply) {
+  const username = requireAuth(request, reply);
+  if (!username) return null;
+  if (username !== PRIVATE_TRANSFER_OWNER) {
+    reply.code(403).send({ error: 'Area privata non disponibile' });
+    return null;
+  }
+
+  return username;
+}
+
+function getRequestAddress(request) {
+  const forwarded = String(request.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || String(request.ip || request.socket?.remoteAddress || '').trim();
+}
+
+function isLocalAccess(request) {
+  const address = getRequestAddress(request)
+    .replace(/^::ffff:/, '')
+    .replace(/^\[|\]$/g, '');
+  const host = String(request.headers['x-forwarded-host'] || request.headers.host || '').toLowerCase();
+
+  return (
+    address === '127.0.0.1' ||
+    address === '::1' ||
+    address === '' ||
+    address.startsWith('10.') ||
+    address.startsWith('192.168.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(address) ||
+    host.includes('raspberrypi.local') ||
+    host.includes('localhost')
+  );
+}
+
 function setSessionCookie(reply, username, token) {
   const value = encodeSessionCookie(username, token);
   reply.header(
@@ -201,6 +249,24 @@ const stmts = {
   getById:       db.prepare('SELECT id, username, text, image_url AS imageUrl FROM messages WHERE id = ?'),
   syncUser:      db.prepare('INSERT INTO users (username, hash) VALUES (?, ?) ON CONFLICT(username) DO UPDATE SET hash = excluded.hash'),
   countUsers:    db.prepare('SELECT COUNT(*) AS count FROM users'),
+  insertPrivateTransfer: db.prepare(`
+    INSERT INTO private_transfers (id, username, original_name, stored_name, mime_type, size_bytes, note, timestamp)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `),
+  listPrivateTransfers: db.prepare(`
+    SELECT id, username, original_name AS originalName, stored_name AS storedName,
+           mime_type AS mimeType, size_bytes AS sizeBytes, note, timestamp
+    FROM private_transfers
+    WHERE username = ?
+    ORDER BY timestamp DESC
+    LIMIT 200
+  `),
+  getPrivateTransferByStoredName: db.prepare(`
+    SELECT id, username, original_name AS originalName, stored_name AS storedName,
+           mime_type AS mimeType, size_bytes AS sizeBytes, note, timestamp
+    FROM private_transfers
+    WHERE username = ? AND stored_name = ?
+  `),
 };
 
 const configuredUsers = loadConfiguredUsers();
@@ -241,6 +307,25 @@ function formatRow(row) {
 
 function loadHistory() {
   return stmts.getHistory.all().reverse().map(formatRow);
+}
+
+function sanitizeUploadName(filename, fallback) {
+  const raw = path.basename(String(filename || fallback || 'file'));
+  const cleaned = raw.replace(/[^\w.\-() ]+/g, '_').trim();
+  return cleaned || fallback || 'file';
+}
+
+function formatPrivateTransfer(row) {
+  return {
+    id: row.id,
+    username: row.username,
+    name: row.originalName,
+    mimeType: row.mimeType || 'application/octet-stream',
+    sizeBytes: Number(row.sizeBytes) || 0,
+    note: row.note || '',
+    timestamp: row.timestamp,
+    downloadUrl: `/chat/private-files/${encodeURIComponent(row.storedName)}`,
+  };
 }
 
 const clients   = new Map();
@@ -315,6 +400,7 @@ function extractMeta(html, baseUrl) {
 
 async function chatRoutes(app) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  fs.mkdirSync(PRIVATE_UPLOADS_DIR, { recursive: true });
 
   app.get('/sw.js', async (request, reply) =>
     reply.type('application/javascript').header('Service-Worker-Allowed', '/')
@@ -502,6 +588,109 @@ async function chatRoutes(app) {
     const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`;
     await pipeline(data.file, fs.createWriteStream(path.join(UPLOADS_DIR, filename)));
     return { url: `/chat/images/${filename}` };
+  });
+
+  app.get('/chat/private-transfers', async (request, reply) => {
+    const username = requirePrivateAccess(request, reply);
+    if (!username) return;
+    return stmts.listPrivateTransfers.all(username).map(formatPrivateTransfer);
+  });
+
+  app.get('/chat/private-files/:filename', async (request, reply) => {
+    const username = requirePrivateAccess(request, reply);
+    if (!username) return;
+    const storedName = path.basename(String(request.params.filename || ''));
+    if (!storedName) return reply.code(404).send({ error: 'Not found' });
+    const entry = stmts.getPrivateTransferByStoredName.get(username, storedName);
+    if (!entry) return reply.code(404).send({ error: 'Not found' });
+    const filePath = path.join(PRIVATE_UPLOADS_DIR, entry.storedName);
+    if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
+    return reply
+      .type(entry.mimeType || 'application/octet-stream')
+      .header('Content-Length', String(entry.sizeBytes || fs.statSync(filePath).size))
+      .header('Content-Disposition', `attachment; filename=${JSON.stringify(entry.originalName)}`)
+      .send(fs.createReadStream(filePath));
+  });
+
+  app.post('/chat/private-transfers/upload', { bodyLimit: 1024 * 1024 * 1024 }, async (request, reply) => {
+    const username = requirePrivateAccess(request, reply);
+    if (!username) return;
+
+    const maxBytes = isLocalAccess(request)
+      ? 1024 * 1024 * 1024
+      : Math.min(PRIVATE_TRANSFER_MAX_BYTES, 250 * 1024 * 1024);
+    let note = '';
+    let uploaded = null;
+
+    try {
+      for await (const part of request.parts({
+        limits: { files: 1, fields: 4, fileSize: maxBytes },
+      })) {
+        if (part.type === 'field') {
+          if (part.fieldname === 'note') note = String(part.value || '').trim().slice(0, 400);
+          continue;
+        }
+
+        if (uploaded) {
+          part.file.resume();
+          continue;
+        }
+
+        const originalName = sanitizeUploadName(part.filename, 'file');
+        const ext = path.extname(originalName).slice(0, 24);
+        const storedName = `${Date.now()}-${crypto.randomBytes(5).toString('hex')}${ext}`;
+        const filePath = path.join(PRIVATE_UPLOADS_DIR, storedName);
+
+        await pipeline(part.file, fs.createWriteStream(filePath));
+
+        if (part.file.truncated) {
+          fs.rmSync(filePath, { force: true });
+          return reply.code(413).send({
+            error: `File troppo grande. Limite ${Math.round(maxBytes / (1024 * 1024))} MB`
+          });
+        }
+
+        const stats = fs.statSync(filePath);
+        uploaded = {
+          originalName,
+          storedName,
+          mimeType: String(part.mimetype || 'application/octet-stream'),
+          sizeBytes: stats.size,
+        };
+      }
+    } catch (err) {
+      app.log.error(err, 'Private transfer upload failed');
+      return reply.code(500).send({ error: 'Upload non riuscito' });
+    }
+
+    if (!uploaded) return reply.code(400).send({ error: 'Nessun file' });
+
+    const record = {
+      id: crypto.randomUUID(),
+      username,
+      originalName: uploaded.originalName,
+      storedName: uploaded.storedName,
+      mimeType: uploaded.mimeType,
+      sizeBytes: uploaded.sizeBytes,
+      note,
+      timestamp: new Date().toISOString(),
+    };
+
+    stmts.insertPrivateTransfer.run(
+      record.id,
+      record.username,
+      record.originalName,
+      record.storedName,
+      record.mimeType,
+      record.sizeBytes,
+      record.note,
+      record.timestamp
+    );
+
+    return Object.assign(formatPrivateTransfer(record), {
+      maxBytes,
+      isLocalAccess: isLocalAccess(request),
+    });
   });
 
   app.get('/chat/ws', { websocket: true }, (socket) => {
