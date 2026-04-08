@@ -33,6 +33,7 @@
       --warning: #f0b758;
       --shadow: 0 24px 60px rgba(36,58,89,.12);
       --shadow-soft: 0 12px 30px rgba(36,58,89,.08);
+      --message-surface: rgba(255,255,255,.56);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -68,7 +69,29 @@
       filter: blur(12px);
       pointer-events: none;
     }
-    #login, #chat, #bg-panel, #lightbox { position: relative; z-index: 1; }
+    #login, #chat, #lightbox { position: relative; z-index: 1; }
+    body.theme-dark {
+      --bg-top: #111723;
+      --bg-mid: #192231;
+      --bg-bottom: #0f141d;
+      --surface: rgba(16,22,31,.78);
+      --surface-strong: rgba(19,26,37,.92);
+      --surface-muted: rgba(21,29,40,.92);
+      --border: rgba(186,204,228,.10);
+      --border-strong: rgba(197,214,236,.16);
+      --ink: #edf3fb;
+      --muted: #a3b0c0;
+      --muted-soft: #7f8ba0;
+      --primary: #66a9ff;
+      --primary-strong: #418ee9;
+      --primary-soft: rgba(102,169,255,.14);
+      --accent: #f09c75;
+      --success: #5fd39b;
+      --warning: #f4c972;
+      --shadow: 0 24px 60px rgba(0,0,0,.32);
+      --shadow-soft: 0 12px 30px rgba(0,0,0,.22);
+      --message-surface: rgba(14,19,27,.58);
+    }
 
     /* Login */
     #login { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
@@ -297,7 +320,7 @@
       border-radius: 30px;
       border: 1px solid rgba(255,255,255,.70);
       box-shadow: var(--shadow);
-      background-color: rgba(255,255,255,.56);
+      background-color: var(--message-surface);
       background-size: cover;
       background-position: center;
       background-attachment: local;
@@ -334,7 +357,7 @@
       border-color: rgba(255,255,255,.18);
     }
     .other .bubble {
-      background: rgba(255,255,255,.92);
+      background: var(--surface-strong);
       color: var(--ink);
       border-bottom-left-radius: 8px;
       border-color: rgba(21,39,66,.08);
@@ -461,52 +484,6 @@
     }
     #load-more-btn:hover { transform: translateY(-1px); background: var(--primary-soft); }
     #load-more-btn:disabled { opacity: .5; cursor: default; }
-
-    /* Background picker */
-    #bg-panel {
-      display: none;
-      position: fixed;
-      top: 88px;
-      right: clamp(12px, 4vw, 24px);
-      background: var(--surface-strong);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(255,255,255,.72);
-      padding: 18px;
-      z-index: 50;
-      width: min(300px, calc(100vw - 24px));
-      backdrop-filter: blur(22px);
-      -webkit-backdrop-filter: blur(22px);
-    }
-    #bg-panel h3 { font-size: .92rem; font-weight: 800; margin-bottom: 14px; color: var(--ink); }
-    #bg-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 14px; }
-    .bg-thumb {
-      width: 100%;
-      aspect-ratio: 1;
-      border-radius: 14px;
-      cursor: pointer;
-      border: 2px solid transparent;
-      transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
-      object-fit: cover;
-      background: rgba(15,34,59,.06);
-    }
-    .bg-thumb:hover { transform: scale(1.04); box-shadow: var(--shadow-soft); }
-    .bg-thumb.active { border-color: var(--primary); }
-    .bg-thumb.default { display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
-    #bg-upload-btn {
-      width: 100%;
-      padding: 10px;
-      background: rgba(15,34,59,.04);
-      border: 1.5px dashed rgba(21,39,66,.18);
-      border-radius: 14px;
-      font-size: .86rem;
-      color: var(--muted);
-      cursor: pointer;
-      font-weight: 700;
-      transition: background .15s ease, border-color .15s ease, color .15s ease;
-    }
-    #bg-upload-btn:hover { background: var(--primary-soft); border-color: rgba(31,111,210,.35); color: var(--primary); }
-    #bg-file-input { display: none; }
 
     /* Input area */
     #input-area {
@@ -683,7 +660,6 @@
       .msg-wrap { max-width: 86%; }
       #reply-bar, #image-preview, #notif-banner { border-radius: 16px; }
       #input-area { padding: 10px; border-radius: 22px; }
-      #bg-panel { top: auto; right: 10px; left: 10px; bottom: 92px; width: auto; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -738,7 +714,7 @@
       </div>
     </div>
     <div class="header-actions">
-      <button class="toolbar-btn" id="bg-btn" title="Sfondo chat" onclick="toggleBgPanel()">&#x1F304;</button>
+      <button class="toolbar-btn" id="theme-btn" title="Passa al tema scuro" aria-label="Passa al tema scuro">◐</button>
       <button class="toolbar-btn" id="notif-btn" title="Attiva notifiche">&#x1f514;</button>
       <button id="logout-btn" title="Esci">Esci</button>
     </div>
@@ -763,15 +739,6 @@
   </div>
 </div>
 
-
-<div id="bg-panel">
-  <h3>Sfondo chat</h3>
-  <div id="bg-grid">
-    <div class="bg-thumb default active" id="bg-default" onclick="applyBackground(null)" title="Nessuno">🌫️</div>
-  </div>
-  <button id="bg-upload-btn" onclick="document.getElementById('bg-file-input').click()">+ Carica sfondo</button>
-  <input type="file" id="bg-file-input" accept="image/jpeg,image/png,image/webp" />
-</div>
 
 <div id="lightbox"><img id="lightbox-img" src="" alt="" /></div>
 
@@ -968,7 +935,7 @@ function joinAs(name, token) {
   document.getElementById('login').style.display = 'none';
   document.getElementById('chat').style.display = 'flex';
   initScrollListener();
-  restoreBackground();
+  restoreTheme();
   connect();
   setTimeout(initPush, 2000);
 }
@@ -1246,77 +1213,29 @@ document.addEventListener('paste', async function(e) {
   if (!img) return; var f = img.getAsFile(); if (f) await uploadImage(f, 'screenshot.png');
 });
 
-
-// Background picker
-var bgPanelOpen = false;
-function toggleBgPanel() {
-  bgPanelOpen = !bgPanelOpen;
-  var panel = document.getElementById('bg-panel');
-  panel.style.display = bgPanelOpen ? 'block' : 'none';
-  if (bgPanelOpen) loadBackgrounds();
-}
-document.addEventListener('click', function(e) {
-  if (bgPanelOpen && !document.getElementById('bg-panel').contains(e.target) && e.target.id !== 'bg-btn') {
-    bgPanelOpen = false; document.getElementById('bg-panel').style.display = 'none';
-  }
-});
-
-async function loadBackgrounds() {
-  try {
-    var res = await authFetch('/chat/backgrounds');
-    var list = await res.json();
-    var grid = document.getElementById('bg-grid');
-    // remove old thumbs except default
-    Array.from(grid.querySelectorAll('.bg-thumb:not(.default)')).forEach(function(el) { el.remove(); });
-    var currentBg = localStorage.getItem('chat-bg');
-    list.forEach(function(bg) {
-      var img = document.createElement('img');
-      img.className = 'bg-thumb' + (currentBg === bg.url ? ' active' : '');
-      img.src = bg.url; img.title = bg.name;
-      img.onclick = function() { applyBackground(bg.url); };
-      grid.appendChild(img);
-    });
-    // default thumb active state
-    document.getElementById('bg-default').className = 'bg-thumb default' + (!currentBg ? ' active' : '');
-  } catch(e) {}
+function setTheme(theme) {
+  var normalized = theme === 'dark' ? 'dark' : 'light';
+  document.body.classList.toggle('theme-dark', normalized === 'dark');
+  localStorage.setItem('chat-theme', normalized);
+  var metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute('content', normalized === 'dark' ? '#111723' : '#1f6fd2');
+  var btn = document.getElementById('theme-btn');
+  if (!btn) return;
+  btn.textContent = normalized === 'dark' ? '☀' : '◐';
+  btn.title = normalized === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro';
+  btn.setAttribute('aria-label', btn.title);
 }
 
-function applyBackground(url) {
-  var msgs = document.getElementById('messages');
-  if (url) {
-    msgs.style.backgroundImage = 'url(' + url + ')';
-    localStorage.setItem('chat-bg', url);
-  } else {
-    msgs.style.backgroundImage = '';
-    localStorage.removeItem('chat-bg');
-  }
-  // update active state
-  document.querySelectorAll('.bg-thumb').forEach(function(el) { el.classList.remove('active'); });
-  if (url) {
-    document.querySelectorAll('.bg-thumb').forEach(function(el) { if (el.src && el.src.endsWith(url.split('/').pop())) el.classList.add('active'); });
-  } else {
-    document.getElementById('bg-default').classList.add('active');
-  }
+function toggleTheme() {
+  setTheme(document.body.classList.contains('theme-dark') ? 'light' : 'dark');
 }
 
-function restoreBackground() {
-  var saved = localStorage.getItem('chat-bg');
-  if (saved) applyBackground(saved);
+function restoreTheme() {
+  setTheme(localStorage.getItem('chat-theme') || 'light');
 }
 
-document.getElementById('bg-file-input').onchange = async function() {
-  var file = this.files[0]; if (!file) return; this.value = '';
-  var btn = document.getElementById('bg-upload-btn'); btn.textContent = 'Carico...';
-  try {
-    var form = new FormData(); form.append('file', file, file.name);
-    var res = await authFetch('/chat/backgrounds/upload', { method: 'POST', body: form });
-    var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Errore');
-    applyBackground(data.url);
-    loadBackgrounds();
-  } catch(e) { alert('Errore caricamento: ' + e.message); }
-  btn.textContent = '+ Carica sfondo';
-};
+document.getElementById('theme-btn').onclick = toggleTheme;
+restoreTheme();
 
 function openLightbox(src) { document.getElementById('lightbox-img').src = src; document.getElementById('lightbox').classList.add('open'); }
 document.getElementById('lightbox').onclick = function() { document.getElementById('lightbox').classList.remove('open'); };
