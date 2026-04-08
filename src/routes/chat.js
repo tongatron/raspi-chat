@@ -382,6 +382,66 @@ function formatUptimeSeconds(totalSeconds) {
   return `${minutes}m`;
 }
 
+function getYoutubeVideoId(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    const host = url.hostname.replace(/^www\./i, '').toLowerCase();
+
+    if (host === 'youtu.be') {
+      const id = url.pathname.split('/').filter(Boolean)[0];
+      return id ? id.slice(0, 32) : null;
+    }
+
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+      if (url.pathname === '/watch') {
+        const id = url.searchParams.get('v');
+        return id ? id.slice(0, 32) : null;
+      }
+
+      const parts = url.pathname.split('/').filter(Boolean);
+      if (parts[0] === 'shorts' || parts[0] === 'live' || parts[0] === 'embed') {
+        return parts[1] ? parts[1].slice(0, 32) : null;
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
+async function buildYoutubePreview(url) {
+  const videoId = getYoutubeVideoId(url);
+  if (!videoId) return null;
+
+  const fallback = {
+    url,
+    siteName: 'YouTube',
+    title: 'Video YouTube',
+    description: null,
+    image: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+    favicon: 'https://www.youtube.com/s/desktop/fe6f5d8b/img/logos/favicon_32x32.png',
+  };
+
+  try {
+    const oembedUrl = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(url)}`;
+    const res = await fetch(oembedUrl, {
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; ChatPreview/1.0)', accept: 'application/json' },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    return {
+      url,
+      siteName: 'YouTube',
+      title: String(data.title || fallback.title).trim() || fallback.title,
+      description: data.author_name ? `Canale: ${String(data.author_name).trim()}` : null,
+      image: data.thumbnail_url || fallback.image,
+      favicon: fallback.favicon,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 const clients   = new Map();
 const pushSubs  = new Map();
 const fcmTokens = new Map();
@@ -616,6 +676,8 @@ async function chatRoutes(app) {
     const { url } = request.query;
     if (!url || !/^https?:\/\/.+/i.test(url)) return reply.code(400).send({ error: 'URL non valido' });
     try {
+      const youtubePreview = await buildYoutubePreview(url);
+      if (youtubePreview) return reply.send(youtubePreview);
       const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0 (compatible; ChatPreview/1.0)', accept: 'text/html' }, signal: AbortSignal.timeout(6000) });
       if (!(res.headers.get('content-type') || '').includes('text/html')) return reply.send({ url });
       return reply.send(extractMeta((await res.text()).slice(0, 80000), url));
