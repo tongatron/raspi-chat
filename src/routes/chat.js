@@ -324,7 +324,8 @@ function formatPrivateTransfer(row) {
     sizeBytes: Number(row.sizeBytes) || 0,
     note: row.note || '',
     timestamp: row.timestamp,
-    downloadUrl: `/chat/private-files/${encodeURIComponent(row.storedName)}`,
+    hasFile: !!row.storedName,
+    downloadUrl: row.storedName ? `/chat/private-files/${encodeURIComponent(row.storedName)}` : null,
   };
 }
 
@@ -602,7 +603,7 @@ async function chatRoutes(app) {
     const storedName = path.basename(String(request.params.filename || ''));
     if (!storedName) return reply.code(404).send({ error: 'Not found' });
     const entry = stmts.getPrivateTransferByStoredName.get(username, storedName);
-    if (!entry) return reply.code(404).send({ error: 'Not found' });
+    if (!entry || !entry.storedName) return reply.code(404).send({ error: 'Not found' });
     const filePath = path.join(PRIVATE_UPLOADS_DIR, entry.storedName);
     if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
     return reply
@@ -691,6 +692,38 @@ async function chatRoutes(app) {
       maxBytes,
       isLocalAccess: isLocalAccess(request),
     });
+  });
+
+  app.post('/chat/private-transfers/note', async (request, reply) => {
+    const username = requirePrivateAccess(request, reply);
+    if (!username) return;
+
+    const note = String(request.body?.note || '').trim().slice(0, 4000);
+    if (!note) return reply.code(400).send({ error: 'Appunto vuoto' });
+
+    const record = {
+      id: crypto.randomUUID(),
+      username,
+      originalName: 'Appunto',
+      storedName: '',
+      mimeType: 'text/plain',
+      sizeBytes: Buffer.byteLength(note, 'utf8'),
+      note,
+      timestamp: new Date().toISOString(),
+    };
+
+    stmts.insertPrivateTransfer.run(
+      record.id,
+      record.username,
+      record.originalName,
+      record.storedName,
+      record.mimeType,
+      record.sizeBytes,
+      record.note,
+      record.timestamp
+    );
+
+    return formatPrivateTransfer(record);
   });
 
   app.get('/chat/ws', { websocket: true }, (socket) => {

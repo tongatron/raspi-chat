@@ -180,6 +180,12 @@
     body.theme-dark #private-refresh-btn {
       background: rgba(17,25,37,.84);
     }
+    body.theme-dark #private-save-note-btn,
+    body.theme-dark .private-note-badge {
+      background: rgba(17,25,37,.84);
+      color: var(--muted);
+      border-color: rgba(229,239,252,.16);
+    }
     body.theme-dark #private-note {
       background: rgba(8,14,24,.88);
       border-color: rgba(229,239,252,.14);
@@ -191,6 +197,9 @@
     }
     body.theme-dark .private-download,
     body.theme-dark #private-refresh-btn:hover {
+      background: rgba(122,180,255,.14);
+    }
+    body.theme-dark #private-save-note-btn:hover {
       background: rgba(122,180,255,.14);
     }
     body.theme-dark .me .link-preview {
@@ -755,16 +764,34 @@
       flex-wrap: wrap;
     }
     #private-file-input { display: none; }
-    #private-upload-btn {
+    #private-upload-btn,
+    #private-submit-btn,
+    #private-save-note-btn {
       border: none;
       border-radius: 16px;
       padding: 12px 16px;
       font: inherit;
       font-weight: 700;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+    }
+    #private-upload-btn,
+    #private-submit-btn {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
       color: white;
       box-shadow: 0 14px 24px rgba(31,111,210,.18);
+    }
+    #private-save-note-btn {
+      background: rgba(15,34,59,.06);
+      color: var(--ink);
+    }
+    #private-submit-btn:disabled {
+      opacity: .5;
+      cursor: default;
+      box-shadow: none;
     }
     #private-file-name {
       color: var(--muted);
@@ -866,6 +893,14 @@
       padding: 10px 12px;
       background: rgba(15,34,59,.06);
       color: var(--primary-strong);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .private-note-badge {
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: rgba(15,34,59,.06);
+      color: var(--muted);
       font-weight: 700;
       white-space: nowrap;
     }
@@ -1060,11 +1095,13 @@
         <span>Accesso solo per Giovanni</span>
       </div>
       <div class="private-upload-row">
-        <button id="private-upload-btn" type="button">Scegli file</button>
+        <label id="private-upload-btn" for="private-file-input">Scegli file</label>
         <input type="file" id="private-file-input" />
+        <button id="private-submit-btn" type="button" disabled>Invia file</button>
+        <button id="private-save-note-btn" type="button">Salva appunto</button>
         <span id="private-file-name"></span>
       </div>
-      <textarea id="private-note" placeholder="Nota opzionale per ricordarti cos'e' questo file"></textarea>
+      <textarea id="private-note" placeholder="Scrivi un appunto, un link o una nota da allegare al file"></textarea>
       <div id="private-upload-status"></div>
     </div>
     <div class="private-list">
@@ -1098,6 +1135,7 @@ var unreadCount = 0;
 var canUsePrivateTransfers = false;
 var currentView = 'chat';
 var privateTransferLoading = false;
+var privateSelectedFile = null;
 
 function playNotifSound() {
   try {
@@ -1580,6 +1618,12 @@ function formatBytes(bytes) {
   return value.toFixed(fixed) + ' ' + units[idx];
 }
 
+function setPrivateSelectedFile(file) {
+  privateSelectedFile = file || null;
+  document.getElementById('private-file-name').textContent = file ? (file.name + ' • ' + formatBytes(file.size)) : '';
+  document.getElementById('private-submit-btn').disabled = !file;
+}
+
 function renderPrivateTransfers(items) {
   var list = document.getElementById('private-transfer-list');
   list.innerHTML = '';
@@ -1606,7 +1650,7 @@ function renderPrivateTransfers(items) {
     if (item.note) {
       var note = document.createElement('div');
       note.className = 'private-item-note';
-      note.textContent = item.note;
+      note.appendChild(linkifyNode(item.note));
       main.appendChild(note);
     }
 
@@ -1615,13 +1659,19 @@ function renderPrivateTransfers(items) {
     meta.textContent = formatBytes(item.sizeBytes) + ' • ' + new Date(item.timestamp).toLocaleString('it-IT');
     main.appendChild(meta);
 
-    var link = document.createElement('a');
-    link.className = 'private-download';
-    link.href = item.downloadUrl;
-    link.textContent = 'Scarica';
-
     li.appendChild(main);
-    li.appendChild(link);
+    if (item.hasFile && item.downloadUrl) {
+      var link = document.createElement('a');
+      link.className = 'private-download';
+      link.href = item.downloadUrl;
+      link.textContent = 'Scarica';
+      li.appendChild(link);
+    } else {
+      var badge = document.createElement('div');
+      badge.className = 'private-note-badge';
+      badge.textContent = 'Appunto';
+      li.appendChild(badge);
+    }
     list.appendChild(li);
   });
 }
@@ -1658,13 +1708,14 @@ async function uploadPrivateTransfer(file) {
   if (noteEl.value.trim()) form.append('note', noteEl.value.trim());
 
   button.disabled = true;
+  document.getElementById('private-save-note-btn').disabled = true;
   button.textContent = 'Carico...';
   status.textContent = 'Upload in corso di ' + formatBytes(file.size) + '...';
   try {
     var res = await authFetch('/chat/private-transfers/upload', { method: 'POST', body: form });
     var data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Errore upload');
-    document.getElementById('private-file-name').textContent = '';
+    setPrivateSelectedFile(null);
     noteEl.value = '';
     status.textContent = 'File caricato. Limite attivo: ' + formatBytes(data.maxBytes) + '.';
     await loadPrivateTransfers();
@@ -1672,7 +1723,41 @@ async function uploadPrivateTransfer(file) {
     status.textContent = e.message || 'Upload non riuscito.';
   } finally {
     button.disabled = false;
+    document.getElementById('private-save-note-btn').disabled = false;
     button.textContent = 'Scegli file';
+  }
+}
+
+async function savePrivateNote() {
+  if (!canUsePrivateTransfers) return;
+  var noteEl = document.getElementById('private-note');
+  var note = noteEl.value.trim();
+  var status = document.getElementById('private-upload-status');
+  var btn = document.getElementById('private-save-note-btn');
+  if (!note) {
+    status.textContent = 'Scrivi prima un appunto o un link.';
+    return;
+  }
+  btn.disabled = true;
+  document.getElementById('private-submit-btn').disabled = true;
+  status.textContent = 'Salvo appunto...';
+  try {
+    var res = await authFetch('/chat/private-transfers/note', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: note }),
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore salvataggio');
+    noteEl.value = '';
+    setPrivateSelectedFile(null);
+    status.textContent = 'Appunto salvato.';
+    await loadPrivateTransfers();
+  } catch (e) {
+    status.textContent = e.message || 'Salvataggio non riuscito.';
+  } finally {
+    btn.disabled = false;
+    document.getElementById('private-submit-btn').disabled = !privateSelectedFile;
   }
 }
 
@@ -1703,16 +1788,15 @@ document.getElementById('private-view-tab').onclick = function() {
   setView('private');
   loadPrivateTransfers();
 };
-document.getElementById('private-upload-btn').onclick = function() {
-  document.getElementById('private-file-input').click();
-};
 document.getElementById('private-file-input').onchange = async function() {
   var file = this.files[0];
   this.value = '';
-  if (!file) return;
-  document.getElementById('private-file-name').textContent = file.name + ' • ' + formatBytes(file.size);
-  await uploadPrivateTransfer(file);
+  setPrivateSelectedFile(file || null);
 };
+document.getElementById('private-submit-btn').onclick = function() {
+  if (privateSelectedFile) uploadPrivateTransfer(privateSelectedFile);
+};
+document.getElementById('private-save-note-btn').onclick = savePrivateNote;
 document.getElementById('private-refresh-btn').onclick = loadPrivateTransfers;
 document.getElementById('theme-btn').onclick = toggleTheme;
 restoreTheme();
