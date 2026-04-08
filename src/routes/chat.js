@@ -24,6 +24,7 @@ if (fs.existsSync(serviceAccountPath)) {
 
 const UPLOADS_DIR = path.join(process.cwd(), 'data', 'uploads');
 const DB_PATH = path.join(process.cwd(), 'data', 'chat.db');
+const CHAT_USERS_FILE = process.env.CHAT_USERS_FILE || path.join(process.cwd(), 'config', 'chat-users.json');
 
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
@@ -49,21 +50,68 @@ db.exec(`
 // Migration: add reply_to_id if missing (existing installs)
 try { db.exec('ALTER TABLE messages ADD COLUMN reply_to_id TEXT'); } catch(e) {}
 
-const SEED_USERS = [
-  { username: 'Giovanni', password: 'morso' },
-  { username: 'Cabras',   password: 'marco'  },
-  { username: 'Test',     password: 'morso'  },
-  { username: 'OpenClaw', password: 'openclaw' },
-];
-const insertUser = db.prepare('INSERT OR IGNORE INTO users (username, hash) VALUES (?, ?)');
-for (const u of SEED_USERS) {
+function hashPassword(password) {
   const salt = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(u.password, salt, 64);
-  insertUser.run(u.username, salt.toString('hex') + ':' + hash.toString('hex'));
+  const hash = crypto.scryptSync(password, salt, 64);
+  return salt.toString('hex') + ':' + hash.toString('hex');
 }
-console.log('[Auth] Users seeded');
+
+function loadConfiguredUsers() {
+  if (!fs.existsSync(CHAT_USERS_FILE)) return [];
+
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(CHAT_USERS_FILE, 'utf8'));
+  } catch (err) {
+    throw new Error(`[Auth] Invalid JSON in ${CHAT_USERS_FILE}: ${err.message}`);
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error(`[Auth] ${CHAT_USERS_FILE} must contain an array of { username, password } objects`);
+  }
+
+  const users = [];
+  const seen = new Set();
+  for (const entry of parsed) {
+    const username = normalizeUsername(entry?.username);
+    const password = String(entry?.password || '');
+    if (!username || !password) {
+      throw new Error(`[Auth] Each user in ${CHAT_USERS_FILE} must include non-empty username and password`);
+    }
+    const key = username.toLowerCase();
+    if (seen.has(key)) {
+      throw new Error(`[Auth] Duplicate username "${username}" in ${CHAT_USERS_FILE}`);
+    }
+    seen.add(key);
+    users.push({ username, password });
+  }
+
+  return users;
+}
 
 const TOKEN_SECRET = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+const SESSION_COOKIE_NAME = 'chat_auth';
+
+function normalizeUsername(value) {
+  return String(value || '').trim().slice(0, 30);
+}
+
+function encodeSessionCookie(username, token) {
+  return Buffer.from(JSON.stringify({ username, token }), 'utf8').toString('base64url');
+}
+
+function decodeSessionCookie(value) {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(String(value), 'base64url').toString('utf8'));
+    return {
+      username: normalizeUsername(parsed.username),
+      token: String(parsed.token || '').trim(),
+    };
+  } catch {
+    return null;
+  }
+}
 
 function generateToken(username) {
   return crypto.createHmac('sha256', TOKEN_SECRET).update(username).digest('hex');
@@ -76,6 +124,60 @@ function validateToken(username, token) {
     if (expected.length !== given.length) return false;
     return crypto.timingSafeEqual(expected, given);
   } catch { return false; }
+}
+
+function parseCookies(request) {
+  const raw = String(request.headers.cookie || '');
+  const cookies = {};
+  for (const entry of raw.split(';')) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+    const idx = trimmed.indexOf('=');
+    if (idx === -1) continue;
+    const key = trimmed.slice(0, idx).trim();
+    const value = trimmed.slice(idx + 1).trim();
+    cookies[key] = value;
+  }
+  return cookies;
+}
+
+function getCookieAuth(request) {
+  const cookies = parseCookies(request);
+  return decodeSessionCookie(cookies[SESSION_COOKIE_NAME]);
+}
+
+function getAuthenticatedUsername(request) {
+  const cookieAuth = getCookieAuth(request);
+  const headerUsername = normalizeUsername(request.headers['x-chat-username']);
+  const username = headerUsername || cookieAuth?.username || '';
+  const headerToken = String(request.headers['x-chat-token'] || '').trim();
+  const token = headerToken || cookieAuth?.token || '';
+  return validateToken(username, token) ? username : null;
+}
+
+function requireAuth(request, reply) {
+  const username = getAuthenticatedUsername(request);
+  if (!username) {
+    reply.code(401).send({ error: 'Non autorizzato' });
+    return null;
+  }
+
+  return username;
+}
+
+function setSessionCookie(reply, username, token) {
+  const value = encodeSessionCookie(username, token);
+  reply.header(
+    'Set-Cookie',
+    `${SESSION_COOKIE_NAME}=${value}; Path=/chat; HttpOnly; SameSite=Strict; Max-Age=2592000`
+  );
+}
+
+function clearSessionCookie(reply) {
+  reply.header(
+    'Set-Cookie',
+    `${SESSION_COOKIE_NAME}=; Path=/chat; HttpOnly; SameSite=Strict; Max-Age=0`
+  );
 }
 
 const HISTORY_SQL = `
@@ -97,7 +199,27 @@ const stmts = {
   deleteReads:   db.prepare('DELETE FROM message_reads WHERE message_id = ?'),
   getUser:       db.prepare('SELECT hash FROM users WHERE username = ?'),
   getById:       db.prepare('SELECT id, username, text, image_url AS imageUrl FROM messages WHERE id = ?'),
+  syncUser:      db.prepare('INSERT INTO users (username, hash) VALUES (?, ?) ON CONFLICT(username) DO UPDATE SET hash = excluded.hash'),
+  countUsers:    db.prepare('SELECT COUNT(*) AS count FROM users'),
 };
+
+const configuredUsers = loadConfiguredUsers();
+if (configuredUsers.length) {
+  const syncUsers = db.transaction((users) => {
+    for (const user of users) {
+      stmts.syncUser.run(user.username, hashPassword(user.password));
+    }
+  });
+  syncUsers(configuredUsers);
+  console.log(`[Auth] Synced ${configuredUsers.length} chat users from ${CHAT_USERS_FILE}`);
+} else {
+  const userCount = stmts.countUsers.get().count;
+  if (userCount === 0) {
+    console.warn(`[Auth] No chat users configured. Create ${CHAT_USERS_FILE} from config/chat-users.example.json`);
+  } else {
+    console.log(`[Auth] No external chat user config found, keeping ${userCount} users from database`);
+  }
+}
 
 function formatRow(row) {
   return {
@@ -218,7 +340,8 @@ async function chatRoutes(app) {
   });
 
   app.post('/chat/login', async (request, reply) => {
-    const { username, password } = request.body || {};
+    const username = normalizeUsername(request.body?.username);
+    const password = String(request.body?.password || '');
     if (!username || !password) return reply.code(400).send({ error: 'Dati mancanti' });
     const user = stmts.getUser.get(username);
     if (!user) return reply.code(401).send({ error: 'Credenziali non valide' });
@@ -226,11 +349,20 @@ async function chatRoutes(app) {
     const inputHash  = crypto.scryptSync(password, Buffer.from(saltHex, 'hex'), 64);
     const storedHash = Buffer.from(hashHex, 'hex');
     if (!crypto.timingSafeEqual(inputHash, storedHash)) return reply.code(401).send({ error: 'Credenziali non valide' });
-    return { token: generateToken(username) };
+    const token = generateToken(username);
+    setSessionCookie(reply, username, token);
+    return { token };
+  });
+
+  app.post('/chat/logout', async (request, reply) => {
+    clearSessionCookie(reply);
+    return { ok: true };
   });
 
   // Pagination endpoint
   app.get('/chat/messages', async (request, reply) => {
+    const username = requireAuth(request, reply);
+    if (!username) return;
     const { before } = request.query;
     if (!before) return reply.code(400).send({ error: 'before richiesto' });
     const limit = Math.min(parseInt(request.query.limit) || 50, 100);
@@ -239,25 +371,37 @@ async function chatRoutes(app) {
   });
 
   app.post('/chat/push-subscribe', async (request, reply) => {
-    const { username, subscription } = request.body;
-    if (!username || !subscription) return reply.code(400).send({ error: 'Dati mancanti' });
+    const username = requireAuth(request, reply);
+    if (!username) return;
+    const { subscription } = request.body || {};
+    if (!subscription) return reply.code(400).send({ error: 'Dati mancanti' });
     pushSubs.set(username, subscription);
     return { ok: true };
   });
   app.delete('/chat/push-unsubscribe', async (request, reply) => {
-    pushSubs.delete(request.body.username);
+    const username = requireAuth(request, reply);
+    if (!username) return;
+    pushSubs.delete(username);
     return { ok: true };
   });
-  app.get('/chat/vapid-public-key', async () => ({ key: process.env.VAPID_PUBLIC_KEY }));
+  app.get('/chat/vapid-public-key', async (request, reply) => {
+    const username = requireAuth(request, reply);
+    if (!username) return;
+    return { key: process.env.VAPID_PUBLIC_KEY };
+  });
 
   app.post('/chat/fcm-register', async (request, reply) => {
-    const { username, token } = request.body;
-    if (!username || !token) return reply.code(400).send({ error: 'Dati mancanti' });
+    const username = requireAuth(request, reply);
+    if (!username) return;
+    const token = String(request.body?.token || '').trim();
+    if (!token) return reply.code(400).send({ error: 'Dati mancanti' });
     fcmTokens.set(username, token);
     return { ok: true };
   });
 
   app.get('/chat/test-push', async (request, reply) => {
+    const username = requireAuth(request, reply);
+    if (!username) return;
     const { to } = request.query;
     const info = {
       webPushSubs: pushSubs.size, webPushUsers: [...pushSubs.keys()],
@@ -280,6 +424,8 @@ async function chatRoutes(app) {
 
   // List available backgrounds
   app.get('/chat/backgrounds', async (request, reply) => {
+    const username = requireAuth(request, reply);
+    if (!username) return;
     const files = fs.readdirSync(BACKGROUNDS_DIR)
       .filter(f => /\.(jpe?g|png|webp)$/i.test(f))
       .map(f => ({ name: f, url: '/chat/backgrounds/' + f }));
@@ -288,6 +434,8 @@ async function chatRoutes(app) {
 
   // Serve background images
   app.get('/chat/backgrounds/:filename', async (request, reply) => {
+    const username = requireAuth(request, reply);
+    if (!username) return;
     const filename = path.basename(request.params.filename);
     const filePath = path.join(BACKGROUNDS_DIR, filename);
     if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
@@ -298,6 +446,8 @@ async function chatRoutes(app) {
 
   // Upload a new background (authenticated users only)
   app.post('/chat/backgrounds/upload', async (request, reply) => {
+    const username = requireAuth(request, reply);
+    if (!username) return;
     const data = await request.file({ limits: { fileSize: 20 * 1024 * 1024 } });
     if (!data) return reply.code(400).send({ error: 'Nessun file' });
     const ext = path.extname(data.filename).toLowerCase();
@@ -317,6 +467,8 @@ async function chatRoutes(app) {
   });
 
   app.get('/chat/preview', async (request, reply) => {
+    const username = requireAuth(request, reply);
+    if (!username) return;
     const { url } = request.query;
     if (!url || !/^https?:\/\/.+/i.test(url)) return reply.code(400).send({ error: 'URL non valido' });
     try {
@@ -330,6 +482,8 @@ async function chatRoutes(app) {
     reply.type('text/html').send(fs.readFileSync(path.join(process.cwd(), 'public', 'chat.html'), 'utf8')));
 
   app.get('/chat/images/:filename', async (request, reply) => {
+    const username = requireAuth(request, reply);
+    if (!username) return;
     const filename = path.basename(request.params.filename);
     const filePath = path.join(UPLOADS_DIR, filename);
     if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
@@ -339,6 +493,8 @@ async function chatRoutes(app) {
   });
 
   app.post('/chat/upload', async (request, reply) => {
+    const username = requireAuth(request, reply);
+    if (!username) return;
     const data = await request.file({ limits: { fileSize: 10 * 1024 * 1024 } });
     if (!data) return reply.code(400).send({ error: 'Nessun file' });
     const ext = path.extname(data.filename).toLowerCase();
@@ -352,15 +508,13 @@ async function chatRoutes(app) {
     const id = crypto.randomUUID();
     clients.set(id, { ws: socket, username: null });
 
-    socket.send(JSON.stringify({ type: 'history', messages: loadHistory() }));
-
     socket.on('message', (raw) => {
       let msg;
       try { msg = JSON.parse(raw.toString()); } catch { return; }
       const client = clients.get(id);
 
       if (msg.type === 'join') {
-        const username = String(msg.username || '').trim().slice(0, 30);
+        const username = normalizeUsername(msg.username);
         if (!username) return;
         if (!validateToken(username, msg.token)) {
           socket.send(JSON.stringify({ type: 'auth_error' }));
@@ -369,6 +523,7 @@ async function chatRoutes(app) {
         }
         client.username = username;
         if (msg.fcmToken) { fcmTokens.set(username, msg.fcmToken); }
+        socket.send(JSON.stringify({ type: 'history', messages: loadHistory() }));
         broadcastOnline();
         return;
       }

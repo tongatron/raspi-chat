@@ -4,6 +4,7 @@ npm-debug.log*
 data/
 firebase-service-account.json
 .DS_Store
+config/chat-users.json
 public/backgrounds/*.jpg
 public/backgrounds/*.png
 public/*.apk

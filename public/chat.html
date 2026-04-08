@@ -295,7 +295,7 @@ async function loadMoreMessages() {
   var btn = document.getElementById('load-more-btn');
   btn.disabled = true; btn.textContent = 'Carico...';
   try {
-    var res = await fetch('/chat/messages?before=' + encodeURIComponent(oldestTimestamp) + '&limit=50');
+    var res = await authFetch('/chat/messages?before=' + encodeURIComponent(oldestTimestamp) + '&limit=50');
     var messages = await res.json();
     if (!messages.length) {
       hasMore = false;
@@ -339,6 +339,38 @@ var selectedUsername = null;
 var savedUser  = localStorage.getItem('chat-user');
 var savedToken = localStorage.getItem('chat-token');
 if (savedUser && savedToken) joinAs(savedUser, savedToken);
+
+function clearStoredAuth() {
+  localStorage.removeItem('chat-user');
+  localStorage.removeItem('chat-token');
+}
+
+function sendLogout() {
+  try { fetch('/chat/logout', { method: 'POST', keepalive: true }); } catch(e) {}
+}
+
+function authHeaders(headers) {
+  var out = Object.assign({}, headers || {});
+  if (myName && myToken) {
+    out['X-Chat-Username'] = myName;
+    out['X-Chat-Token'] = myToken;
+  }
+  return out;
+}
+
+async function authFetch(url, options) {
+  var opts = Object.assign({}, options || {});
+  opts.headers = authHeaders(opts.headers);
+  var res = await fetch(url, opts);
+  if (res.status === 401) {
+    sendLogout();
+    clearStoredAuth();
+    if (ws) ws.close();
+    location.reload();
+    throw new Error('Non autorizzato');
+  }
+  return res;
+}
 
 function selectUser(name, initial, bg, color) {
   selectedUsername = name;
@@ -390,8 +422,8 @@ function joinAs(name, token) {
 }
 
 document.getElementById('logout-btn').onclick = function() {
-  localStorage.removeItem('chat-user');
-  localStorage.removeItem('chat-token');
+  sendLogout();
+  clearStoredAuth();
   if (ws) ws.close();
   location.reload();
 };
@@ -410,7 +442,7 @@ async function initPush() {
     swReg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
     swReg = await navigator.serviceWorker.ready;
     var perm = Notification.permission;
-    var vapidResp = await fetch('/chat/vapid-public-key');
+    var vapidResp = await authFetch('/chat/vapid-public-key');
     var serverKey = (await vapidResp.json()).key;
     var savedKey = localStorage.getItem('chat-vapid-key');
     var sub = null;
@@ -420,7 +452,7 @@ async function initPush() {
     if (sub && savedKey !== serverKey) { try { await sub.unsubscribe(); } catch(e) {} sub = null; }
     if (sub) {
       btn.style.opacity = '1'; banner.style.display = 'none';
-      await fetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON()}) });
+      await authFetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON()}) });
     } else if (perm === 'granted') { await subscribePush(serverKey); }
     else if (perm !== 'denied') { banner.style.display = 'block'; }
     btn.onclick = togglePush;
@@ -428,10 +460,10 @@ async function initPush() {
 }
 async function subscribePush(vapidKey) {
   try {
-    if (!vapidKey) { vapidKey = (await (await fetch('/chat/vapid-public-key')).json()).key; }
+    if (!vapidKey) { vapidKey = (await (await authFetch('/chat/vapid-public-key')).json()).key; }
     var sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) });
     localStorage.setItem('chat-vapid-key', vapidKey);
-    await fetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON()}) });
+    await authFetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON()}) });
     document.getElementById('notif-btn').style.opacity = '1';
     document.getElementById('notif-banner').style.display = 'none';
   } catch(e) {}
@@ -446,7 +478,7 @@ async function togglePush() {
     var sub = await swReg.pushManager.getSubscription();
     if (sub) {
       await sub.unsubscribe(); localStorage.removeItem('chat-vapid-key');
-      await fetch('/chat/push-unsubscribe', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName}) });
+      await authFetch('/chat/push-unsubscribe', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName}) });
       document.getElementById('notif-btn').style.opacity = '.5'; return;
     }
     await enablePush();
@@ -463,7 +495,8 @@ function connect() {
 
 function handleMsg(msg) {
   if (msg.type === 'auth_error') {
-    localStorage.removeItem('chat-user'); localStorage.removeItem('chat-token'); location.reload(); return;
+    sendLogout();
+    clearStoredAuth(); location.reload(); return;
   }
   if (msg.type === 'history') {
     var unreadIds = [];
@@ -522,7 +555,7 @@ function extractUrls(text) { return Array.from(text.matchAll(/(https?:\/\/[^\s<>
 
 async function attachLinkPreviews(bubble, urls) {
   try {
-    var res = await fetch('/chat/preview?url=' + encodeURIComponent(urls[0]));
+    var res = await authFetch('/chat/preview?url=' + encodeURIComponent(urls[0]));
     var data = await res.json();
     if (!data.title && !data.image) return;
     var a = document.createElement('a'); a.href = urls[0]; a.target = '_blank'; a.className = 'link-preview';
@@ -643,7 +676,7 @@ async function uploadImage(file, name) {
   var btn = document.getElementById('attach-btn'); btn.textContent = '...'; btn.disabled = true;
   try {
     var form = new FormData(); form.append('file', file, name);
-    var res = await fetch('/chat/upload', {method:'POST',body:form});
+    var res = await authFetch('/chat/upload', {method:'POST',body:form});
     var txt = await res.text(); var data;
     try { data = JSON.parse(txt); } catch(e) { throw new Error(txt.slice(0,120)); }
     if (!res.ok || !data.url) throw new Error(data.error || 'Errore');
@@ -678,7 +711,7 @@ document.addEventListener('click', function(e) {
 
 async function loadBackgrounds() {
   try {
-    var res = await fetch('/chat/backgrounds');
+    var res = await authFetch('/chat/backgrounds');
     var list = await res.json();
     var grid = document.getElementById('bg-grid');
     // remove old thumbs except default
@@ -724,7 +757,7 @@ document.getElementById('bg-file-input').onchange = async function() {
   var btn = document.getElementById('bg-upload-btn'); btn.textContent = 'Carico...';
   try {
     var form = new FormData(); form.append('file', file, file.name);
-    var res = await fetch('/chat/backgrounds/upload', { method: 'POST', body: form });
+    var res = await authFetch('/chat/backgrounds/upload', { method: 'POST', body: form });
     var data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Errore');
     applyBackground(data.url);
