@@ -71,26 +71,115 @@
     }
     #login, #chat, #lightbox { position: relative; z-index: 1; }
     body.theme-dark {
-      --bg-top: #111723;
-      --bg-mid: #192231;
-      --bg-bottom: #0f141d;
-      --surface: rgba(16,22,31,.78);
-      --surface-strong: rgba(19,26,37,.92);
-      --surface-muted: rgba(21,29,40,.92);
-      --border: rgba(186,204,228,.10);
-      --border-strong: rgba(197,214,236,.16);
-      --ink: #edf3fb;
-      --muted: #a3b0c0;
-      --muted-soft: #7f8ba0;
-      --primary: #66a9ff;
-      --primary-strong: #418ee9;
-      --primary-soft: rgba(102,169,255,.14);
+      --bg-top: #090d14;
+      --bg-mid: #0d1420;
+      --bg-bottom: #070b12;
+      --surface: rgba(10,16,26,.84);
+      --surface-strong: rgba(14,21,33,.94);
+      --surface-muted: rgba(18,26,39,.94);
+      --border: rgba(214,228,247,.18);
+      --border-strong: rgba(224,236,252,.28);
+      --ink: #f3f7fd;
+      --muted: #b4c0cf;
+      --muted-soft: #91a0b4;
+      --primary: #7ab4ff;
+      --primary-strong: #539cf2;
+      --primary-soft: rgba(122,180,255,.16);
       --accent: #f09c75;
-      --success: #5fd39b;
+      --success: #6fe0a8;
       --warning: #f4c972;
-      --shadow: 0 24px 60px rgba(0,0,0,.32);
-      --shadow-soft: 0 12px 30px rgba(0,0,0,.22);
-      --message-surface: rgba(14,19,27,.58);
+      --shadow: 0 24px 60px rgba(0,0,0,.42);
+      --shadow-soft: 0 12px 30px rgba(0,0,0,.30);
+      --message-surface: rgba(7,11,18,.72);
+    }
+    body.theme-dark::before {
+      background: radial-gradient(circle, rgba(86,150,255,.18), rgba(86,150,255,0));
+    }
+    body.theme-dark::after {
+      background: radial-gradient(circle, rgba(40,82,141,.18), rgba(40,82,141,0));
+    }
+    body.theme-dark .login-box,
+    body.theme-dark header,
+    body.theme-dark #messages,
+    body.theme-dark #reply-bar,
+    body.theme-dark #input-area,
+    body.theme-dark #image-preview,
+    body.theme-dark #notif-banner,
+    body.theme-dark #debug-log {
+      border-color: rgba(229,239,252,.18);
+      box-shadow: 0 18px 42px rgba(0,0,0,.34);
+    }
+    body.theme-dark .login-eyebrow,
+    body.theme-dark .selected-user,
+    body.theme-dark .user-btn,
+    body.theme-dark .pwd-input,
+    body.theme-dark #load-more-btn,
+    body.theme-dark .toolbar-btn,
+    body.theme-dark #logout-btn,
+    body.theme-dark #attach-btn,
+    body.theme-dark #image-preview button,
+    body.theme-dark #reply-cancel,
+    body.theme-dark .delete-btn,
+    body.theme-dark .reply-btn {
+      border-color: rgba(229,239,252,.16);
+    }
+    body.theme-dark .login-eyebrow,
+    body.theme-dark .selected-user,
+    body.theme-dark .user-btn,
+    body.theme-dark .pwd-input,
+    body.theme-dark #load-more-btn,
+    body.theme-dark .toolbar-btn,
+    body.theme-dark #logout-btn,
+    body.theme-dark #attach-btn,
+    body.theme-dark #image-preview,
+    body.theme-dark #debug-log,
+    body.theme-dark #typing-indicator {
+      background: rgba(17,25,37,.84);
+    }
+    body.theme-dark .user-btn:hover,
+    body.theme-dark .toolbar-btn:hover,
+    body.theme-dark #attach-btn:hover,
+    body.theme-dark #logout-btn:hover,
+    body.theme-dark #load-more-btn:hover,
+    body.theme-dark #image-preview button:hover,
+    body.theme-dark #reply-cancel:hover,
+    body.theme-dark .reply-btn:hover,
+    body.theme-dark .delete-btn:hover {
+      background: rgba(122,180,255,.14);
+    }
+    body.theme-dark #input-area textarea {
+      background: rgba(8,14,24,.88);
+      border-color: rgba(229,239,252,.14);
+      color: var(--ink);
+    }
+    body.theme-dark #input-area textarea:focus {
+      background: rgba(10,16,27,.96);
+      border-color: rgba(122,180,255,.42);
+    }
+    body.theme-dark .other .bubble {
+      background: rgba(16,24,36,.96);
+      border-color: rgba(229,239,252,.14);
+    }
+    body.theme-dark .me .bubble {
+      background: linear-gradient(180deg, #327bdb, #225fb2);
+      border-color: rgba(255,255,255,.12);
+    }
+    body.theme-dark .link-preview {
+      background: rgba(12,18,28,.96);
+      border-color: rgba(229,239,252,.14);
+      box-shadow: 0 12px 26px rgba(0,0,0,.28);
+    }
+    body.theme-dark .me .link-preview {
+      background: rgba(255,255,255,.10);
+      border-color: rgba(255,255,255,.16);
+    }
+    body.theme-dark #notif-banner {
+      background: linear-gradient(180deg, rgba(77,60,27,.96), rgba(61,47,23,.98));
+      color: #f7d89e;
+      border-color: rgba(244,201,114,.24);
+    }
+    body.theme-dark #messages::-webkit-scrollbar-thumb {
+      background: rgba(122,180,255,.28);
     }
 
     /* Login */
