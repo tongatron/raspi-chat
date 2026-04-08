@@ -614,8 +614,16 @@
     #reply-cancel:hover { background: rgba(15,34,59,.06); color: var(--ink); }
 
     /* Load more */
-    #load-more-wrap { text-align: center; padding: 2px 0 0; display: none; }
+    #load-more-wrap {
+      display: none;
+      align-self: center;
+      justify-content: center;
+      width: 100%;
+      padding: 4px 0 2px;
+      text-align: center;
+    }
     #load-more-btn {
+      min-width: min(100%, 320px);
       background: rgba(255,255,255,.88);
       border: 1px solid var(--border);
       border-radius: 999px;
@@ -629,6 +637,15 @@
     }
     #load-more-btn:hover { transform: translateY(-1px); background: var(--primary-soft); }
     #load-more-btn:disabled { opacity: .5; cursor: default; }
+    #load-more-wrap.done #load-more-btn {
+      color: var(--muted);
+      background: rgba(255,255,255,.72);
+      box-shadow: none;
+    }
+    #load-more-wrap.done #load-more-btn:hover {
+      transform: none;
+      background: rgba(255,255,255,.72);
+    }
 
     /* Input area */
     #input-area {
@@ -1268,6 +1285,32 @@ function scrollToMessage(id) {
 }
 
 // Pagination
+function setLoadMoreState(state) {
+  var wrap = document.getElementById('load-more-wrap');
+  var btn = document.getElementById('load-more-btn');
+  if (!wrap || !btn) return;
+
+  if (state === 'hidden') {
+    wrap.style.display = 'none';
+    wrap.classList.remove('done');
+    btn.disabled = false;
+    btn.textContent = 'Carica altri messaggi';
+    return;
+  }
+
+  wrap.style.display = 'flex';
+  if (state === 'done') {
+    wrap.classList.add('done');
+    btn.disabled = true;
+    btn.textContent = 'Nessun altro messaggio';
+    return;
+  }
+
+  wrap.classList.remove('done');
+  btn.disabled = false;
+  btn.textContent = 'Carica altri messaggi';
+}
+
 async function loadMoreMessages() {
   if (loadingMore || !hasMore || !oldestTimestamp) return;
   loadingMore = true;
@@ -1278,7 +1321,7 @@ async function loadMoreMessages() {
     var messages = await res.json();
     if (!messages.length) {
       hasMore = false;
-      document.getElementById('load-more-wrap').style.display = 'none';
+      setLoadMoreState('done');
       return;
     }
     var container = document.getElementById('messages');
@@ -1293,11 +1336,11 @@ async function loadMoreMessages() {
     container.scrollTop += container.scrollHeight - oldHeight;
     if (messages.length < 50) {
       hasMore = false;
-      document.getElementById('load-more-wrap').style.display = 'none';
+      setLoadMoreState('done');
     }
   } catch(e) {}
   loadingMore = false;
-  btn.disabled = false; btn.textContent = 'Carica altri messaggi';
+  if (hasMore) setLoadMoreState('ready');
 }
 
 // Auto-load on scroll near top
@@ -1491,7 +1534,10 @@ function handleMsg(msg) {
     });
     // Show load-more if we got a full page
     if (msg.messages.length >= 100) {
-      document.getElementById('load-more-wrap').style.display = 'block';
+      setLoadMoreState('ready');
+    } else {
+      hasMore = false;
+      setLoadMoreState('done');
     }
     scrollBottom();
     if (unreadIds.length && ws.readyState === 1) ws.send(JSON.stringify({ type: 'read', ids: unreadIds }));
