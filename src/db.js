@@ -1,49 +1,23 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const sqlite3 = require('sqlite3');
+const Database = require('better-sqlite3');
 const { config } = require('./config');
 
 fs.mkdirSync(path.dirname(config.dbPath), { recursive: true });
 
-const db = new sqlite3.Database(config.dbPath);
+const db = new Database(config.dbPath);
+db.pragma('journal_mode = WAL');
 
 function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function onRun(err) {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      resolve({ lastID: this.lastID, changes: this.changes });
-    });
-  });
+  return Promise.resolve(db.prepare(sql).run(params));
 }
 
 function get(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      resolve(row || null);
-    });
-  });
+  return Promise.resolve(db.prepare(sql).get(params) || null);
 }
 
 function all(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      resolve(rows);
-    });
-  });
+  return Promise.resolve(db.prepare(sql).all(params));
 }
 
 async function initDb() {
