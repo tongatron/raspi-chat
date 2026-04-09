@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "check": "node --check server.js && node --check src/app.js && node --check src/routes/chat.js && node --check src/routes/root.js && node --check src/routes/items.js",
     "test": "node -e \"console.log('No tests configured yet')\"",
     "start": "node server.js",
     "dev": "node --watch server.js"
