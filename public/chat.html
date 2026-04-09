@@ -1502,6 +1502,68 @@
     .console-card.full {
       grid-column: 1 / -1;
     }
+    .console-chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .console-chart-panel {
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 190px;
+    }
+    .console-chart-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+    }
+    .console-chart-title {
+      font-size: .9rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+    }
+    .console-chart-value {
+      color: var(--muted);
+      font-size: .82rem;
+      font-weight: 700;
+      text-align: right;
+    }
+    .console-chart-svg {
+      width: 100%;
+      height: 110px;
+      display: block;
+      overflow: visible;
+    }
+    .console-chart-svg .grid-line {
+      stroke: rgba(148, 163, 184, .18);
+      stroke-width: 1;
+    }
+    .console-chart-svg .area {
+      opacity: .22;
+    }
+    .console-chart-svg .line {
+      fill: none;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .console-chart-svg .dot {
+      stroke-width: 3;
+      fill: var(--surface-strong);
+    }
+    .console-chart-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: .76rem;
+    }
     .console-stats {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1751,6 +1813,9 @@
       .console-grid {
         grid-template-columns: 1fr;
       }
+      .console-chart-grid {
+        grid-template-columns: 1fr;
+      }
       .console-card {
         grid-column: 1 / -1;
         border-radius: 5px;
@@ -1968,6 +2033,59 @@
     </div>
     <div id="console-status-line">Carico dati...</div>
     <div class="console-grid" id="console-grid" hidden>
+      <article class="console-card full">
+        <h3>Trend in tempo reale</h3>
+        <div class="console-chart-grid">
+          <div class="console-chart-panel">
+            <div class="console-chart-head">
+              <div class="console-chart-title">Temperatura</div>
+              <div class="console-chart-value" id="chart-temp-value">--</div>
+            </div>
+            <svg class="console-chart-svg" id="chart-temp" viewBox="0 0 320 110" preserveAspectRatio="none"></svg>
+            <div class="console-chart-meta">
+              <span id="chart-temp-min">--</span>
+              <span>ultimi 5 minuti</span>
+              <span id="chart-temp-max">--</span>
+            </div>
+          </div>
+          <div class="console-chart-panel">
+            <div class="console-chart-head">
+              <div class="console-chart-title">Load medio</div>
+              <div class="console-chart-value" id="chart-load-value">--</div>
+            </div>
+            <svg class="console-chart-svg" id="chart-load" viewBox="0 0 320 110" preserveAspectRatio="none"></svg>
+            <div class="console-chart-meta">
+              <span id="chart-load-min">--</span>
+              <span>ultimi 5 minuti</span>
+              <span id="chart-load-max">--</span>
+            </div>
+          </div>
+          <div class="console-chart-panel">
+            <div class="console-chart-head">
+              <div class="console-chart-title">RAM usata</div>
+              <div class="console-chart-value" id="chart-ram-value">--</div>
+            </div>
+            <svg class="console-chart-svg" id="chart-ram" viewBox="0 0 320 110" preserveAspectRatio="none"></svg>
+            <div class="console-chart-meta">
+              <span id="chart-ram-min">--</span>
+              <span>ultimi 5 minuti</span>
+              <span id="chart-ram-max">--</span>
+            </div>
+          </div>
+          <div class="console-chart-panel">
+            <div class="console-chart-head">
+              <div class="console-chart-title">Utenti online</div>
+              <div class="console-chart-value" id="chart-online-value">--</div>
+            </div>
+            <svg class="console-chart-svg" id="chart-online" viewBox="0 0 320 110" preserveAspectRatio="none"></svg>
+            <div class="console-chart-meta">
+              <span id="chart-online-min">--</span>
+              <span>ultimi 5 minuti</span>
+              <span id="chart-online-max">--</span>
+            </div>
+          </div>
+        </div>
+      </article>
       <article class="console-card">
         <h3>Raspberry</h3>
         <div class="console-stats" id="raspberry-stats"></div>
@@ -2058,6 +2176,13 @@ var adminUsersLoading = false;
 var scrollListenerBound = false;
 var latestInviteUrl = '';
 var consoleLoading = false;
+var consoleAutoRefresh = null;
+var consoleHistory = {
+  temp: [],
+  load: [],
+  ram: [],
+  online: []
+};
 var selectedAdminUsername = '';
 var adminUsersCache = [];
 var roomsCache = [];
@@ -2643,6 +2768,7 @@ function setView(view) {
   if (view === 'rooms' && isAdmin) nextView = 'rooms';
   if (view === 'console' && isAdmin) nextView = 'console';
   if (view === 'admin' && isAdmin) nextView = 'admin';
+  if (nextView !== 'console') stopConsoleAutoRefresh();
   currentView = nextView;
   document.getElementById('chat-main-view').style.display = nextView === 'chat' ? 'contents' : 'none';
   document.getElementById('rooms-view').style.display = nextView === 'rooms' ? 'flex' : 'none';
@@ -2663,6 +2789,7 @@ function setView(view) {
     adminBtn.classList.toggle('active', nextView === 'admin');
     adminBtn.textContent = 'Admin';
   }
+  if (nextView === 'console') startConsoleAutoRefresh();
 }
 
 function formatBytes(bytes) {
@@ -3102,6 +3229,105 @@ function formatLoadAvg(values) {
   return (values || []).map(function(v) { return Number(v || 0).toFixed(2); }).join(' • ');
 }
 
+function stopConsoleAutoRefresh() {
+  if (consoleAutoRefresh) {
+    clearInterval(consoleAutoRefresh);
+    consoleAutoRefresh = null;
+  }
+}
+
+function startConsoleAutoRefresh() {
+  if (!isAdmin || currentView !== 'console' || consoleAutoRefresh) return;
+  consoleAutoRefresh = setInterval(function() {
+    if (currentView !== 'console') {
+      stopConsoleAutoRefresh();
+      return;
+    }
+    loadConsoleData();
+  }, 5000);
+}
+
+function pushConsolePoint(series, value) {
+  if (value == null || Number.isNaN(value)) return;
+  series.push({ t: Date.now(), v: value });
+  while (series.length > 60) series.shift();
+}
+
+function formatChartValue(key, value) {
+  if (value == null || Number.isNaN(value)) return '--';
+  if (key === 'temp') return value.toFixed(1) + ' °C';
+  if (key === 'load') return value.toFixed(2);
+  if (key === 'ram') return value.toFixed(0) + '%';
+  if (key === 'online') return String(Math.round(value));
+  return String(value);
+}
+
+function renderConsoleChart(key, color) {
+  var svg = document.getElementById('chart-' + key);
+  if (!svg) return;
+  var points = consoleHistory[key] || [];
+  var currentEl = document.getElementById('chart-' + key + '-value');
+  var minEl = document.getElementById('chart-' + key + '-min');
+  var maxEl = document.getElementById('chart-' + key + '-max');
+  if (!points.length) {
+    svg.innerHTML = '';
+    if (currentEl) currentEl.textContent = '--';
+    if (minEl) minEl.textContent = '--';
+    if (maxEl) maxEl.textContent = '--';
+    return;
+  }
+
+  var width = 320;
+  var height = 110;
+  var padX = 8;
+  var padY = 8;
+  var values = points.map(function(point) { return point.v; });
+  var min = Math.min.apply(null, values);
+  var max = Math.max.apply(null, values);
+  if (min === max) {
+    min -= 1;
+    max += 1;
+  }
+
+  function getX(index) {
+    if (points.length === 1) return width / 2;
+    return padX + ((width - padX * 2) * index / (points.length - 1));
+  }
+  function getY(value) {
+    var ratio = (value - min) / (max - min);
+    return height - padY - ratio * (height - padY * 2);
+  }
+
+  var polyline = points.map(function(point, index) {
+    return getX(index).toFixed(1) + ',' + getY(point.v).toFixed(1);
+  }).join(' ');
+  var area = polyline + ' ' + getX(points.length - 1).toFixed(1) + ',' + (height - padY).toFixed(1) + ' ' + getX(0).toFixed(1) + ',' + (height - padY).toFixed(1);
+  var latest = points[points.length - 1];
+
+  svg.innerHTML =
+    '<line class="grid-line" x1="' + padX + '" y1="' + (height - padY) + '" x2="' + (width - padX) + '" y2="' + (height - padY) + '"></line>' +
+    '<line class="grid-line" x1="' + padX + '" y1="' + (height / 2).toFixed(1) + '" x2="' + (width - padX) + '" y2="' + (height / 2).toFixed(1) + '"></line>' +
+    '<line class="grid-line" x1="' + padX + '" y1="' + padY + '" x2="' + (width - padX) + '" y2="' + padY + '"></line>' +
+    '<polygon class="area" fill="' + color + '" points="' + area + '"></polygon>' +
+    '<polyline class="line" stroke="' + color + '" points="' + polyline + '"></polyline>' +
+    '<circle class="dot" cx="' + getX(points.length - 1).toFixed(1) + '" cy="' + getY(latest.v).toFixed(1) + '" r="4" stroke="' + color + '"></circle>';
+
+  if (currentEl) currentEl.textContent = formatChartValue(key, latest.v);
+  if (minEl) minEl.textContent = 'min ' + formatChartValue(key, min);
+  if (maxEl) maxEl.textContent = 'max ' + formatChartValue(key, max);
+}
+
+function updateConsoleCharts(data) {
+  pushConsolePoint(consoleHistory.temp, data.raspberry.temperatureC);
+  pushConsolePoint(consoleHistory.load, data.raspberry.loadAvg && data.raspberry.loadAvg.length ? Number(data.raspberry.loadAvg[0]) : null);
+  pushConsolePoint(consoleHistory.ram, data.raspberry.memory && data.raspberry.memory.total ? (data.raspberry.memory.used / data.raspberry.memory.total) * 100 : null);
+  pushConsolePoint(consoleHistory.online, Number(data.chat.onlineCount || 0));
+  renderConsoleChart('temp', '#ff7a59');
+  renderConsoleChart('load', '#7cb6ff');
+  renderConsoleChart('ram', '#8bdb81');
+  renderConsoleChart('online', '#f5c94a');
+}
+
 function addConsoleStat(target, label, value) {
   var el = document.createElement('div');
   el.className = 'console-stat';
@@ -3168,6 +3394,7 @@ async function loadConsoleData() {
     addConsoleRow(network, 'Piattaforma', data.raspberry.platform || 'n/d');
     addConsoleRow(network, 'Online in chat', (data.chat.usersOnline || []).join(', ') || 'Nessuno');
 
+    updateConsoleCharts(data);
     status.textContent = 'Ultimo aggiornamento: ' + new Date(data.generatedAt).toLocaleString('it-IT');
     grid.hidden = false;
   } catch (e) {
