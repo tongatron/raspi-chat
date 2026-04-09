@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registrati</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    :root {
+      --bg-top: #0b1320;
+      --bg-bottom: #111c2e;
+      --surface: rgba(15, 25, 40, .86);
+      --surface-strong: rgba(18, 31, 49, .94);
+      --border: rgba(226, 236, 252, .14);
+      --ink: #f4f7fc;
+      --muted: #b0bed0;
+      --primary: #6eaefc;
+      --primary-strong: #4f90e6;
+      --success: #6fe0a8;
+      --danger: #ff8f8f;
+      --shadow: 0 28px 60px rgba(0, 0, 0, .34);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+      color: var(--ink);
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      width: min(460px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 26px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(110, 174, 252, .12);
+      color: var(--primary);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 4vw, 2.5rem);
+      letter-spacing: -.04em;
+    }
+    .copy {
+      margin: 0 0 22px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .status {
+      min-height: 1.5em;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--success); }
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: var(--muted);
+      font-size: .84rem;
+      font-weight: 700;
+    }
+    input {
+      width: 100%;
+      border: 1px solid rgba(226, 236, 252, .14);
+      background: var(--surface-strong);
+      color: var(--ink);
+      border-radius: 16px;
+      padding: 13px 14px;
+      font: inherit;
+      outline: none;
+    }
+    input:focus {
+      border-color: rgba(110, 174, 252, .42);
+      box-shadow: 0 0 0 4px rgba(110, 174, 252, .12);
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    button, a.button-link {
+      border: none;
+      border-radius: 16px;
+      padding: 12px 16px;
+      font: inherit;
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #submit-btn {
+      background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+      color: white;
+      box-shadow: 0 16px 28px rgba(79, 144, 230, .22);
+    }
+    #submit-btn:disabled {
+      opacity: .6;
+      box-shadow: none;
+      cursor: default;
+    }
+    #login-link {
+      background: rgba(255,255,255,.06);
+      color: var(--ink);
+    }
+    .invite-meta {
+      color: var(--muted);
+      font-size: .84rem;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="eyebrow">Invito privato</div>
+    <h1>Registrati</h1>
+    <p class="copy">Completa la registrazione con un nome e una password. Il link e' monouso.</p>
+    <div class="invite-meta" id="invite-meta">Controllo il link...</div>
+    <div class="status" id="status"></div>
+    <form class="form" id="register-form">
+      <label>
+        Nome
+        <input id="username" type="text" maxlength="30" autocomplete="username" placeholder="Il tuo nome" />
+      </label>
+      <label>
+        Password
+        <input id="password" type="password" autocomplete="new-password" placeholder="Scegli una password" />
+      </label>
+      <label>
+        Ripeti password
+        <input id="password-repeat" type="password" autocomplete="new-password" placeholder="Ripeti la password" />
+      </label>
+      <div class="actions">
+        <button id="submit-btn" type="submit">Registrati</button>
+        <a id="login-link" class="button-link" href="/chat">Apri chat</a>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    var token = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || '');
+    var form = document.getElementById('register-form');
+    var statusEl = document.getElementById('status');
+    var inviteMetaEl = document.getElementById('invite-meta');
+    var submitBtn = document.getElementById('submit-btn');
+    var inviteOk = false;
+
+    function setStatus(message, kind) {
+      statusEl.textContent = message || '';
+      statusEl.className = 'status' + (kind ? ' ' + kind : '');
+    }
+
+    async function loadInvite() {
+      try {
+        var res = await fetch('/chat/invite/' + encodeURIComponent(token) + '/data', { cache: 'no-store' });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Invito non disponibile');
+        inviteOk = true;
+        inviteMetaEl.textContent = 'Invito pronto. Il nuovo account verra\' creato come ' + (data.invite && data.invite.role === 'admin' ? 'admin' : 'user') + '.';
+        setStatus('');
+      } catch (e) {
+        inviteOk = false;
+        inviteMetaEl.textContent = 'Questo link non e\' disponibile.';
+        setStatus(e.message || 'Invito non valido', 'error');
+        submitBtn.disabled = true;
+      }
+    }
+
+    form.onsubmit = async function(event) {
+      event.preventDefault();
+      if (!inviteOk) return;
+      var username = document.getElementById('username').value.trim();
+      var password = document.getElementById('password').value;
+      var repeat = document.getElementById('password-repeat').value;
+      if (!username) return setStatus('Inserisci un nome.', 'error');
+      if (password.length < 4) return setStatus('La password deve avere almeno 4 caratteri.', 'error');
+      if (password !== repeat) return setStatus('Le password non coincidono.', 'error');
+
+      submitBtn.disabled = true;
+      setStatus('Creo il tuo account...');
+      try {
+        var res = await fetch('/chat/invite/' + encodeURIComponent(token) + '/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: username, password: password }),
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Registrazione non riuscita');
+        setStatus('Account creato. Ora puoi entrare in chat.', 'ok');
+        inviteMetaEl.textContent = 'Registrazione completata.';
+        form.reset();
+        submitBtn.disabled = true;
+      } catch (e) {
+        setStatus(e.message || 'Registrazione non riuscita', 'error');
+        submitBtn.disabled = false;
+      }
+    };
+
+    loadInvite();
+  </script>
+</body>
+</html>

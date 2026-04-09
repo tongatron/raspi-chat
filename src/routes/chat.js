@@ -64,10 +64,22 @@ db.exec(`
     note TEXT,
     timestamp TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS invites (
+    token TEXT PRIMARY KEY,
+    created_by TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user',
+    created_at TEXT NOT NULL,
+    used_at TEXT,
+    used_by TEXT
+  );
 `);
 // Migration: add reply_to_id if missing (existing installs)
 try { db.exec('ALTER TABLE messages ADD COLUMN reply_to_id TEXT'); } catch(e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"); } catch(e) {}
+try { db.exec("ALTER TABLE invites ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"); } catch(e) {}
+try { db.exec("ALTER TABLE invites ADD COLUMN created_at TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE invites ADD COLUMN used_at TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE invites ADD COLUMN used_by TEXT"); } catch(e) {}
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);
@@ -311,6 +323,20 @@ const stmts = {
   countUsers:    db.prepare('SELECT COUNT(*) AS count FROM users'),
   countAdmins:   db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'"),
   countMessages: db.prepare('SELECT COUNT(*) AS count FROM messages'),
+  createInvite: db.prepare(`
+    INSERT INTO invites (token, created_by, role, created_at)
+    VALUES (?, ?, ?, ?)
+  `),
+  getInvite: db.prepare(`
+    SELECT token, created_by AS createdBy, role, created_at AS createdAt, used_at AS usedAt, used_by AS usedBy
+    FROM invites
+    WHERE token = ?
+  `),
+  markInviteUsed: db.prepare(`
+    UPDATE invites
+    SET used_at = ?, used_by = ?
+    WHERE token = ? AND used_at IS NULL
+  `),
   insertPrivateTransfer: db.prepare(`
     INSERT INTO private_transfers (id, username, original_name, stored_name, mime_type, size_bytes, note, timestamp)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -406,6 +432,40 @@ function formatUser(row) {
     isOwner: username === PRIVATE_TRANSFER_OWNER,
   };
 }
+
+function formatInvite(row, request) {
+  if (!row) return null;
+  const protocol = String(request.headers['x-forwarded-proto'] || request.protocol || 'http').split(',')[0].trim() || 'http';
+  const host = String(request.headers['x-forwarded-host'] || request.headers.host || '').split(',')[0].trim();
+  const pathName = `/chat/invite/${encodeURIComponent(row.token)}`;
+  return {
+    token: row.token,
+    role: normalizeRole(row.role),
+    createdBy: normalizeUsername(row.createdBy),
+    createdAt: row.createdAt,
+    usedAt: row.usedAt || null,
+    usedBy: row.usedBy ? normalizeUsername(row.usedBy) : null,
+    isUsed: !!row.usedAt,
+    url: host ? `${protocol}://${host}${pathName}` : pathName,
+    path: pathName,
+  };
+}
+
+const registerUserFromInvite = db.transaction(({ token, username, password, now }) => {
+  const invite = stmts.getInvite.get(token);
+  if (!invite) return { error: 'Invito non trovato', status: 404 };
+  if (invite.usedAt) return { error: 'Invito gia usato', status: 410 };
+  if (stmts.getUser.get(username)) return { error: 'Nome gia usato', status: 409 };
+
+  stmts.syncUser.run(username, hashPassword(password), normalizeRole(invite.role));
+  const result = stmts.markInviteUsed.run(now, username, token);
+  if (!result.changes) return { error: 'Invito non piu disponibile', status: 409 };
+
+  return {
+    ok: true,
+    role: normalizeRole(invite.role),
+  };
+});
 
 function readCommand(command, args) {
   try {
@@ -684,6 +744,60 @@ async function chatRoutes(app) {
     };
   });
 
+  app.post('/chat/admin/invites', async (request, reply) => {
+    const adminUser = requireAdmin(request, reply);
+    if (!adminUser) return;
+
+    const role = normalizeRole(request.body?.role || 'user');
+    const token = crypto.randomBytes(24).toString('hex');
+    const createdAt = new Date().toISOString();
+    stmts.createInvite.run(token, adminUser.username, role, createdAt);
+
+    return {
+      ok: true,
+      invite: formatInvite(stmts.getInvite.get(token), request),
+    };
+  });
+
+  app.get('/chat/invite/:token/data', async (request, reply) => {
+    const token = String(request.params.token || '').trim();
+    if (!token) return reply.code(404).send({ error: 'Invito non trovato' });
+    const invite = stmts.getInvite.get(token);
+    if (!invite) return reply.code(404).send({ error: 'Invito non trovato' });
+    if (invite.usedAt) {
+      return reply.code(410).send({
+        error: 'Invito gia usato',
+        invite: formatInvite(invite, request),
+      });
+    }
+
+    return {
+      ok: true,
+      invite: formatInvite(invite, request),
+    };
+  });
+
+  app.post('/chat/invite/:token/register', async (request, reply) => {
+    const token = String(request.params.token || '').trim();
+    const invite = stmts.getInvite.get(token);
+    if (!invite) return reply.code(404).send({ error: 'Invito non trovato' });
+    if (invite.usedAt) return reply.code(410).send({ error: 'Invito gia usato' });
+
+    const username = normalizeUsername(request.body?.username);
+    const password = String(request.body?.password || '');
+    if (!username) return reply.code(400).send({ error: 'Nome mancante' });
+    if (password.length < 4) return reply.code(400).send({ error: 'Password troppo corta' });
+    const result = registerUserFromInvite({ token, username, password, now: new Date().toISOString() });
+    if (!result.ok) return reply.code(result.status || 400).send({ error: result.error || 'Registrazione non riuscita' });
+
+    return {
+      ok: true,
+      username,
+      role: result.role,
+      loginUrl: '/chat',
+    };
+  });
+
   // Pagination endpoint
   app.get('/chat/messages', async (request, reply) => {
     const username = requireAuth(request, reply);
@@ -815,6 +929,16 @@ async function chatRoutes(app) {
     return reply.type('text/html').header('Cache-Control', 'no-store').send(
       fs.readFileSync(path.join(process.cwd(), 'public', 'chat-console.html'), 'utf8')
     );
+  });
+
+  app.get('/chat/invite/:token', async (request, reply) => {
+    const token = String(request.params.token || '').trim();
+    if (!token) return reply.code(404).send({ error: 'Invito non trovato' });
+    return reply
+      .type('text/html')
+      .header('X-Robots-Tag', 'noindex, nofollow')
+      .header('Cache-Control', 'no-store')
+      .send(fs.readFileSync(path.join(process.cwd(), 'public', 'chat-register.html'), 'utf8'));
   });
 
   app.get('/chat/console/data', async (request, reply) => {

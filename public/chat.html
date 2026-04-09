@@ -1038,6 +1038,56 @@
       cursor: pointer;
       box-shadow: 0 14px 24px rgba(23,118,77,.18);
     }
+    .admin-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 2px 0;
+    }
+    .admin-invite-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    #admin-invite-btn,
+    #admin-copy-invite-btn {
+      border: none;
+      border-radius: 14px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    #admin-invite-btn {
+      background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+      color: white;
+      box-shadow: 0 14px 24px rgba(31,111,210,.18);
+    }
+    #admin-copy-invite-btn {
+      background: rgba(15,34,59,.06);
+      color: var(--ink);
+    }
+    #admin-copy-invite-btn:disabled,
+    #admin-invite-btn:disabled {
+      opacity: .55;
+      cursor: default;
+      box-shadow: none;
+    }
+    .admin-invite-link {
+      width: 100%;
+      border: 1px solid rgba(21,39,66,.10);
+      border-radius: 14px;
+      background: rgba(255,255,255,.88);
+      color: var(--ink);
+      padding: 10px 12px;
+      font: inherit;
+      font-size: .88rem;
+      outline: none;
+    }
+    .admin-invite-meta {
+      color: var(--muted);
+      font-size: .82rem;
+      line-height: 1.4;
+    }
 
     /* Link preview */
     .link-preview {
@@ -1371,6 +1421,15 @@
           <button id="admin-save-btn" type="button">Salva utente</button>
         </div>
         <div class="admin-status" id="admin-status"></div>
+        <div class="admin-divider"></div>
+        <h3>Invita utente</h3>
+        <div class="admin-copy">Crea un link monouso con indirizzo casuale. Chi lo apre puo' registrarsi con nome e password.</div>
+        <div class="admin-invite-actions">
+          <button id="admin-invite-btn" type="button">Crea invito</button>
+          <button id="admin-copy-invite-btn" type="button" disabled>Copia link</button>
+        </div>
+        <input id="admin-invite-link" class="admin-invite-link" type="text" readonly placeholder="Il link comparira' qui" />
+        <div class="admin-invite-meta" id="admin-invite-meta">Il link e' pensato per un solo utilizzo.</div>
       </div>
     </div>
   </section>
@@ -1402,6 +1461,7 @@ var myRole = 'user';
 var isAdmin = false;
 var adminUsersLoading = false;
 var scrollListenerBound = false;
+var latestInviteUrl = '';
 
 function playNotifSound() {
   try {
@@ -2142,6 +2202,57 @@ async function saveAdminUser() {
   }
 }
 
+function renderInvite(invite) {
+  latestInviteUrl = invite && invite.url ? invite.url : '';
+  document.getElementById('admin-invite-link').value = latestInviteUrl;
+  document.getElementById('admin-copy-invite-btn').disabled = !latestInviteUrl;
+  document.getElementById('admin-invite-meta').textContent = latestInviteUrl
+    ? 'Invito monouso creato ora. Condividilo solo con la persona giusta.'
+    : 'Il link e\' pensato per un solo utilizzo.';
+}
+
+async function createInvite() {
+  if (!isAdmin) return;
+  var button = document.getElementById('admin-invite-btn');
+  var copyBtn = document.getElementById('admin-copy-invite-btn');
+  var meta = document.getElementById('admin-invite-meta');
+  button.disabled = true;
+  copyBtn.disabled = true;
+  meta.textContent = 'Creo il link privato...';
+  try {
+    var res = await authFetch('/chat/admin/invites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'user' }),
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore creazione invito');
+    renderInvite(data.invite || null);
+  } catch (e) {
+    meta.textContent = e.message || 'Creazione invito non riuscita.';
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function copyInviteLink() {
+  if (!latestInviteUrl) return;
+  var meta = document.getElementById('admin-invite-meta');
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(latestInviteUrl);
+    } else {
+      var input = document.getElementById('admin-invite-link');
+      input.focus();
+      input.select();
+      document.execCommand('copy');
+    }
+    meta.textContent = 'Link copiato.';
+  } catch (e) {
+    meta.textContent = 'Non riesco a copiare il link da qui.';
+  }
+}
+
 async function uploadPrivateTransfer(file) {
   if (!file || !canUsePrivateTransfers) return;
   var status = document.getElementById('private-upload-status');
@@ -2239,6 +2350,8 @@ document.getElementById('admin-btn').onclick = function() {
   if (nextView === 'admin') loadAdminUsers();
 };
 document.getElementById('admin-save-btn').onclick = saveAdminUser;
+document.getElementById('admin-invite-btn').onclick = createInvite;
+document.getElementById('admin-copy-invite-btn').onclick = copyInviteLink;
 document.getElementById('private-file-input').onchange = async function() {
   var file = this.files[0];
   this.value = '';
