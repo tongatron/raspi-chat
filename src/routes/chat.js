@@ -10,11 +10,20 @@ const webpush = require('web-push');
 const admin = require('firebase-admin');
 const Database = require('better-sqlite3');
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL,
-  process.env.VAPID_PUBLIC_KEY,
+const hasVapidConfig = !!(
+  process.env.VAPID_EMAIL &&
+  process.env.VAPID_PUBLIC_KEY &&
   process.env.VAPID_PRIVATE_KEY
 );
+if (hasVapidConfig) {
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL,
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+} else {
+  console.log('[Push] VAPID keys missing, web push disabled until configured');
+}
 
 const serviceAccountPath = path.join(process.cwd(), 'firebase-service-account.json');
 if (fs.existsSync(serviceAccountPath)) {

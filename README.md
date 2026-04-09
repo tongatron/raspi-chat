@@ -1,5 +1,9 @@
 # cabras-chat
 
+<p align="center">
+  <img src="public/logo.png" alt="Cabras Chat" width="220" />
+</p>
+
 Chat web self-hosted pensata per Raspberry Pi e piccoli server domestici.
 
 Il progetto include:
@@ -80,14 +84,16 @@ Per Android wrapper:
 ```bash
 git clone https://github.com/tongatron/cabras-chat.git
 cd cabras-chat
-cp .env.example .env
-cp config/chat-users.example.json config/chat-users.json
 npm install
 npm run check
 npm start
 ```
 
-La chat sara' disponibile su:
+Se non hai ancora configurato il progetto, apri:
+
+`http://127.0.0.1:3000/setup`
+
+Se invece hai gia' `.env` e `config/chat-users.json`, la chat sara' disponibile su:
 
 `http://127.0.0.1:3000/chat`
 
@@ -100,11 +106,11 @@ bash ops/install-rpi.sh
 ```
 
 Poi:
-1. modifica `.env`
-2. modifica `config/chat-users.json`
-3. copia [ops/fastify-api.service.example](/Users/tonga/Documents/GitHub/cabras-chat/ops/fastify-api.service.example) in `/etc/systemd/system/fastify-api.service`
-4. opzionale: usa [ops/nginx.chat.example.conf](/Users/tonga/Documents/GitHub/cabras-chat/ops/nginx.chat.example.conf) come base per nginx
-5. riavvia systemd
+1. avvia una volta l'app con `npm start`
+2. apri il wizard su `http://raspberrypi.local:3000/setup` oppure `http://IP-DELLA-RASPBERRY:3000/setup`
+3. completa i passaggi web
+4. usa i file generati in `data/setup-generated/`
+5. abilita `systemd`
 
 Comandi utili:
 
@@ -114,6 +120,39 @@ sudo systemctl enable --now fastify-api
 sudo systemctl status fastify-api
 journalctl -u fastify-api -f
 ```
+
+## Setup guidato via web
+
+Il percorso pensato per chi installa il progetto per la prima volta e':
+
+1. `bash ops/install-rpi.sh`
+2. `npm start`
+3. apri `/setup`
+4. compila i passaggi
+5. copia i file generati
+6. abilita il servizio
+
+Lo wizard `/setup` fa queste cose:
+
+- controlla che la cartella sia scrivibile
+- raccoglie nome chat, host, porta e modalita' rete
+- crea l'utente admin iniziale e gli utenti base
+- imposta owner e limite dell'archivio privato
+- genera automaticamente le chiavi VAPID per le Web Push
+- scrive `.env`
+- scrive `config/chat-users.json`
+- crea `data/setup-complete.json`
+- genera:
+  - `data/setup-generated/fastify-api.service`
+  - `data/setup-generated/nginx.chat.conf`
+  - `data/setup-generated/cloudflared.config.yml`
+
+Quando il setup e' completato, `/setup` si disattiva e la app torna a mostrare la chat normale.
+
+Nota pratica:
+
+- di default `/setup` e' accessibile solo da rete locale
+- se vuoi forzarlo da remoto, puoi esportare `SETUP_ALLOW_REMOTE=1`
 
 ## Configurazione
 
@@ -139,6 +178,8 @@ Le principali sono gia' documentate in [.env.example](/Users/tonga/Documents/Git
 - `HOST`, `PORT`
 - `CHAT_USERS_FILE`
 - `TOKEN_SECRET`
+- `DEFAULT_ADMIN_USERNAME`
+- `DEFAULT_ROOM_NAME`
 - `PRIVATE_TRANSFER_OWNER`
 - `PRIVATE_TRANSFER_MAX_MB`
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`
@@ -212,6 +253,10 @@ sudo cloudflared service install
 sudo systemctl enable --now cloudflared
 sudo systemctl status cloudflared
 ```
+
+Se usi il wizard, trovi gia' una base pronta in:
+
+`data/setup-generated/cloudflared.config.yml`
 
 ### Cloudflare e nginx
 

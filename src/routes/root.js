@@ -10,6 +10,7 @@ async function rootRoutes(app, options) {
         health: '/health',
         version: '/version',
         items: `${config.apiPrefix}/items`,
+        setup: '/setup',
       },
     };
   });
