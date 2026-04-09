@@ -212,6 +212,24 @@
       background: rgba(255,255,255,.10);
       border-color: rgba(255,255,255,.16);
     }
+    body.theme-dark .admin-invite-link {
+      background: rgba(8,14,24,.92);
+      border-color: rgba(229,239,252,.14);
+      color: var(--ink);
+      -webkit-text-fill-color: var(--ink);
+    }
+    body.theme-dark .admin-invite-link::placeholder {
+      color: var(--muted-soft);
+      -webkit-text-fill-color: var(--muted-soft);
+    }
+    body.theme-dark #room-name-input {
+      color: #111827;
+      -webkit-text-fill-color: #111827;
+    }
+    body.theme-dark #room-name-input::placeholder {
+      color: #6b7280;
+      -webkit-text-fill-color: #6b7280;
+    }
     body.theme-dark #notif-banner {
       background: linear-gradient(180deg, rgba(77,60,27,.96), rgba(61,47,23,.98));
       color: #f7d89e;
@@ -659,9 +677,6 @@
       gap: 6px;
     }
     .me .msg-meta { color: var(--muted); justify-content: flex-end; }
-    .msg-status { font-size: .66rem; opacity: .9; }
-    .msg-status.read, .me .msg-status.read { color: var(--success); opacity: 1; }
-
     .reply-btn {
       background: rgba(15,34,59,.06);
       border: none;
@@ -1124,6 +1139,7 @@
     }
     .room-open-btn,
     #room-create-btn,
+    #room-rename-btn,
     #room-invite-btn,
     #room-remove-btn {
       border: none;
@@ -1135,7 +1151,8 @@
       cursor: pointer;
     }
     .room-open-btn,
-    #room-create-btn {
+    #room-create-btn,
+    #room-rename-btn {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
       color: white;
       box-shadow: 0 14px 24px rgba(31,111,210,.18);
@@ -1178,7 +1195,8 @@
       border: 1px solid rgba(21,39,66,.10);
       border-radius: 14px;
       background: rgba(255,255,255,.88);
-      color: var(--ink);
+      color: #111827;
+      -webkit-text-fill-color: #111827;
       padding: 10px 12px;
       font: inherit;
       outline: none;
@@ -1438,13 +1456,6 @@
     }
     .console-ok { color: var(--success); }
     .console-warn { color: var(--warning); }
-    #console-details {
-      white-space: pre-wrap;
-      word-break: break-word;
-      font: inherit;
-      color: var(--muted);
-      margin: 0;
-    }
     .admin-divider {
       height: 1px;
       background: var(--border);
@@ -1485,6 +1496,7 @@
       border-radius: 14px;
       background: rgba(255,255,255,.88);
       color: var(--ink);
+      -webkit-text-fill-color: var(--ink);
       padding: 10px 12px;
       font: inherit;
       font-size: .88rem;
@@ -1551,28 +1563,9 @@
       border-radius: 14px;
       font-family: monospace;
     }
-    #typing-indicator {
-      width: fit-content;
-      align-self: flex-start;
-      padding: 8px 14px;
-      font-size: .81rem;
-      color: var(--muted);
-      min-height: 0;
-      transition: all .2s ease;
-      background: rgba(255,255,255,.72);
-      border-radius: 999px;
-      box-shadow: var(--shadow-soft);
-    }
-    #typing-indicator:empty { padding: 0; background: transparent; box-shadow: none; }
-    .typing-dots { display: inline-flex; gap: 3px; vertical-align: middle; margin-left: 4px; }
-    .typing-dots span { width: 6px; height: 6px; background: rgba(31,111,210,.55); border-radius: 50%; animation: typingBounce .6s infinite; }
-    .typing-dots span:nth-child(2) { animation-delay: .15s; }
-    .typing-dots span:nth-child(3) { animation-delay: .3s; }
-
     /* Highlight on scroll-to */
     .msg-highlight .bubble { animation: highlightPop .6s ease; }
 
-    @keyframes typingBounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
     @keyframes highlightPop { 0%,100% { filter: brightness(1); } 30% { filter: brightness(.88); } }
     @keyframes panelIn { from { opacity: 0; transform: translateY(18px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
     @keyframes pulseDot { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 4px rgba(38,162,105,.14); } 40% { transform: scale(1.08); box-shadow: 0 0 0 7px rgba(38,162,105,.08); } }
@@ -1812,7 +1805,6 @@
     <div class="header-actions">
       <button id="console-btn" type="button">Console</button>
       <button id="rooms-btn" type="button">Stanze</button>
-      <button id="archive-btn" type="button">Archivio</button>
       <button id="admin-btn" type="button">Admin</button>
       <button class="toolbar-btn" id="theme-btn" title="Passa al tema scuro" aria-label="Passa al tema scuro">◐</button>
       <button class="toolbar-btn" id="notif-btn" title="Attiva notifiche">&#x1f514;</button>
@@ -1851,6 +1843,7 @@
         <input id="room-name-input" type="text" maxlength="60" placeholder="Nome stanza" />
         <div class="room-members" id="room-create-members"></div>
         <button id="room-create-btn" type="button">Crea stanza</button>
+        <button id="room-rename-btn" type="button" disabled>Rinomina stanza</button>
         <div class="admin-divider"></div>
         <h3 id="room-invite-title">Invita utenti</h3>
         <div class="rooms-copy" id="room-invite-copy">Apri una stanza a un altro utente gia presente in piattaforma.</div>
@@ -1863,33 +1856,6 @@
         <button id="room-remove-btn" type="button" disabled>Rimuovi dalla stanza</button>
         <div class="rooms-status" id="rooms-status"></div>
       </div>
-    </div>
-  </section>
-  <section id="private-transfer-view">
-    <div class="private-list">
-      <div class="private-list-head">
-        <h3>Recenti</h3>
-        <button id="private-refresh-btn" type="button">Aggiorna</button>
-      </div>
-      <ul id="private-transfer-list"></ul>
-    </div>
-    <div class="private-card">
-      <h3>Nuovo invio</h3>
-      <p>File, note e link solo per te.</p>
-      <div class="private-meta">
-        <span>250 MB da remoto</span>
-        <span>1 GB in locale</span>
-        <span>Solo Giovanni</span>
-      </div>
-      <div class="private-upload-row">
-        <label id="private-upload-btn" for="private-file-input">File</label>
-        <input type="file" id="private-file-input" />
-        <button id="private-submit-btn" type="button" disabled>Invia</button>
-        <button id="private-save-note-btn" type="button">Nota</button>
-        <span id="private-file-name"></span>
-      </div>
-      <textarea id="private-note" placeholder="Scrivi una nota o incolla un link"></textarea>
-      <div id="private-upload-status"></div>
     </div>
   </section>
   <section id="console-view">
@@ -1920,10 +1886,6 @@
       <article class="console-card">
         <h3>Rete</h3>
         <div class="console-list" id="network-list"></div>
-      </article>
-      <article class="console-card full">
-        <h3>Dettagli</h3>
-        <pre id="console-details"></pre>
       </article>
     </div>
   </section>
@@ -1992,10 +1954,7 @@ var loadingMore = false;
 
 // Unread badge
 var unreadCount = 0;
-var canUsePrivateTransfers = false;
 var currentView = 'chat';
-var privateTransferLoading = false;
-var privateSelectedFile = null;
 var myRole = 'user';
 var isAdmin = false;
 var adminUsersLoading = false;
@@ -2275,7 +2234,6 @@ async function joinAs(name, token) {
   var session = await (await authFetch('/chat/me')).json();
   myRole = session.role || 'user';
   isAdmin = !!session.isAdmin;
-  canUsePrivateTransfers = !!session.canUsePrivateTransfers;
   roomsCache = session.rooms || [];
   roomUsersCache = [];
   var initialRoom = roomsCache.find(function(room) { return room.id === currentRoomId; }) || roomsCache[0] || null;
@@ -2283,14 +2241,12 @@ async function joinAs(name, token) {
   document.getElementById('login').style.display = 'none';
   document.getElementById('chat').style.display = 'flex';
   document.getElementById('console-btn').style.display = isAdmin ? 'inline-flex' : 'none';
-  document.getElementById('rooms-btn').style.display = 'inline-flex';
-  document.getElementById('archive-btn').style.display = canUsePrivateTransfers ? 'inline-flex' : 'none';
+  document.getElementById('rooms-btn').style.display = isAdmin ? 'inline-flex' : 'none';
   document.getElementById('admin-btn').style.display = isAdmin ? 'inline-flex' : 'none';
   initScrollListener();
   restoreTheme();
   setView('chat');
-  if (canUsePrivateTransfers) loadPrivateTransfers();
-  await loadRoomsData();
+  if (isAdmin) await loadRoomsData();
   connect();
   setTimeout(initPush, 2000);
 }
@@ -2417,7 +2373,7 @@ function handleMsg(msg) {
   else if (msg.type === 'read') {
     msg.ids.forEach(function(id) {
       var entry = msgElements[id];
-      if (entry && entry.statusEl) { entry.statusEl.textContent = '✓ Letto'; entry.statusEl.className = 'msg-status read'; }
+      if (entry && entry.statusEl) { entry.statusEl.textContent = ''; }
     });
   }
   else if (msg.type === 'deleted') {
@@ -2428,7 +2384,6 @@ function handleMsg(msg) {
       setTimeout(function() { if (entry.wrap.parentNode) entry.wrap.parentNode.removeChild(entry.wrap); delete msgElements[msg.id]; }, 300);
     }
   }
-  else if (msg.type === 'typing') { showTyping(msg.username); }
 }
 
 // URL linkify
@@ -2497,13 +2452,6 @@ function buildMessage(msg) {
   meta.appendChild(time);
 
   var statusEl = null;
-  if (isMe) {
-    statusEl = document.createElement('span'); statusEl.className = 'msg-status';
-    var isRead = msg.readBy && msg.readBy.some(function(r){return r !== myName;});
-    statusEl.textContent = isRead ? '✓ Letto' : 'Inviato';
-    if (isRead) statusEl.className = 'msg-status read';
-    meta.appendChild(statusEl);
-  }
   // Delete button (own messages only)
   if (isMe && msg.id) {
     var delBtn = document.createElement("button"); delBtn.className = "delete-btn"; delBtn.textContent = "🗑"; delBtn.title = "Elimina messaggio";
@@ -2521,29 +2469,14 @@ function buildMessage(msg) {
 
 function updateOnline(users) { document.getElementById('online-list').textContent = users.length ? users.join(', ') : ''; }
 
-var typingTimers = {};
-function showTyping(username) {
-  if (typingTimers[username]) clearTimeout(typingTimers[username]);
-  typingTimers[username] = setTimeout(function() { delete typingTimers[username]; renderTyping(); }, 3000);
-  renderTyping();
-}
-function renderTyping() {
-  var el = document.getElementById('typing-indicator'); var names = Object.keys(typingTimers);
-  if (!names.length) { el.innerHTML = ''; return; }
-  var text = names.length === 1 ? names[0] + ' sta scrivendo' : names.join(', ') + ' stanno scrivendo';
-  el.innerHTML = text + ' <span class=typing-dots><span></span><span></span><span></span></span>';
-  var m = document.getElementById('messages'); m.scrollTop = m.scrollHeight;
-}
 function scrollBottom() { var m = document.getElementById('messages'); m.scrollTop = m.scrollHeight; }
 
 // Send
 var msgInput = document.getElementById('msg-input');
 document.getElementById('send-btn').onclick = sendMessage;
 msgInput.onkeydown = function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
-var lastTypingSent = 0;
 msgInput.oninput = function() {
   msgInput.style.height = 'auto'; msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
-  var now = Date.now(); if (now - lastTypingSent > 2000 && ws && ws.readyState === 1) { ws.send(JSON.stringify({type:'typing'})); lastTypingSent = now; }
 };
 
 function sendMessage() {
@@ -2587,14 +2520,12 @@ document.addEventListener('paste', async function(e) {
 
 function setView(view) {
   var nextView = 'chat';
-  if (view === 'rooms') nextView = 'rooms';
-  if (view === 'private' && canUsePrivateTransfers) nextView = 'private';
+  if (view === 'rooms' && isAdmin) nextView = 'rooms';
   if (view === 'console' && isAdmin) nextView = 'console';
   if (view === 'admin' && isAdmin) nextView = 'admin';
   currentView = nextView;
   document.getElementById('chat-main-view').style.display = nextView === 'chat' ? 'contents' : 'none';
   document.getElementById('rooms-view').style.display = nextView === 'rooms' ? 'flex' : 'none';
-  document.getElementById('private-transfer-view').style.display = nextView === 'private' ? 'flex' : 'none';
   document.getElementById('console-view').style.display = nextView === 'console' ? 'flex' : 'none';
   document.getElementById('admin-view').style.display = nextView === 'admin' ? 'flex' : 'none';
   var consoleBtn = document.getElementById('console-btn');
@@ -2606,11 +2537,6 @@ function setView(view) {
   if (roomsBtn) {
     roomsBtn.classList.toggle('active', nextView === 'rooms');
     roomsBtn.textContent = 'Stanze';
-  }
-  var archiveBtn = document.getElementById('archive-btn');
-  if (archiveBtn) {
-    archiveBtn.classList.toggle('active', nextView === 'private');
-    archiveBtn.textContent = 'Archivio';
   }
   var adminBtn = document.getElementById('admin-btn');
   if (adminBtn) {
@@ -2630,86 +2556,6 @@ function formatBytes(bytes) {
   }
   var fixed = value >= 10 || idx === 0 ? 0 : 1;
   return value.toFixed(fixed) + ' ' + units[idx];
-}
-
-function setPrivateSelectedFile(file) {
-  privateSelectedFile = file || null;
-  document.getElementById('private-file-name').textContent = file ? (file.name + ' • ' + formatBytes(file.size)) : '';
-  document.getElementById('private-submit-btn').disabled = !file;
-}
-
-function renderPrivateTransfers(items) {
-  var list = document.getElementById('private-transfer-list');
-  list.innerHTML = '';
-  if (!items.length) {
-    var empty = document.createElement('li');
-    empty.className = 'private-empty';
-    empty.textContent = 'Nessun file caricato per ora.';
-    list.appendChild(empty);
-    return;
-  }
-
-  items.forEach(function(item) {
-    var li = document.createElement('li');
-    li.className = 'private-item';
-
-    var main = document.createElement('div');
-    main.className = 'private-item-main';
-
-    var name = document.createElement('div');
-    name.className = 'private-item-name';
-    name.textContent = item.name;
-    main.appendChild(name);
-
-    if (item.note) {
-      var note = document.createElement('div');
-      note.className = 'private-item-note';
-      note.appendChild(linkifyNode(item.note));
-      main.appendChild(note);
-    }
-
-    var meta = document.createElement('div');
-    meta.className = 'private-item-meta';
-    meta.textContent = formatBytes(item.sizeBytes) + ' • ' + new Date(item.timestamp).toLocaleString('it-IT');
-    main.appendChild(meta);
-
-    li.appendChild(main);
-    if (item.hasFile && item.downloadUrl) {
-      var link = document.createElement('a');
-      link.className = 'private-download';
-      link.href = item.downloadUrl;
-      link.textContent = 'Scarica';
-      li.appendChild(link);
-    } else {
-      var badge = document.createElement('div');
-      badge.className = 'private-note-badge';
-      badge.textContent = 'Appunto';
-      li.appendChild(badge);
-    }
-    list.appendChild(li);
-  });
-}
-
-async function loadPrivateTransfers() {
-  if (!canUsePrivateTransfers || privateTransferLoading) return;
-  privateTransferLoading = true;
-  var status = document.getElementById('private-upload-status');
-  try {
-    var res = await authFetch('/chat/private-transfers');
-    if (res.status === 403) {
-      canUsePrivateTransfers = false;
-      document.getElementById('archive-btn').style.display = 'none';
-      setView('chat');
-      return;
-    }
-    if (!res.ok) throw new Error('Errore archivio');
-    var items = await res.json();
-    renderPrivateTransfers(items);
-    status.textContent = '';
-  } catch (e) {
-    status.textContent = 'Non riesco a caricare l\'archivio privato.';
-  }
-  privateTransferLoading = false;
 }
 
 function renderRoomMemberOptions(targetId, users, selectedNames) {
@@ -2749,6 +2595,7 @@ function renderRooms(rooms, users) {
   roomUsersCache = users || roomUsersCache;
   var list = document.getElementById('rooms-list-body');
   var status = document.getElementById('rooms-status');
+  var roomNameInput = document.getElementById('room-name-input');
   list.innerHTML = '';
   if (!roomsCache.length) {
     var empty = document.createElement('div');
@@ -2759,10 +2606,10 @@ function renderRooms(rooms, users) {
     roomsCache.forEach(function(room) {
       var item = document.createElement('div');
       item.className = 'room-item' + (room.id === currentRoomId ? ' active' : '');
-      item.onclick = function() { switchRoom(room.id); };
 
       var main = document.createElement('div');
       main.className = 'room-item-main';
+      main.onclick = function() { selectRoom(room.id, false); };
       var name = document.createElement('div');
       name.className = 'room-item-name';
       name.textContent = room.name;
@@ -2779,7 +2626,7 @@ function renderRooms(rooms, users) {
       openBtn.textContent = room.id === currentRoomId ? 'Attiva' : 'Apri';
       openBtn.onclick = function(event) {
         event.stopPropagation();
-        switchRoom(room.id);
+        openRoom(room.id, false);
       };
       item.appendChild(openBtn);
       list.appendChild(item);
@@ -2794,7 +2641,9 @@ function renderRooms(rooms, users) {
   renderRoomMemberOptions('room-remove-members', roomUsersCache.filter(function(user) {
     return activeRoom && activeRoom.members.indexOf(user.username) !== -1 && user.username !== myName && user.username !== activeRoom.createdBy;
   }), []);
+  roomNameInput.value = activeRoom ? activeRoom.name : '';
   document.getElementById('room-invite-btn').disabled = !activeRoom;
+  document.getElementById('room-rename-btn').disabled = !activeRoom;
   document.getElementById('room-remove-btn').disabled = !activeRoom || !isAdmin;
   document.getElementById('room-panel-title').textContent = activeRoom ? ('Stanza attiva: ' + activeRoom.name) : 'Nuova stanza';
   document.getElementById('room-panel-copy').textContent = activeRoom
@@ -2844,10 +2693,46 @@ async function createRoom() {
     if (!res.ok) throw new Error(data.error || 'Creazione non riuscita');
     document.getElementById('room-name-input').value = '';
     await loadRoomsData();
-    if (data.room) switchRoom(data.room.id, true);
+    if (data.room) openRoom(data.room.id, true);
     status.textContent = 'Stanza creata.';
   } catch (e) {
     status.textContent = e.message || 'Creazione stanza non riuscita.';
+  }
+}
+
+async function renameRoom() {
+  var room = getCurrentRoom();
+  var status = document.getElementById('rooms-status');
+  var name = document.getElementById('room-name-input').value.trim();
+  if (!room) {
+    status.textContent = 'Seleziona prima una stanza.';
+    return;
+  }
+  if (!name) {
+    status.textContent = 'Inserisci un nome stanza.';
+    return;
+  }
+  if (name === room.name) {
+    status.textContent = 'Il nome stanza e gia aggiornato.';
+    return;
+  }
+  status.textContent = 'Rinomino stanza...';
+  try {
+    var res = await authFetch('/chat/rooms/' + encodeURIComponent(room.id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name }),
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Rinomina non riuscita');
+    await loadRoomsData();
+    if (data.room) {
+      setCurrentRoom(data.room.id, data.room.name);
+      renderRooms(roomsCache, roomUsersCache);
+    }
+    status.textContent = 'Stanza rinominata.';
+  } catch (e) {
+    status.textContent = e.message || 'Rinomina non riuscita.';
   }
 }
 
@@ -2911,7 +2796,7 @@ async function removeUsersFromRoom() {
   }
 }
 
-function switchRoom(roomId, fromFreshData) {
+function selectRoom(roomId, fromFreshData) {
   var room = roomsCache.find(function(entry) { return entry.id === roomId; });
   if (!room) return;
   setCurrentRoom(room.id, room.name);
@@ -2922,12 +2807,16 @@ function switchRoom(roomId, fromFreshData) {
   loadingMore = false;
   document.getElementById('messages').innerHTML = '<div id="typing-indicator"></div>';
   msgElements = {};
-  setView('chat');
   if (ws && ws.readyState <= 1) {
     try { ws.close(); } catch (e) {}
   } else {
     connect();
   }
+}
+
+function openRoom(roomId, fromFreshData) {
+  selectRoom(roomId, fromFreshData);
+  setView('chat');
 }
 
 function renderAdminUsers(users, currentUsername) {
@@ -2955,7 +2844,7 @@ function renderAdminUsers(users, currentUsername) {
 
     var meta = document.createElement('div');
     meta.className = 'admin-user-meta';
-    meta.textContent = user.role + (user.username === currentUsername ? ' • tu' : '') + (user.isOwner ? ' • owner archivio' : '');
+    meta.textContent = user.role + (user.username === currentUsername ? ' • tu' : '');
     main.appendChild(meta);
     item.appendChild(main);
 
@@ -2972,7 +2861,7 @@ function renderAdminUsers(users, currentUsername) {
     editBtn.onclick = function() { startAdminEdit(user); };
     actions.appendChild(editBtn);
 
-    if (user.username !== currentUsername && !user.isOwner) {
+    if (user.username !== currentUsername) {
       var deleteBtn = document.createElement('button');
       deleteBtn.className = 'admin-user-btn danger';
       deleteBtn.type = 'button';
@@ -3010,7 +2899,7 @@ function startAdminEdit(user) {
   document.getElementById('admin-role').value = user.role;
   document.getElementById('admin-password').value = '';
   document.getElementById('admin-save-btn').textContent = 'Salva modifiche';
-  document.getElementById('admin-delete-btn').disabled = user.username === myName || !!user.isOwner;
+  document.getElementById('admin-delete-btn').disabled = user.username === myName;
   renderAdminUsers(adminUsersCache, myName);
 }
 
@@ -3146,25 +3035,19 @@ async function loadConsoleData() {
 
     addConsoleStat(chat, 'Utenti online', String(data.chat.onlineCount));
     addConsoleStat(chat, 'Messaggi chat', String(data.chat.messageCount));
-    addConsoleStat(chat, 'Elementi archivio', String(data.chat.privateTransferCount));
     addConsoleStat(chat, 'Web push', String(data.chat.pushSubscriptions));
-    addConsoleStat(chat, 'FCM token', String(data.chat.fcmTokens));
     addConsoleStat(chat, 'Node', data.raspberry.node || 'n/d');
 
     addConsoleRow(tests, 'Cookie auth', data.tests.authCookiePresent ? 'OK' : 'Assente', data.tests.authCookiePresent ? 'console-ok' : 'console-warn');
     addConsoleRow(tests, 'SQLite', data.tests.sqliteOk ? 'OK' : 'Errore', data.tests.sqliteOk ? 'console-ok' : 'console-warn');
     addConsoleRow(tests, 'Accesso locale', data.tests.localAccess ? 'Si' : 'No', data.tests.localAccess ? 'console-ok' : 'console-warn');
-    addConsoleRow(tests, 'Limite upload remoto', data.tests.uploadRemoteLimitMb + ' MB');
-    addConsoleRow(tests, 'Limite upload locale', data.tests.uploadLocalLimitMb + ' MB');
     addConsoleRow(tests, 'Push VAPID', data.chat.vapidConfigured ? 'Configurato' : 'Assente', data.chat.vapidConfigured ? 'console-ok' : 'console-warn');
-    addConsoleRow(tests, 'FCM', data.chat.fcmConfigured ? 'Configurato' : 'Assente', data.chat.fcmConfigured ? 'console-ok' : 'console-warn');
 
     addConsoleRow(network, 'IP locali', (data.raspberry.localIps || []).join(', ') || 'n/d');
     addConsoleRow(network, 'CPU', (data.raspberry.cpuModel || 'n/d') + ' • ' + data.raspberry.cpuCount + ' core');
     addConsoleRow(network, 'Piattaforma', data.raspberry.platform || 'n/d');
     addConsoleRow(network, 'Online in chat', (data.chat.usersOnline || []).join(', ') || 'Nessuno');
 
-    document.getElementById('console-details').textContent = JSON.stringify(data, null, 2);
     status.textContent = 'Ultimo aggiornamento: ' + new Date(data.generatedAt).toLocaleString('it-IT');
     grid.hidden = false;
   } catch (e) {
@@ -3226,69 +3109,6 @@ async function copyInviteLink() {
   }
 }
 
-async function uploadPrivateTransfer(file) {
-  if (!file || !canUsePrivateTransfers) return;
-  var status = document.getElementById('private-upload-status');
-  var button = document.getElementById('private-upload-btn');
-  var noteEl = document.getElementById('private-note');
-  var form = new FormData();
-  form.append('file', file, file.name);
-  if (noteEl.value.trim()) form.append('note', noteEl.value.trim());
-
-  button.disabled = true;
-  document.getElementById('private-save-note-btn').disabled = true;
-  button.textContent = 'Carico...';
-  status.textContent = 'Upload in corso di ' + formatBytes(file.size) + '...';
-  try {
-    var res = await authFetch('/chat/private-transfers/upload', { method: 'POST', body: form });
-    var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Errore upload');
-    setPrivateSelectedFile(null);
-    noteEl.value = '';
-    status.textContent = 'File caricato. Limite attivo: ' + formatBytes(data.maxBytes) + '.';
-    await loadPrivateTransfers();
-  } catch (e) {
-    status.textContent = e.message || 'Upload non riuscito.';
-  } finally {
-    button.disabled = false;
-    document.getElementById('private-save-note-btn').disabled = false;
-    button.textContent = 'Scegli file';
-  }
-}
-
-async function savePrivateNote() {
-  if (!canUsePrivateTransfers) return;
-  var noteEl = document.getElementById('private-note');
-  var note = noteEl.value.trim();
-  var status = document.getElementById('private-upload-status');
-  var btn = document.getElementById('private-save-note-btn');
-  if (!note) {
-    status.textContent = 'Scrivi prima un appunto o un link.';
-    return;
-  }
-  btn.disabled = true;
-  document.getElementById('private-submit-btn').disabled = true;
-  status.textContent = 'Salvo appunto...';
-  try {
-    var res = await authFetch('/chat/private-transfers/note', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note: note }),
-    });
-    var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Errore salvataggio');
-    noteEl.value = '';
-    setPrivateSelectedFile(null);
-    status.textContent = 'Appunto salvato.';
-    await loadPrivateTransfers();
-  } catch (e) {
-    status.textContent = e.message || 'Salvataggio non riuscito.';
-  } finally {
-    btn.disabled = false;
-    document.getElementById('private-submit-btn').disabled = !privateSelectedFile;
-  }
-}
-
 function setTheme(theme) {
   var normalized = theme === 'dark' ? 'dark' : 'light';
   document.body.classList.toggle('theme-dark', normalized === 'dark');
@@ -3310,12 +3130,6 @@ function restoreTheme() {
   setTheme(localStorage.getItem('chat-theme') || 'light');
 }
 
-document.getElementById('archive-btn').onclick = function() {
-  if (!canUsePrivateTransfers) return;
-  var nextView = currentView === 'private' ? 'chat' : 'private';
-  setView(nextView);
-  if (nextView === 'private') loadPrivateTransfers();
-};
 document.getElementById('console-btn').onclick = function() {
   if (!isAdmin) return;
   var nextView = currentView === 'console' ? 'chat' : 'console';
@@ -3323,6 +3137,7 @@ document.getElementById('console-btn').onclick = function() {
   if (nextView === 'console') loadConsoleData();
 };
 document.getElementById('rooms-btn').onclick = function() {
+  if (!isAdmin) return;
   var nextView = currentView === 'rooms' ? 'chat' : 'rooms';
   setView(nextView);
   if (nextView === 'rooms') loadRoomsData();
@@ -3340,18 +3155,9 @@ document.getElementById('admin-delete-btn').onclick = function() {
 };
 document.getElementById('admin-invite-btn').onclick = createInvite;
 document.getElementById('admin-copy-invite-btn').onclick = copyInviteLink;
-document.getElementById('private-file-input').onchange = async function() {
-  var file = this.files[0];
-  this.value = '';
-  setPrivateSelectedFile(file || null);
-};
-document.getElementById('private-submit-btn').onclick = function() {
-  if (privateSelectedFile) uploadPrivateTransfer(privateSelectedFile);
-};
-document.getElementById('private-save-note-btn').onclick = savePrivateNote;
-document.getElementById('private-refresh-btn').onclick = loadPrivateTransfers;
 document.getElementById('console-refresh-btn').onclick = loadConsoleData;
 document.getElementById('room-create-btn').onclick = createRoom;
+document.getElementById('room-rename-btn').onclick = renameRoom;
 document.getElementById('room-invite-btn').onclick = inviteUsersToRoom;
 document.getElementById('room-remove-btn').onclick = removeUsersFromRoom;
 document.getElementById('theme-btn').onclick = toggleTheme;

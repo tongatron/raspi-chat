@@ -300,7 +300,6 @@
         addStat(chat, 'Messaggi chat', String(data.chat.messageCount));
         addStat(chat, 'Elementi archivio', String(data.chat.privateTransferCount));
         addStat(chat, 'Web push', String(data.chat.pushSubscriptions));
-        addStat(chat, 'FCM token', String(data.chat.fcmTokens));
         addStat(chat, 'Node', data.raspberry.node || 'n/d');
 
         addRow(tests, 'Cookie auth', data.tests.authCookiePresent ? 'OK' : 'Assente', data.tests.authCookiePresent ? 'ok' : 'warn');
@@ -309,7 +308,6 @@
         addRow(tests, 'Limite upload remoto', data.tests.uploadRemoteLimitMb + ' MB');
         addRow(tests, 'Limite upload locale', data.tests.uploadLocalLimitMb + ' MB');
         addRow(tests, 'Push VAPID', data.chat.vapidConfigured ? 'Configurato' : 'Assente', data.chat.vapidConfigured ? 'ok' : 'warn');
-        addRow(tests, 'FCM', data.chat.fcmConfigured ? 'Configurato' : 'Assente', data.chat.fcmConfigured ? 'ok' : 'warn');
 
         addRow(network, 'IP locali', (data.raspberry.localIps || []).join(', ') || 'n/d');
         addRow(network, 'CPU', (data.raspberry.cpuModel || 'n/d') + ' • ' + data.raspberry.cpuCount + ' core');

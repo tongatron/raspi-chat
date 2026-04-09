@@ -13,17 +13,12 @@ Il progetto include:
 - SQLite locale
 - upload immagini
 - preview link
-- notifiche Web Push e FCM
+- notifiche Web Push
 - archivio privato per file/note
-- wrapper Android in `android-chat/`
 
 URL live di riferimento:
 
 `https://chat.tongatron.org/chat`
-
-Pagina pubblica per scaricare l'APK:
-
-`https://chat.tongatron.org/chat/app`
 
 ## A chi serve
 
@@ -43,22 +38,18 @@ Contiene:
 - web app e backend
 - asset pubblici
 - documentazione di deploy
-- wrapper Android WebView con FCM
 
 Non contiene:
 - `.env`
 - `config/chat-users.json`
-- `firebase-service-account.json`
-- `android-chat/app/google-services.json`
 
 ## Struttura
 
 ```text
 cabras-chat/
-├── android-chat/                Wrapper Android
 ├── config/                      Esempi configurazione utenti
 ├── ops/                         Esempi deploy Raspberry
-├── public/                      Frontend, PWA, APK pubblica
+├── public/                      Frontend, PWA
 ├── src/                         Backend Fastify
 ├── .env.example
 ├── package.json
@@ -71,11 +62,6 @@ cabras-chat/
 - npm
 - Linux o Raspberry Pi OS
 - reverse proxy opzionale ma consigliato
-
-Per Android wrapper:
-- Android SDK
-- JDK 17+
-- `android-chat/app/google-services.json` locale
 
 ## Installazione rapida
 
@@ -303,30 +289,8 @@ Controlli utili:
 
 ### Note pratiche
 
-- se usi PWA, APK e notifiche, il dominio pubblico stabile e' importante
-- se cambi hostname, aggiorna eventuali riferimenti Android/FCM e link pubblici
+- se usi PWA e notifiche, il dominio pubblico stabile e' importante
 - se vuoi protezione extra, puoi aggiungere in Cloudflare Access una policy davanti al dominio, ma per una chat pubblica di solito non serve
-
-## Android wrapper
-
-Il wrapper Android ora vive in:
-
-[android-chat](/Users/tonga/Documents/GitHub/cabras-chat/android-chat)
-
-Build debug:
-
-```bash
-cd android-chat
-./gradlew assembleDebug
-```
-
-Output:
-
-`android-chat/app/build/outputs/apk/debug/app-debug.apk`
-
-Nota:
-- il build richiede `android-chat/app/google-services.json`
-- quel file resta locale e non va versionato
 
 ## Endpoint utili
 
@@ -334,8 +298,6 @@ Pubblici:
 - `GET /chat`
 - `POST /chat/login`
 - `GET /chat/ws`
-- `GET /chat/app`
-- `GET /chat/download-app`
 - `GET /chat/manifest.json`
 - `GET /sw.js`
 - `GET /health`

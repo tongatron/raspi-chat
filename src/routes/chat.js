@@ -7,7 +7,6 @@ const os = require('node:os');
 const { execFileSync } = require('node:child_process');
 const { pipeline } = require('node:stream/promises');
 const webpush = require('web-push');
-const admin = require('firebase-admin');
 const Database = require('better-sqlite3');
 
 const hasVapidConfig = !!(
@@ -25,22 +24,10 @@ if (hasVapidConfig) {
   console.log('[Push] VAPID keys missing, web push disabled until configured');
 }
 
-const serviceAccountPath = path.join(process.cwd(), 'firebase-service-account.json');
-if (fs.existsSync(serviceAccountPath)) {
-  admin.initializeApp({ credential: admin.credential.cert(require(serviceAccountPath)) });
-  console.log('[FCM] Firebase Admin initialized');
-} else {
-  console.log('[FCM] No service account found, FCM disabled');
-}
-
 const UPLOADS_DIR = path.join(process.cwd(), 'data', 'uploads');
-const PRIVATE_UPLOADS_DIR = path.join(process.cwd(), 'data', 'private-transfers');
 const DB_PATH = path.join(process.cwd(), 'data', 'chat.db');
 const CHAT_USERS_FILE = process.env.CHAT_USERS_FILE || path.join(process.cwd(), 'config', 'chat-users.json');
 const DEFAULT_ADMIN_USERNAME = normalizeUsername(process.env.DEFAULT_ADMIN_USERNAME || 'Giovanni');
-const PRIVATE_TRANSFER_OWNER = normalizeUsername(process.env.PRIVATE_TRANSFER_OWNER || 'Giovanni');
-const PRIVATE_TRANSFER_MAX_MB = Math.max(parseInt(process.env.PRIVATE_TRANSFER_MAX_MB || '512', 10) || 512, 50);
-const PRIVATE_TRANSFER_MAX_BYTES = PRIVATE_TRANSFER_MAX_MB * 1024 * 1024;
 const DEFAULT_ROOM_ID = 'cabras-giovanni';
 const DEFAULT_ROOM_NAME = String(process.env.DEFAULT_ROOM_NAME || 'Cabras Giovanni').trim() || 'Cabras Giovanni';
 
@@ -78,16 +65,6 @@ db.exec(`
     username TEXT PRIMARY KEY,
     hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'user'
-  );
-  CREATE TABLE IF NOT EXISTS private_transfers (
-    id TEXT PRIMARY KEY,
-    username TEXT NOT NULL,
-    original_name TEXT NOT NULL,
-    stored_name TEXT NOT NULL,
-    mime_type TEXT,
-    size_bytes INTEGER NOT NULL,
-    note TEXT,
-    timestamp TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS invites (
     token TEXT PRIMARY KEY,
@@ -264,17 +241,6 @@ function requireAdmin(request, reply) {
   return user;
 }
 
-function requirePrivateAccess(request, reply) {
-  const username = requireAuth(request, reply);
-  if (!username) return null;
-  if (username !== PRIVATE_TRANSFER_OWNER) {
-    reply.code(403).send({ error: 'Area privata non disponibile' });
-    return null;
-  }
-
-  return username;
-}
-
 function requireRoomMember(request, reply, roomId, user) {
   const authenticatedUser = user || requireAuthUser(request, reply);
   if (!authenticatedUser) return null;
@@ -380,6 +346,11 @@ const stmts = {
     INSERT INTO rooms (id, name, created_by, created_at)
     VALUES (?, ?, ?, ?)
   `),
+  renameRoom: db.prepare(`
+    UPDATE rooms
+    SET name = ?
+    WHERE id = ?
+  `),
   addRoomMember: db.prepare(`
     INSERT OR IGNORE INTO room_members (room_id, username, invited_by, joined_at)
     VALUES (?, ?, ?, ?)
@@ -431,29 +402,6 @@ const stmts = {
     UPDATE invites
     SET used_at = ?, used_by = ?
     WHERE token = ? AND used_at IS NULL
-  `),
-  insertPrivateTransfer: db.prepare(`
-    INSERT INTO private_transfers (id, username, original_name, stored_name, mime_type, size_bytes, note, timestamp)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `),
-  listPrivateTransfers: db.prepare(`
-    SELECT id, username, original_name AS originalName, stored_name AS storedName,
-           mime_type AS mimeType, size_bytes AS sizeBytes, note, timestamp
-    FROM private_transfers
-    WHERE username = ?
-    ORDER BY timestamp DESC
-    LIMIT 200
-  `),
-  getPrivateTransferByStoredName: db.prepare(`
-    SELECT id, username, original_name AS originalName, stored_name AS storedName,
-           mime_type AS mimeType, size_bytes AS sizeBytes, note, timestamp
-    FROM private_transfers
-    WHERE username = ? AND stored_name = ?
-  `),
-  countPrivateTransfers: db.prepare(`
-    SELECT COUNT(*) AS count
-    FROM private_transfers
-    WHERE username = ?
   `),
 };
 
@@ -532,26 +480,6 @@ function loadHistory(roomId) {
   return stmts.getHistory.all(roomId).reverse().map(formatRow);
 }
 
-function sanitizeUploadName(filename, fallback) {
-  const raw = path.basename(String(filename || fallback || 'file'));
-  const cleaned = raw.replace(/[^\w.\-() ]+/g, '_').trim();
-  return cleaned || fallback || 'file';
-}
-
-function formatPrivateTransfer(row) {
-  return {
-    id: row.id,
-    username: row.username,
-    name: row.originalName,
-    mimeType: row.mimeType || 'application/octet-stream',
-    sizeBytes: Number(row.sizeBytes) || 0,
-    note: row.note || '',
-    timestamp: row.timestamp,
-    hasFile: !!row.storedName,
-    downloadUrl: row.storedName ? `/chat/private-files/${encodeURIComponent(row.storedName)}` : null,
-  };
-}
-
 function formatUser(row) {
   const username = normalizeUsername(row.username);
   const role = normalizeRole(row.role);
@@ -559,7 +487,6 @@ function formatUser(row) {
     username,
     role,
     isAdmin: role === 'admin',
-    isOwner: username === PRIVATE_TRANSFER_OWNER,
   };
 }
 
@@ -704,7 +631,6 @@ async function buildYoutubePreview(url) {
 
 const clients   = new Map();
 const pushSubs  = new Map();
-const fcmTokens = new Map();
 
 function broadcast(msg) {
   const raw = JSON.stringify(msg);
@@ -739,23 +665,34 @@ async function sendWebPush(msg, senderUsername) {
     }
   }
 }
-async function sendFCMPush(msg, senderUsername) {
-  if (!admin.apps.length) return;
-  for (const [username, token] of fcmTokens) {
-    if (username === senderUsername) continue;
-    try {
-      await admin.messaging().send({
-        token,
-        data: { title: msg.username, body: msg.text ? msg.text.slice(0, 100) : '📎 Immagine' },
-        android: { priority: 'high', notification: { title: msg.username, body: msg.text ? msg.text.slice(0, 100) : '📎 Immagine', channelId: 'chat_messages', sound: 'default' } }
-      });
-    } catch (err) {
-      if (err.code === 'messaging/registration-token-not-registered') fcmTokens.delete(username);
-    }
-  }
-}
 async function sendAllPush(msg, senderUsername) {
-  await Promise.all([sendWebPush(msg, senderUsername), sendFCMPush(msg, senderUsername)]);
+  await sendWebPush(msg, senderUsername);
+}
+
+function decodeHtmlEntities(value) {
+  if (!value) return value;
+  return String(value)
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+      try { return String.fromCodePoint(parseInt(hex, 16)); } catch { return _; }
+    })
+    .replace(/&#([0-9]+);/g, (_, dec) => {
+      try { return String.fromCodePoint(parseInt(dec, 10)); } catch { return _; }
+    })
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+}
+
+function resolveMetaUrl(value, baseUrl) {
+  if (!value) return null;
+  try {
+    return new URL(decodeHtmlEntities(value), baseUrl).toString();
+  } catch {
+    return decodeHtmlEntities(value);
+  }
 }
 
 function extractMeta(html, baseUrl) {
@@ -772,25 +709,47 @@ function extractMeta(html, baseUrl) {
   const titleM = html.match(/<title[^>]*>([^<]{1,200})<\/title>/i);
   const title = og('title') || meta('twitter:title') || (titleM ? titleM[1].trim() : null);
   const description = og('description') || meta('description') || meta('twitter:description');
-  let image = og('image') || meta('twitter:image');
-  if (image && image.startsWith('/')) { const base = new URL(baseUrl); image = `${base.protocol}//${base.host}${image}`; }
+  const rawImage = og('image') || og('image:secure_url') || meta('twitter:image') || meta('twitter:image:src');
+  const image = resolveMetaUrl(rawImage, baseUrl);
   const siteName = og('site_name');
   const favicon = (() => {
     const m = html.match(/<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)["']/i)
       || html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*icon[^"']*["']/i);
     if (!m) return null;
     const href = m[1];
-    if (href.startsWith('http')) return href;
-    const base = new URL(baseUrl);
-    return href.startsWith('/') ? `${base.protocol}//${base.host}${href}` : `${base.protocol}//${base.host}/${href}`;
+    return resolveMetaUrl(href, baseUrl);
   })();
-  const decode = s => s ? s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"') : s;
-  return { title: decode(title), description: decode(description), image: decode(image), siteName: decode(siteName), favicon, url: baseUrl };
+  return {
+    title: decodeHtmlEntities(title),
+    description: decodeHtmlEntities(description),
+    image,
+    siteName: decodeHtmlEntities(siteName),
+    favicon,
+    url: baseUrl
+  };
+}
+
+function normalizeFacebookPreview(meta, url) {
+  if (!meta) return meta;
+  const hostname = (() => {
+    try { return new URL(url).hostname.toLowerCase(); } catch { return ''; }
+  })();
+  if (!hostname.includes('facebook.com') && !hostname.includes('fb.com') && !hostname.includes('fb.watch')) {
+    return meta;
+  }
+  const title = meta.title && meta.title !== 'Facebook' ? meta.title : 'Facebook';
+  const description = meta.description && meta.description !== title ? meta.description : null;
+  return Object.assign({}, meta, {
+    siteName: meta.siteName || 'Facebook',
+    title,
+    description,
+    image: meta.image || null,
+    favicon: meta.favicon || 'https://static.xx.fbcdn.net/rsrc.php/yD/r/d4ZIVX-5C-b.ico',
+  });
 }
 
 async function chatRoutes(app) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  fs.mkdirSync(PRIVATE_UPLOADS_DIR, { recursive: true });
 
   app.get('/sw.js', async (request, reply) =>
     reply.type('application/javascript')
@@ -871,7 +830,6 @@ async function chatRoutes(app) {
       username: user.username,
       role: user.role,
       isAdmin: user.role === 'admin',
-      canUsePrivateTransfers: user.username === PRIVATE_TRANSFER_OWNER,
       canUseConsole: user.role === 'admin',
       rooms,
       defaultRoomId: rooms[0]?.id || DEFAULT_ROOM_ID,
@@ -879,7 +837,7 @@ async function chatRoutes(app) {
   });
 
   app.get('/chat/rooms', async (request, reply) => {
-    const user = requireAuthUser(request, reply);
+    const user = requireAdmin(request, reply);
     if (!user) return;
     return {
       rooms: loadRoomsForUser(user.username),
@@ -888,7 +846,7 @@ async function chatRoutes(app) {
   });
 
   app.post('/chat/rooms', async (request, reply) => {
-    const user = requireAuthUser(request, reply);
+    const user = requireAdmin(request, reply);
     if (!user) return;
 
     const name = normalizeRoomName(request.body?.name);
@@ -920,16 +878,33 @@ async function chatRoutes(app) {
     };
   });
 
-  app.post('/chat/rooms/:roomId/members', async (request, reply) => {
-    const user = requireAuthUser(request, reply);
+  app.patch('/chat/rooms/:roomId', async (request, reply) => {
+    const user = requireAdmin(request, reply);
     if (!user) return;
 
     const roomId = String(request.params.roomId || '').trim();
     const access = requireRoomMember(request, reply, roomId, user);
     if (!access) return;
-    if (!access.room.isOwner && user.role !== 'admin') {
-      return reply.code(403).send({ error: 'Solo il creatore stanza o un admin possono invitare utenti' });
-    }
+
+    const name = normalizeRoomName(request.body?.name);
+    if (!name) return reply.code(400).send({ error: 'Nome stanza mancante' });
+
+    stmts.renameRoom.run(name, roomId);
+
+    return {
+      ok: true,
+      room: loadRoomsForUser(user.username).find((room) => room.id === roomId) || null,
+      rooms: loadRoomsForUser(user.username),
+    };
+  });
+
+  app.post('/chat/rooms/:roomId/members', async (request, reply) => {
+    const user = requireAdmin(request, reply);
+    if (!user) return;
+
+    const roomId = String(request.params.roomId || '').trim();
+    const access = requireRoomMember(request, reply, roomId, user);
+    if (!access) return;
 
     const requestedMembers = Array.isArray(request.body?.members) ? request.body.members : [];
     const normalized = [];
@@ -1033,10 +1008,6 @@ async function chatRoutes(app) {
     if (username === adminUser.username) {
       return reply.code(400).send({ error: 'Non puoi eliminare il tuo utente mentre sei collegato' });
     }
-    if (username === PRIVATE_TRANSFER_OWNER) {
-      return reply.code(400).send({ error: 'Questo utente e collegato all archivio privato' });
-    }
-
     const existing = stmts.getUser.get(username);
     if (!existing) return reply.code(404).send({ error: 'Utente non trovato' });
     if (normalizeRole(existing.role) === 'admin' && stmts.countAdmins.get().count <= 1) {
@@ -1139,24 +1110,13 @@ async function chatRoutes(app) {
     return { key: process.env.VAPID_PUBLIC_KEY };
   });
 
-  app.post('/chat/fcm-register', async (request, reply) => {
-    const username = requireAuth(request, reply);
-    if (!username) return;
-    const token = String(request.body?.token || '').trim();
-    if (!token) return reply.code(400).send({ error: 'Dati mancanti' });
-    fcmTokens.set(username, token);
-    return { ok: true };
-  });
-
   app.get('/chat/test-push', async (request, reply) => {
     const username = requireAuth(request, reply);
     if (!username) return;
     const { to } = request.query;
     const info = {
       webPushSubs: pushSubs.size, webPushUsers: [...pushSubs.keys()],
-      fcmSubs: fcmTokens.size, fcmUsers: [...fcmTokens.keys()],
       vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
-      fcmConfigured: admin.apps.length > 0,
     };
     if (to && pushSubs.has(to)) {
       try {
@@ -1170,12 +1130,6 @@ async function chatRoutes(app) {
       }
     } else if (to) {
       info.webPushTestResult = 'missing-subscription';
-    }
-    if (to && fcmTokens.has(to)) {
-      try {
-        await admin.messaging().send({ token: fcmTokens.get(to), android: { priority: 'high', notification: { title: 'Test', body: 'Notifica di test!', channelId: 'chat_messages' } } });
-        info.fcmTestResult = 'sent';
-      } catch (e) { info.fcmTestResult = 'error: ' + e.message; }
     }
     return info;
   });
@@ -1221,19 +1175,6 @@ async function chatRoutes(app) {
     return { url: '/chat/backgrounds/' + filename, name: filename };
   });
 
-  app.get('/chat/download-app', async (request, reply) => {
-    const filePath = path.join(process.cwd(), 'public', 'chat-tongatron.apk');
-    return reply.type('application/vnd.android.package-archive')
-      .header('Content-Disposition', 'attachment; filename=ChatTongatron.apk')
-      .send(fs.createReadStream(filePath));
-  });
-
-  app.get('/chat/app', async (request, reply) => {
-    return reply.type('text/html').header('Cache-Control', 'no-store').send(
-      fs.readFileSync(path.join(process.cwd(), 'public', 'chat-app.html'), 'utf8')
-    );
-  });
-
   app.get('/chat/preview', async (request, reply) => {
     const username = requireAuth(request, reply);
     if (!username) return;
@@ -1244,7 +1185,7 @@ async function chatRoutes(app) {
       if (youtubePreview) return reply.send(youtubePreview);
       const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0 (compatible; ChatPreview/1.0)', accept: 'text/html' }, signal: AbortSignal.timeout(6000) });
       if (!(res.headers.get('content-type') || '').includes('text/html')) return reply.send({ url });
-      return reply.send(extractMeta((await res.text()).slice(0, 80000), url));
+      return reply.send(normalizeFacebookPreview(extractMeta((await res.text()).slice(0, 80000), url), url));
     } catch { return reply.send({ url }); }
   });
 
@@ -1263,8 +1204,8 @@ async function chatRoutes(app) {
   });
 
   app.get('/chat/console/data', async (request, reply) => {
-    const username = requirePrivateAccess(request, reply);
-    if (!username) return;
+    const user = requireAdmin(request, reply);
+    if (!user) return;
 
     const memTotal = os.totalmem();
     const memFree = os.freemem();
@@ -1275,11 +1216,8 @@ async function chatRoutes(app) {
       usersOnline: online,
       onlineCount: online.length,
       messageCount: stmts.countMessages.get().count,
-      privateTransferCount: stmts.countPrivateTransfers.get(username).count,
       pushSubscriptions: pushSubs.size,
-      fcmTokens: fcmTokens.size,
       vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
-      fcmConfigured: admin.apps.length > 0,
     };
 
     return {
@@ -1314,8 +1252,6 @@ async function chatRoutes(app) {
         authCookiePresent: !!getCookieAuth(request),
         localAccess: isLocalAccess(request),
         sqliteOk: true,
-        uploadRemoteLimitMb: 250,
-        uploadLocalLimitMb: 1024,
       },
     };
   });
@@ -1348,141 +1284,6 @@ async function chatRoutes(app) {
     return { url: `/chat/images/${filename}` };
   });
 
-  app.get('/chat/private-transfers', async (request, reply) => {
-    const username = requirePrivateAccess(request, reply);
-    if (!username) return;
-    return stmts.listPrivateTransfers.all(username).map(formatPrivateTransfer);
-  });
-
-  app.get('/chat/private-files/:filename', async (request, reply) => {
-    const username = requirePrivateAccess(request, reply);
-    if (!username) return;
-    const storedName = path.basename(String(request.params.filename || ''));
-    if (!storedName) return reply.code(404).send({ error: 'Not found' });
-    const entry = stmts.getPrivateTransferByStoredName.get(username, storedName);
-    if (!entry || !entry.storedName) return reply.code(404).send({ error: 'Not found' });
-    const filePath = path.join(PRIVATE_UPLOADS_DIR, entry.storedName);
-    if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
-    return reply
-      .type(entry.mimeType || 'application/octet-stream')
-      .header('Content-Length', String(entry.sizeBytes || fs.statSync(filePath).size))
-      .header('Content-Disposition', `attachment; filename=${JSON.stringify(entry.originalName)}`)
-      .send(fs.createReadStream(filePath));
-  });
-
-  app.post('/chat/private-transfers/upload', { bodyLimit: 1024 * 1024 * 1024 }, async (request, reply) => {
-    const username = requirePrivateAccess(request, reply);
-    if (!username) return;
-
-    const maxBytes = isLocalAccess(request)
-      ? 1024 * 1024 * 1024
-      : Math.min(PRIVATE_TRANSFER_MAX_BYTES, 250 * 1024 * 1024);
-    let note = '';
-    let uploaded = null;
-
-    try {
-      for await (const part of request.parts({
-        limits: { files: 1, fields: 4, fileSize: maxBytes },
-      })) {
-        if (part.type === 'field') {
-          if (part.fieldname === 'note') note = String(part.value || '').trim().slice(0, 400);
-          continue;
-        }
-
-        if (uploaded) {
-          part.file.resume();
-          continue;
-        }
-
-        const originalName = sanitizeUploadName(part.filename, 'file');
-        const ext = path.extname(originalName).slice(0, 24);
-        const storedName = `${Date.now()}-${crypto.randomBytes(5).toString('hex')}${ext}`;
-        const filePath = path.join(PRIVATE_UPLOADS_DIR, storedName);
-
-        await pipeline(part.file, fs.createWriteStream(filePath));
-
-        if (part.file.truncated) {
-          fs.rmSync(filePath, { force: true });
-          return reply.code(413).send({
-            error: `File troppo grande. Limite ${Math.round(maxBytes / (1024 * 1024))} MB`
-          });
-        }
-
-        const stats = fs.statSync(filePath);
-        uploaded = {
-          originalName,
-          storedName,
-          mimeType: String(part.mimetype || 'application/octet-stream'),
-          sizeBytes: stats.size,
-        };
-      }
-    } catch (err) {
-      app.log.error(err, 'Private transfer upload failed');
-      return reply.code(500).send({ error: 'Upload non riuscito' });
-    }
-
-    if (!uploaded) return reply.code(400).send({ error: 'Nessun file' });
-
-    const record = {
-      id: crypto.randomUUID(),
-      username,
-      originalName: uploaded.originalName,
-      storedName: uploaded.storedName,
-      mimeType: uploaded.mimeType,
-      sizeBytes: uploaded.sizeBytes,
-      note,
-      timestamp: new Date().toISOString(),
-    };
-
-    stmts.insertPrivateTransfer.run(
-      record.id,
-      record.username,
-      record.originalName,
-      record.storedName,
-      record.mimeType,
-      record.sizeBytes,
-      record.note,
-      record.timestamp
-    );
-
-    return Object.assign(formatPrivateTransfer(record), {
-      maxBytes,
-      isLocalAccess: isLocalAccess(request),
-    });
-  });
-
-  app.post('/chat/private-transfers/note', async (request, reply) => {
-    const username = requirePrivateAccess(request, reply);
-    if (!username) return;
-
-    const note = String(request.body?.note || '').trim().slice(0, 4000);
-    if (!note) return reply.code(400).send({ error: 'Appunto vuoto' });
-
-    const record = {
-      id: crypto.randomUUID(),
-      username,
-      originalName: 'Appunto',
-      storedName: '',
-      mimeType: 'text/plain',
-      sizeBytes: Buffer.byteLength(note, 'utf8'),
-      note,
-      timestamp: new Date().toISOString(),
-    };
-
-    stmts.insertPrivateTransfer.run(
-      record.id,
-      record.username,
-      record.originalName,
-      record.storedName,
-      record.mimeType,
-      record.sizeBytes,
-      record.note,
-      record.timestamp
-    );
-
-    return formatPrivateTransfer(record);
-  });
-
   app.get('/chat/ws', { websocket: true }, (socket) => {
     const id = crypto.randomUUID();
     clients.set(id, { ws: socket, username: null, roomId: null });
@@ -1511,7 +1312,6 @@ async function chatRoutes(app) {
         const previousRoomId = client.roomId;
         client.username = username;
         client.roomId = roomId;
-        if (msg.fcmToken) { fcmTokens.set(username, msg.fcmToken); }
         socket.send(JSON.stringify({
           type: 'history',
           roomId,
@@ -1524,14 +1324,6 @@ async function chatRoutes(app) {
       }
 
       if (!client?.username) return;
-
-      if (msg.type === 'typing') {
-        const out = JSON.stringify({ type: 'typing', username: client.username, roomId: client.roomId });
-        for (const [cid, c] of clients) {
-          if (cid !== id && c.roomId === client.roomId && c.ws.readyState === 1) c.ws.send(out);
-        }
-        return;
-      }
 
       if (msg.type === 'read') {
         const ids = Array.isArray(msg.ids) ? msg.ids : [];
