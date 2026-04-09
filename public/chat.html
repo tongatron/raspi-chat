@@ -241,6 +241,101 @@
       text-transform: uppercase;
       margin-bottom: 16px;
     }
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 13px;
+      position: relative;
+      flex-shrink: 0;
+      background:
+        radial-gradient(circle at 28% 18%, rgba(255,255,255,.08), rgba(255,255,255,0) 30%),
+        linear-gradient(180deg, #121212 0%, #050505 62%, #000000 100%);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.08),
+        0 14px 24px rgba(0,0,0,.42);
+      overflow: hidden;
+    }
+    .brand-mark::before {
+      content: "";
+      position: absolute;
+      inset: auto -18% 13px 28%;
+      height: 5px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, rgba(255,59,59,.04), rgba(255,59,59,.96), rgba(255,214,214,.04));
+      transform: rotate(-24deg) skewX(-20deg);
+      box-shadow: 0 0 16px rgba(255,59,59,.34);
+      opacity: .92;
+    }
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      inset: 4px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.08);
+      pointer-events: none;
+    }
+    .brand-mark.tiny {
+      width: 24px;
+      height: 24px;
+      border-radius: 9px;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.22),
+        0 8px 16px rgba(23,90,170,.18);
+    }
+    .brand-mark.tiny::after {
+      inset: 3px;
+      border-radius: 7px;
+    }
+    .brand-bubble {
+      position: absolute;
+      border-radius: 12px;
+      transform: rotate(-6deg);
+    }
+    .brand-bubble.back {
+      left: 9px;
+      top: 11px;
+      width: 18px;
+      height: 14px;
+      background: rgba(255,88,88,.30);
+      border: 1px solid rgba(255,126,126,.18);
+      box-shadow: inset 0 1px 0 rgba(255,176,176,.12);
+      border-radius: 8px;
+      transform: rotate(-9deg) skewX(-10deg);
+    }
+    .brand-bubble.back::after {
+      content: "";
+      position: absolute;
+      left: 5px;
+      bottom: -4px;
+      width: 7px;
+      height: 7px;
+      background: inherit;
+      clip-path: polygon(0 0, 100% 0, 12% 100%);
+      border-bottom-left-radius: 2px;
+    }
+    .brand-bubble.front {
+      right: 7px;
+      top: 14px;
+      width: 20px;
+      height: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(235,235,235,.92));
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.8),
+        0 8px 16px rgba(0,0,0,.24);
+      border-radius: 9px;
+      transform: rotate(4deg) skewX(-9deg);
+    }
+    .brand-bubble.front::after {
+      content: "";
+      position: absolute;
+      right: 5px;
+      bottom: -4px;
+      width: 8px;
+      height: 8px;
+      background: rgba(241,241,241,.96);
+      clip-path: polygon(0 0, 100% 0, 88% 100%);
+      border-bottom-right-radius: 2px;
+    }
     .login-box h1 { font-size: clamp(2rem, 4vw, 2.6rem); letter-spacing: -.04em; margin-bottom: 8px; }
     .login-copy { color: var(--muted); margin-bottom: 28px; font-size: 1rem; line-height: 1.55; }
     #step-users > p, #step-password > p { color: var(--muted); margin-bottom: 18px; font-size: .95rem; font-weight: 600; letter-spacing: .01em; }
@@ -394,18 +489,9 @@
     }
     .header-main { display: flex; align-items: center; gap: 14px; min-width: 0; }
     .header-mark {
-      width: 48px;
-      height: 48px;
-      border-radius: 16px;
-      background: linear-gradient(180deg, #2f7de1, #175aaa);
-      color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
-      font-size: .92rem;
-      letter-spacing: .08em;
-      box-shadow: 0 14px 24px rgba(23,90,170,.22);
       flex-shrink: 0;
     }
     .header-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -1378,7 +1464,27 @@
         font-size: .74rem;
         max-width: 100%;
       }
-      .header-mark { width: 42px; height: 42px; border-radius: 14px; }
+      .brand-mark {
+        width: 42px;
+        height: 42px;
+        border-radius: 11px;
+      }
+      .brand-mark::after {
+        inset: 4px;
+        border-radius: 8px;
+      }
+      .brand-bubble.back {
+        left: 8px;
+        top: 10px;
+        width: 16px;
+        height: 13px;
+      }
+      .brand-bubble.front {
+        right: 7px;
+        top: 12px;
+        width: 18px;
+        height: 14px;
+      }
       .header-actions {
         margin-left: auto;
         gap: 6px;
@@ -1512,7 +1618,13 @@
 
 <div id="login">
   <div class="login-box">
-    <div class="login-eyebrow">Chat privata</div>
+    <div class="login-eyebrow">
+      <span class="brand-mark tiny" aria-hidden="true">
+        <span class="brand-bubble back"></span>
+        <span class="brand-bubble front"></span>
+      </span>
+      Chat privata
+    </div>
     <h1>Chat</h1>
     <p class="login-copy">Una stanza leggera e protetta per continuare la conversazione.</p>
     <div id="step-users">
@@ -1537,7 +1649,12 @@
 <div id="chat">
   <header>
     <div class="header-main">
-      <div class="header-mark">C</div>
+      <div class="header-mark" aria-hidden="true">
+        <span class="brand-mark">
+          <span class="brand-bubble back"></span>
+          <span class="brand-bubble front"></span>
+        </span>
+      </div>
       <div class="header-copy">
         <h2>Chat</h2>
         <div class="header-presence">
