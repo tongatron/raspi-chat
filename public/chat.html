@@ -14,7 +14,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/chat/favicon-32-v2.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/chat/favicon-16-v2.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="/chat/icon-192-v2.png" />
-  <meta name="theme-color" content="#1f6fd2" />
+  <meta name="theme-color" content="#111723" />
   <meta property="og:title" content="Cabras Chat" />
   <meta property="og:description" content="Chat self-hosted su Raspberry Pi" />
   <meta property="og:image" content="/chat/logo-v4.png" />
@@ -23,26 +23,26 @@
   <meta name="twitter:image" content="/chat/logo-v4.png" />
   <style>
     :root {
-      --bg-top: #f4ede2;
-      --bg-mid: #edf3fb;
-      --bg-bottom: #faf7f1;
-      --surface: rgba(255,255,255,.74);
-      --surface-strong: rgba(255,255,255,.92);
-      --surface-muted: rgba(247,250,253,.92);
-      --border: rgba(21,39,66,.10);
-      --border-strong: rgba(29,62,102,.16);
-      --ink: #1d2a39;
-      --muted: #697586;
-      --muted-soft: #8d98a7;
-      --primary: #1f6fd2;
-      --primary-strong: #1559ad;
-      --primary-soft: #eaf2ff;
-      --accent: #d56a45;
-      --success: #26a269;
-      --warning: #f0b758;
-      --shadow: 0 24px 60px rgba(36,58,89,.12);
-      --shadow-soft: 0 12px 30px rgba(36,58,89,.08);
-      --message-surface: rgba(255,255,255,.56);
+      --bg-top: #090d14;
+      --bg-mid: #0d1420;
+      --bg-bottom: #070b12;
+      --surface: rgba(10,16,26,.84);
+      --surface-strong: rgba(14,21,33,.94);
+      --surface-muted: rgba(18,26,39,.94);
+      --border: rgba(214,228,247,.18);
+      --border-strong: rgba(224,236,252,.28);
+      --ink: #f3f7fd;
+      --muted: #b4c0cf;
+      --muted-soft: #91a0b4;
+      --primary: #7ab4ff;
+      --primary-strong: #539cf2;
+      --primary-soft: rgba(122,180,255,.16);
+      --accent: #f09c75;
+      --success: #6fe0a8;
+      --warning: #f4c972;
+      --shadow: 0 24px 60px rgba(0,0,0,.42);
+      --shadow-soft: 0 12px 30px rgba(0,0,0,.30);
+      --message-surface: rgba(7,11,18,.72);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -67,7 +67,7 @@
       inset: -12% auto auto -12%;
       width: min(42vw, 460px);
       height: min(42vw, 460px);
-      background: radial-gradient(circle, rgba(31,111,210,.20), rgba(31,111,210,0));
+      background: radial-gradient(circle, rgba(86,150,255,.18), rgba(86,150,255,0));
       filter: blur(8px);
       pointer-events: none;
     }
@@ -78,174 +78,148 @@
       bottom: -16%;
       width: min(44vw, 500px);
       height: min(44vw, 500px);
-      background: radial-gradient(circle, rgba(213,106,69,.18), rgba(213,106,69,0));
+      background: radial-gradient(circle, rgba(40,82,141,.18), rgba(40,82,141,0));
       filter: blur(12px);
       pointer-events: none;
     }
     #login, #chat, #lightbox { position: relative; z-index: 1; }
-    body.theme-dark {
-      --bg-top: #090d14;
-      --bg-mid: #0d1420;
-      --bg-bottom: #070b12;
-      --surface: rgba(10,16,26,.84);
-      --surface-strong: rgba(14,21,33,.94);
-      --surface-muted: rgba(18,26,39,.94);
-      --border: rgba(214,228,247,.18);
-      --border-strong: rgba(224,236,252,.28);
-      --ink: #f3f7fd;
-      --muted: #b4c0cf;
-      --muted-soft: #91a0b4;
-      --primary: #7ab4ff;
-      --primary-strong: #539cf2;
-      --primary-soft: rgba(122,180,255,.16);
-      --accent: #f09c75;
-      --success: #6fe0a8;
-      --warning: #f4c972;
-      --shadow: 0 24px 60px rgba(0,0,0,.42);
-      --shadow-soft: 0 12px 30px rgba(0,0,0,.30);
-      --message-surface: rgba(7,11,18,.72);
-    }
-    body.theme-dark::before {
-      background: radial-gradient(circle, rgba(86,150,255,.18), rgba(86,150,255,0));
-    }
-    body.theme-dark::after {
-      background: radial-gradient(circle, rgba(40,82,141,.18), rgba(40,82,141,0));
-    }
-    body.theme-dark .login-box,
-    body.theme-dark header,
-    body.theme-dark #messages,
-    body.theme-dark #reply-bar,
-    body.theme-dark #input-area,
-    body.theme-dark #image-preview,
-    body.theme-dark #notif-banner,
-    body.theme-dark #debug-log {
+    body .login-box,
+    body header,
+    body #messages,
+    body #reply-bar,
+    body #input-area,
+    body #image-preview,
+    body #notif-banner,
+    body #debug-log {
       border-color: rgba(229,239,252,.18);
       box-shadow: 0 18px 42px rgba(0,0,0,.34);
     }
-    body.theme-dark .login-eyebrow,
-    body.theme-dark .selected-user,
-    body.theme-dark .user-btn,
-    body.theme-dark .pwd-input,
-    body.theme-dark .toolbar-btn,
-    body.theme-dark #logout-btn,
-    body.theme-dark #attach-btn,
-    body.theme-dark #image-preview button,
-    body.theme-dark #reply-cancel,
-    body.theme-dark .delete-btn,
-    body.theme-dark .reply-btn {
+    body .login-eyebrow,
+    body .selected-user,
+    body .user-btn,
+    body .pwd-input,
+    body .toolbar-btn,
+    body #logout-btn,
+    body #attach-btn,
+    body #image-preview button,
+    body #reply-cancel,
+    body .delete-btn,
+    body .reply-btn {
       border-color: rgba(229,239,252,.16);
     }
-    body.theme-dark .login-eyebrow,
-    body.theme-dark .selected-user,
-    body.theme-dark .user-btn,
-    body.theme-dark .pwd-input,
-    body.theme-dark .toolbar-btn,
-    body.theme-dark #logout-btn,
-    body.theme-dark #attach-btn,
-    body.theme-dark #image-preview,
-    body.theme-dark #debug-log,
-    body.theme-dark #typing-indicator {
+    body .login-eyebrow,
+    body .selected-user,
+    body .user-btn,
+    body .pwd-input,
+    body .toolbar-btn,
+    body #logout-btn,
+    body #attach-btn,
+    body #image-preview,
+    body #debug-log,
+    body #typing-indicator {
       background: rgba(17,25,37,.84);
     }
-    body.theme-dark .user-btn:hover,
-    body.theme-dark .toolbar-btn:hover,
-    body.theme-dark #attach-btn:hover,
-    body.theme-dark #console-btn:hover,
-    body.theme-dark #logout-btn:hover,
-    body.theme-dark #image-preview button:hover,
-    body.theme-dark #reply-cancel:hover,
-    body.theme-dark .reply-btn:hover,
-    body.theme-dark .delete-btn:hover {
+    body .user-btn:hover,
+    body .toolbar-btn:hover,
+    body #attach-btn:hover,
+    body #console-btn:hover,
+    body #logout-btn:hover,
+    body #image-preview button:hover,
+    body #reply-cancel:hover,
+    body .reply-btn:hover,
+    body .delete-btn:hover {
       background: rgba(122,180,255,.14);
     }
-    body.theme-dark #input-area textarea {
+    body #input-area textarea {
       background: rgba(8,14,24,.88);
       border-color: rgba(229,239,252,.14);
       color: var(--ink);
     }
-    body.theme-dark #input-area textarea:focus {
+    body #input-area textarea:focus {
       background: rgba(10,16,27,.96);
       border-color: rgba(122,180,255,.42);
     }
-    body.theme-dark .other .bubble {
+    body .other .bubble {
       background: rgba(16,24,36,.96);
       border-color: rgba(229,239,252,.14);
     }
-    body.theme-dark .me .bubble {
+    body .me .bubble {
       background: linear-gradient(180deg, #327bdb, #225fb2);
       border-color: rgba(255,255,255,.12);
     }
-    body.theme-dark .link-preview {
+    body .link-preview {
       background: rgba(12,18,28,.96);
       border-color: rgba(229,239,252,.14);
       box-shadow: 0 12px 26px rgba(0,0,0,.28);
     }
-    body.theme-dark .private-card,
-    body.theme-dark .private-list,
-    body.theme-dark .private-item,
-    body.theme-dark .rooms-card,
-    body.theme-dark .rooms-list,
-    body.theme-dark .admin-card,
-    body.theme-dark .admin-list,
-    body.theme-dark .console-topbar,
-    body.theme-dark .console-card {
+    body .private-card,
+    body .private-list,
+    body .private-item,
+    body .rooms-card,
+    body .rooms-list,
+    body .admin-card,
+    body .admin-list,
+    body .console-topbar,
+    body .console-card {
       border-color: rgba(229,239,252,.18);
       box-shadow: 0 18px 42px rgba(0,0,0,.34);
     }
-    body.theme-dark .private-item,
-    body.theme-dark #private-refresh-btn {
+    body .private-item,
+    body #private-refresh-btn {
       background: rgba(17,25,37,.84);
     }
-    body.theme-dark #private-save-note-btn,
-    body.theme-dark .private-note-badge {
+    body #private-save-note-btn,
+    body .private-note-badge {
       background: rgba(17,25,37,.84);
       color: var(--muted);
       border-color: rgba(229,239,252,.16);
     }
-    body.theme-dark #private-note {
+    body #private-note {
       background: rgba(8,14,24,.88);
       border-color: rgba(229,239,252,.14);
       color: var(--ink);
     }
-    body.theme-dark #private-note:focus {
+    body #private-note:focus {
       background: rgba(10,16,27,.96);
       border-color: rgba(122,180,255,.42);
     }
-    body.theme-dark .private-download,
-    body.theme-dark #private-refresh-btn:hover {
+    body .private-download,
+    body #private-refresh-btn:hover {
       background: rgba(122,180,255,.14);
     }
-    body.theme-dark #private-save-note-btn:hover {
+    body #private-save-note-btn:hover {
       background: rgba(122,180,255,.14);
     }
-    body.theme-dark .me .link-preview {
+    body .me .link-preview {
       background: rgba(255,255,255,.10);
       border-color: rgba(255,255,255,.16);
     }
-    body.theme-dark .admin-invite-link {
+    body .admin-invite-link {
       background: rgba(8,14,24,.92);
       border-color: rgba(229,239,252,.14);
       color: var(--ink);
       -webkit-text-fill-color: var(--ink);
     }
-    body.theme-dark .admin-invite-link::placeholder {
+    body .admin-invite-link::placeholder {
       color: var(--muted-soft);
       -webkit-text-fill-color: var(--muted-soft);
     }
-    body.theme-dark #room-name-input {
+    body #room-name-input,
+    body #room-active-name-input {
       color: #111827;
       -webkit-text-fill-color: #111827;
     }
-    body.theme-dark #room-name-input::placeholder {
+    body #room-name-input::placeholder,
+    body #room-active-name-input::placeholder {
       color: #6b7280;
       -webkit-text-fill-color: #6b7280;
     }
-    body.theme-dark #notif-banner {
+    body #notif-banner {
       background: linear-gradient(180deg, rgba(77,60,27,.96), rgba(61,47,23,.98));
       color: #f7d89e;
       border-color: rgba(244,201,114,.24);
     }
-    body.theme-dark #messages::-webkit-scrollbar-thumb {
+    body #messages::-webkit-scrollbar-thumb {
       background: rgba(122,180,255,.28);
     }
 
@@ -630,8 +604,8 @@
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
     }
-    body.theme-dark #admin-menu,
-    body.theme-dark #user-rooms-menu {
+    body #admin-menu,
+    body #user-rooms-menu {
       background: #1c2129;
       border-color: rgba(255,255,255,.14);
       box-shadow: 0 8px 24px rgba(0,0,0,.6);
@@ -652,12 +626,12 @@
       cursor: pointer;
       width: 100%;
     }
-    body.theme-dark #admin-menu button,
-    body.theme-dark #user-rooms-menu button { color: #f3f7fd; }
+    body #admin-menu button,
+    body #user-rooms-menu button { color: #f3f7fd; }
     #admin-menu button:hover,
     #user-rooms-menu button:hover { background: rgba(15,34,59,.08); }
-    body.theme-dark #admin-menu button:hover,
-    body.theme-dark #user-rooms-menu button:hover { background: rgba(255,255,255,.08); }
+    body #admin-menu button:hover,
+    body #user-rooms-menu button:hover { background: rgba(255,255,255,.08); }
     #logout-btn {
       height: 42px;
       border: none;
@@ -1180,6 +1154,49 @@
       gap: 12px;
       padding: 16px;
     }
+    .rooms-list-head {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+    .rooms-list-head .eyebrow {
+      color: var(--muted-soft);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .rooms-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .rooms-section {
+      background: rgba(255,255,255,.02);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 5px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .rooms-section h3 {
+      font-size: 1rem;
+      letter-spacing: -.02em;
+    }
+    .rooms-section-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .rooms-section-header .eyebrow {
+      color: var(--muted-soft);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
     .rooms-list-body {
       display: flex;
       flex-direction: column;
@@ -1203,10 +1220,16 @@
       background: var(--surface-strong);
       border: 1px solid var(--border);
       cursor: pointer;
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+    .room-item:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,.10);
     }
     .room-item.active {
       border-color: rgba(31,111,210,.28);
       box-shadow: 0 0 0 1px rgba(31,111,210,.12) inset;
+      background: rgba(255,255,255,.04);
     }
     .room-item-main {
       min-width: 0;
@@ -1218,6 +1241,16 @@
     .room-item-name {
       font-weight: 700;
       word-break: break-word;
+    }
+    .room-item-state {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted-soft);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
     }
     .room-item-meta {
       color: var(--muted);
@@ -1231,26 +1264,39 @@
     #room-remove-btn {
       border: none;
       border-radius: 4px;
-      padding: 8px 10px;
+      padding: 10px 12px;
       font: inherit;
-      font-size: .82rem;
+      font-size: .84rem;
       font-weight: 700;
       cursor: pointer;
     }
     .room-open-btn,
-    #room-create-btn,
-    #room-rename-btn {
+    #room-create-btn {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
       color: white;
       box-shadow: 0 14px 24px rgba(31,111,210,.18);
     }
+    #room-rename-btn {
+      background: rgba(15,34,59,.06);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
     #room-invite-btn {
+      background: rgba(38,162,105,.12);
+      color: #2aa96d;
+    }
+    #room-remove-btn {
       background: rgba(255,87,87,.10);
       color: #d44a4a;
     }
-    #room-remove-btn {
-      background: rgba(255,255,255,.06);
-      color: var(--muted);
+    #room-rename-btn:disabled,
+    #room-invite-btn:disabled,
+    #room-remove-btn:disabled,
+    #room-create-btn:disabled {
+      opacity: .5;
+      cursor: default;
+      box-shadow: none;
     }
     .rooms-copy,
     .rooms-empty,
@@ -1258,6 +1304,9 @@
       color: var(--muted);
       line-height: 1.45;
       font-size: .88rem;
+    }
+    .rooms-copy.compact {
+      font-size: .82rem;
     }
     .room-members {
       display: flex;
@@ -1277,7 +1326,8 @@
     .room-member-option input {
       accent-color: var(--primary);
     }
-    #room-name-input {
+    #room-name-input,
+    #room-active-name-input {
       width: 100%;
       border: 1px solid rgba(21,39,66,.10);
       border-radius: 4px;
@@ -1288,7 +1338,8 @@
       font: inherit;
       outline: none;
     }
-    #room-name-input:focus {
+    #room-name-input:focus,
+    #room-active-name-input:focus {
       border-color: rgba(31,111,210,.45);
       box-shadow: 0 0 0 4px rgba(31,111,210,.10);
       background: rgba(255,255,255,.96);
@@ -1410,25 +1461,25 @@
       box-shadow: 0 0 0 4px rgba(31,111,210,.10);
       background-color: rgba(255,255,255,.96);
     }
-    body.theme-dark .admin-field input,
-    body.theme-dark .admin-field select {
+    body .admin-field input,
+    body .admin-field select {
       background: rgba(8,14,24,.88);
       border-color: rgba(229,239,252,.14);
       color: var(--ink);
     }
-    body.theme-dark .admin-field input::placeholder { color: rgba(229,239,252,.40); }
-    body.theme-dark .admin-field select {
+    body .admin-field input::placeholder { color: rgba(229,239,252,.40); }
+    body .admin-field select {
       background-image: linear-gradient(45deg, transparent 50%, #e5effc 50%), linear-gradient(135deg, #e5effc 50%, transparent 50%);
       background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
       background-size: 5px 5px, 5px 5px;
       background-repeat: no-repeat;
     }
-    body.theme-dark .admin-field select option {
+    body .admin-field select option {
       background: #111925;
       color: var(--ink);
     }
-    body.theme-dark .admin-field input:focus,
-    body.theme-dark .admin-field select:focus {
+    body .admin-field input:focus,
+    body .admin-field select:focus {
       background-color: rgba(10,16,27,.96);
       border-color: rgba(122,180,255,.42);
     }
@@ -1501,22 +1552,6 @@
     #console-status-line {
       line-height: 1.45;
       font-size: .88rem;
-    }
-    .console-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    #console-refresh-btn {
-      border: none;
-      border-radius: 4px;
-      padding: 10px 14px;
-      font: inherit;
-      font-weight: 700;
-      cursor: pointer;
-      background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-      color: white;
-      box-shadow: 0 14px 24px rgba(31,111,210,.18);
     }
     .console-grid {
       display: grid;
@@ -1940,7 +1975,7 @@
     }
   </style>
 </head>
-<body class="theme-dark">
+<body>
 
 <div id="login">
   <div class="login-box">
@@ -2029,27 +2064,46 @@
   <section id="rooms-view">
     <div class="rooms-layout">
       <div class="rooms-list">
-        <h3>Stanze</h3>
-        <div class="rooms-copy">Scegli la stanza attiva oppure creane una nuova con altri utenti della piattaforma.</div>
+        <div class="rooms-list-head">
+          <div class="eyebrow">Navigazione</div>
+          <h3>Stanze</h3>
+          <div class="rooms-copy">Apri una stanza esistente oppure gestiscila dalla colonna a destra.</div>
+        </div>
         <div class="rooms-list-body" id="rooms-list-body"></div>
       </div>
       <div class="rooms-card">
-        <h3 id="room-panel-title">Nuova stanza</h3>
-        <div class="rooms-copy" id="room-panel-copy">Crea una nuova stanza privata e invita subito altri utenti registrati.</div>
-        <input id="room-name-input" type="text" maxlength="60" placeholder="Nome stanza" />
-        <div class="room-members" id="room-create-members"></div>
-        <button id="room-create-btn" type="button">Crea stanza</button>
-        <button id="room-rename-btn" type="button" disabled>Rinomina stanza</button>
-        <div class="admin-divider"></div>
-        <h3 id="room-invite-title">Invita utenti</h3>
-        <div class="rooms-copy" id="room-invite-copy">Apri una stanza a un altro utente gia presente in piattaforma.</div>
-        <div class="room-members" id="room-invite-members"></div>
-        <button id="room-invite-btn" type="button" disabled>Invita nella stanza</button>
-        <div class="admin-divider"></div>
-        <h3 id="room-remove-title">Rimuovi dalla stanza</h3>
-        <div class="rooms-copy" id="room-remove-copy">Solo l'admin puo' rimuovere persone dalle stanze.</div>
-        <div class="room-members" id="room-remove-members"></div>
-        <button id="room-remove-btn" type="button" disabled>Rimuovi dalla stanza</button>
+        <div class="rooms-stack">
+          <section class="rooms-section">
+            <div class="rooms-section-header">
+              <div class="eyebrow">Nuova stanza</div>
+              <h3>Crea stanza</h3>
+              <div class="rooms-copy compact">Dai un nome alla stanza e scegli subito chi deve entrarci.</div>
+            </div>
+            <input id="room-name-input" type="text" maxlength="60" placeholder="Nome nuova stanza" />
+            <div class="room-members" id="room-create-members"></div>
+            <button id="room-create-btn" type="button">Crea stanza</button>
+          </section>
+
+          <section class="rooms-section">
+            <div class="rooms-section-header">
+              <div class="eyebrow">Stanza attiva</div>
+              <h3 id="room-panel-title">Stanza attiva</h3>
+              <div class="rooms-copy compact" id="room-panel-copy">Seleziona una stanza per modificarne nome e partecipanti.</div>
+            </div>
+            <input id="room-active-name-input" type="text" maxlength="60" placeholder="Seleziona una stanza" />
+            <button id="room-rename-btn" type="button" disabled>Rinomina stanza</button>
+            <div class="admin-divider"></div>
+            <h3 id="room-invite-title">Inserisci persone</h3>
+            <div class="rooms-copy compact" id="room-invite-copy">Aggiungi utenti gia registrati alla stanza attiva.</div>
+            <div class="room-members" id="room-invite-members"></div>
+            <button id="room-invite-btn" type="button" disabled>Inserisci nella stanza</button>
+            <div class="admin-divider"></div>
+            <h3 id="room-remove-title">Rimuovi persone</h3>
+            <div class="rooms-copy compact" id="room-remove-copy">Seleziona chi togliere dalla stanza attiva.</div>
+            <div class="room-members" id="room-remove-members"></div>
+            <button id="room-remove-btn" type="button" disabled>Rimuovi dalla stanza</button>
+          </section>
+        </div>
         <div class="rooms-status" id="rooms-status"></div>
       </div>
     </div>
@@ -2060,9 +2114,6 @@
         <div class="console-eyebrow">Console</div>
         <h3>Raspberry e Chat</h3>
         <div class="console-copy">Cruscotto rapido per controllare stato Raspberry, chat e collegamenti.</div>
-      </div>
-      <div class="console-actions">
-        <button id="console-refresh-btn" type="button">Aggiorna</button>
       </div>
     </div>
     <div id="console-status-line">Carico dati...</div>
@@ -2523,7 +2574,6 @@ async function joinAs(name, token) {
   document.getElementById('user-rooms-wrap').style.display = !isAdmin && roomsCache.length > 1 ? 'inline-block' : 'none';
   renderUserRoomsMenu();
   initScrollListener();
-  applyDarkTheme();
   setView('chat');
   if (isAdmin) await loadRoomsData();
   connect();
@@ -2878,7 +2928,8 @@ function renderRooms(rooms, users) {
   roomUsersCache = users || roomUsersCache;
   var list = document.getElementById('rooms-list-body');
   var status = document.getElementById('rooms-status');
-  var roomNameInput = document.getElementById('room-name-input');
+  var createRoomNameInput = document.getElementById('room-name-input');
+  var activeRoomNameInput = document.getElementById('room-active-name-input');
   list.innerHTML = '';
   if (!roomsCache.length) {
     var empty = document.createElement('div');
@@ -2893,6 +2944,10 @@ function renderRooms(rooms, users) {
       var main = document.createElement('div');
       main.className = 'room-item-main';
       main.onclick = function() { selectRoom(room.id, false); };
+      var state = document.createElement('div');
+      state.className = 'room-item-state';
+      state.textContent = room.id === currentRoomId ? 'Stanza attiva' : 'Stanza';
+      main.appendChild(state);
       var name = document.createElement('div');
       name.className = 'room-item-name';
       name.textContent = room.name;
@@ -2924,19 +2979,19 @@ function renderRooms(rooms, users) {
   renderRoomMemberOptions('room-remove-members', roomUsersCache.filter(function(user) {
     return activeRoom && activeRoom.members.indexOf(user.username) !== -1 && user.username !== myName && user.username !== activeRoom.createdBy;
   }), []);
-  roomNameInput.value = activeRoom ? activeRoom.name : '';
+  activeRoomNameInput.value = activeRoom ? activeRoom.name : '';
   document.getElementById('room-invite-btn').disabled = !activeRoom;
   document.getElementById('room-rename-btn').disabled = !activeRoom;
   document.getElementById('room-remove-btn').disabled = !activeRoom || !isAdmin;
-  document.getElementById('room-panel-title').textContent = activeRoom ? ('Stanza attiva: ' + activeRoom.name) : 'Nuova stanza';
+  document.getElementById('room-panel-title').textContent = activeRoom ? activeRoom.name : 'Nessuna stanza selezionata';
   document.getElementById('room-panel-copy').textContent = activeRoom
-    ? 'Puoi creare altre stanze oppure cambiare la stanza attiva qui sotto.'
-    : 'Crea una nuova stanza privata e invita subito altri utenti registrati.';
-  document.getElementById('room-invite-title').textContent = activeRoom ? ('Invita in ' + activeRoom.name) : 'Invita utenti';
+    ? 'Puoi rinominare la stanza attiva oppure gestire chi ne fa parte.'
+    : 'Apri una stanza dalla colonna a sinistra per modificarla.';
+  document.getElementById('room-invite-title').textContent = activeRoom ? ('Inserisci in ' + activeRoom.name) : 'Inserisci persone';
   document.getElementById('room-invite-copy').textContent = activeRoom
-    ? 'Aggiungi altri utenti gia registrati alla stanza selezionata.'
+    ? 'Aggiungi utenti gia registrati alla stanza attiva.'
     : 'Seleziona prima una stanza.';
-  document.getElementById('room-remove-title').textContent = activeRoom ? ('Rimuovi da ' + activeRoom.name) : 'Rimuovi dalla stanza';
+  document.getElementById('room-remove-title').textContent = activeRoom ? ('Rimuovi da ' + activeRoom.name) : 'Rimuovi persone';
   document.getElementById('room-remove-copy').textContent = activeRoom
     ? (isAdmin ? 'Seleziona uno o piu utenti da rimuovere dalla stanza attiva.' : 'Solo l\'admin puo rimuovere persone dalle stanze.')
     : 'Seleziona prima una stanza.';
@@ -2986,7 +3041,7 @@ async function createRoom() {
 async function renameRoom() {
   var room = getCurrentRoom();
   var status = document.getElementById('rooms-status');
-  var name = document.getElementById('room-name-input').value.trim();
+  var name = document.getElementById('room-active-name-input').value.trim();
   if (!room) {
     status.textContent = 'Seleziona prima una stanza.';
     return;
@@ -3492,12 +3547,6 @@ async function copyInviteLink() {
   }
 }
 
-function applyDarkTheme() {
-  document.body.classList.add('theme-dark');
-  var metaTheme = document.querySelector('meta[name="theme-color"]');
-  if (metaTheme) metaTheme.setAttribute('content', '#111723');
-}
-
 document.getElementById('admin-btn').onclick = function(e) {
   if (!isAdmin) return;
   e.stopPropagation();
@@ -3537,12 +3586,10 @@ document.getElementById('admin-delete-btn').onclick = function() {
 };
 document.getElementById('admin-invite-btn').onclick = createInvite;
 document.getElementById('admin-copy-invite-btn').onclick = copyInviteLink;
-document.getElementById('console-refresh-btn').onclick = loadConsoleData;
 document.getElementById('room-create-btn').onclick = createRoom;
 document.getElementById('room-rename-btn').onclick = renameRoom;
 document.getElementById('room-invite-btn').onclick = inviteUsersToRoom;
 document.getElementById('room-remove-btn').onclick = removeUsersFromRoom;
-applyDarkTheme();
 
 function openLightbox(src) { document.getElementById('lightbox-img').src = src; document.getElementById('lightbox').classList.add('open'); }
 document.getElementById('lightbox').onclick = function() { document.getElementById('lightbox').classList.remove('open'); };
