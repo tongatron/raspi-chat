@@ -606,7 +606,7 @@
       background: rgba(38,162,105,.14);
       color: #17764d;
     }
-    #admin-menu {
+    #admin-menu, #user-rooms-menu {
       display: none;
       position: absolute;
       top: calc(100% + 6px);
@@ -622,13 +622,13 @@
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
     }
-    body.theme-dark #admin-menu {
+    body.theme-dark #admin-menu, #user-rooms-menu {
       background: #1c2129;
       border-color: rgba(255,255,255,.14);
       box-shadow: 0 8px 24px rgba(0,0,0,.6);
     }
-    #admin-menu.open { display: flex; }
-    #admin-menu button {
+    #admin-menu, #user-rooms-menu.open { display: flex; }
+    #admin-menu, #user-rooms-menu button {
       background: transparent;
       border: none;
       text-align: left;
@@ -641,9 +641,9 @@
       cursor: pointer;
       width: 100%;
     }
-    body.theme-dark #admin-menu button { color: #f3f7fd; }
-    #admin-menu button:hover { background: rgba(15,34,59,.08); }
-    body.theme-dark #admin-menu button:hover { background: rgba(255,255,255,.08); }
+    body.theme-dark #admin-menu, #user-rooms-menu button { color: #f3f7fd; }
+    #admin-menu, #user-rooms-menu button:hover { background: rgba(15,34,59,.08); }
+    body.theme-dark #admin-menu, #user-rooms-menu button:hover { background: rgba(255,255,255,.08); }
     #logout-btn {
       height: 42px;
       border: none;
@@ -1883,6 +1883,10 @@
       </div>
     </div>
     <div class="header-actions">
+      <div id="user-rooms-wrap" style="position:relative; display:none;">
+        <button id="user-rooms-btn" type="button">Stanze</button>
+        <div id="user-rooms-menu" role="menu"></div>
+      </div>
       <div id="admin-menu-wrap" style="position:relative; display:none;">
         <button id="admin-btn" type="button">Admin</button>
         <div id="admin-menu" role="menu">
@@ -3205,7 +3209,7 @@ document.getElementById('admin-btn').onclick = function(e) {
   e.stopPropagation();
   document.getElementById('admin-menu').classList.toggle('open');
 };
-document.querySelectorAll('#admin-menu button').forEach(function(btn) {
+document.querySelectorAll('#admin-menu, #user-rooms-menu button').forEach(function(btn) {
   btn.onclick = function(e) {
     e.stopPropagation();
     if (!isAdmin) return;
@@ -3221,7 +3225,7 @@ document.querySelectorAll('#admin-menu button').forEach(function(btn) {
 document.addEventListener('click', function(e) {
   var menu = document.getElementById('admin-menu');
   if (!menu || !menu.classList.contains('open')) return;
-  if (e.target.closest('#admin-menu-wrap')) return;
+  if (e.target.closest('#admin-menu, #user-rooms-menu-wrap')) return;
   menu.classList.remove('open');
 });
 document.getElementById('admin-save-btn').onclick = saveAdminUser;
