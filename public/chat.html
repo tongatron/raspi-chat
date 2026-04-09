@@ -717,6 +717,13 @@
       border-bottom-left-radius: 8px;
       border-color: rgba(21,39,66,.08);
     }
+    .bubble.image-only {
+      padding: 0;
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+      border-radius: 0;
+    }
     .bubble img.msg-img { max-width: 260px; max-height: 260px; border-radius: 4px; display: block; cursor: pointer; }
     .bubble img.msg-img + p { margin-top: 8px; }
     .msg-meta {
@@ -2682,6 +2689,7 @@ function buildMessage(msg) {
 
   if (msg.imageUrl) { var img = document.createElement('img'); img.src = msg.imageUrl; img.className = 'msg-img'; img.alt = ''; img.onclick = function(){openLightbox(msg.imageUrl);}; bubble.appendChild(img); }
   if (msg.text) { var p = document.createElement('p'); p.appendChild(linkifyNode(msg.text)); bubble.appendChild(p); var urls = extractUrls(msg.text); if (urls.length) attachLinkPreviews(bubble, urls); }
+  if (msg.imageUrl && !msg.text && !msg.replyTo) bubble.classList.add('image-only');
   wrap.appendChild(bubble);
 
   // Meta row
