@@ -127,8 +127,8 @@ Esempio:
 
 ```json
 [
-  { "username": "Giovanni", "password": "change-me-giovanni" },
-  { "username": "Cabras", "password": "change-me-cabras" }
+  { "username": "Giovanni", "password": "change-me-giovanni", "role": "admin" },
+  { "username": "Cabras", "password": "change-me-cabras", "role": "user" }
 ]
 ```
 
@@ -155,6 +155,112 @@ Assetto consigliato su Raspberry:
 Percorso consigliato:
 
 `/srv/apps/cabras-chat`
+
+## Cloudflare
+
+Se vuoi esporre la chat su Internet senza aprire direttamente porte sulla Raspberry, il modo piu' pratico e' usare Cloudflare Tunnel con `cloudflared`.
+
+Scenario tipico:
+
+- app Node su `127.0.0.1:3000`
+- `cloudflared` sulla Raspberry
+- hostname pubblico tipo `chat.example.com`
+- nessun port forwarding diretto verso casa
+
+### Cosa ti serve prima
+
+- un account Cloudflare
+- un dominio gestito da Cloudflare
+- il progetto gia' funzionante in locale su `http://127.0.0.1:3000/chat`
+
+### Flusso consigliato
+
+1. aggiungi il dominio a Cloudflare se non e' gia' li'
+2. installa `cloudflared` sulla Raspberry seguendo la guida ufficiale
+3. autentica `cloudflared` con il tuo account Cloudflare
+4. crea un tunnel dedicato, per esempio `cabras-chat`
+5. collega un hostname pubblico al tunnel, per esempio `chat.example.com`
+6. configura l'ingress del tunnel verso `http://127.0.0.1:3000`
+7. installa `cloudflared` come servizio systemd
+
+### Comandi tipici
+
+Dopo aver installato `cloudflared`:
+
+```bash
+cloudflared tunnel login
+cloudflared tunnel create cabras-chat
+cloudflared tunnel route dns cabras-chat chat.example.com
+```
+
+Config di esempio in `/etc/cloudflared/config.yml`:
+
+```yaml
+tunnel: <TUNNEL_ID>
+credentials-file: /home/giovanni/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  - hostname: chat.example.com
+    service: http://127.0.0.1:3000
+  - service: http_status:404
+```
+
+Poi:
+
+```bash
+sudo cloudflared service install
+sudo systemctl enable --now cloudflared
+sudo systemctl status cloudflared
+```
+
+### Cloudflare e nginx
+
+Hai due opzioni sensate:
+
+- tunnel diretto verso `http://127.0.0.1:3000`
+- tunnel verso `nginx`, se vuoi usare nginx anche per altre regole locali
+
+Se usi solo la chat, il tunnel diretto verso Fastify e' spesso la scelta piu' semplice.
+
+### DNS e hostname
+
+Con il comando `cloudflared tunnel route dns` Cloudflare crea il record DNS necessario per l'hostname pubblico associato al tunnel.
+
+Esempio:
+
+- hostname pubblico: `chat.example.com`
+- servizio locale: `http://127.0.0.1:3000`
+
+### WebSocket e chat realtime
+
+La chat usa WebSocket su `/chat/ws`. Con Cloudflare Tunnel non serve una configurazione speciale aggiuntiva lato app: il tunnel inoltra il traffico HTTP/WebSocket verso il servizio locale configurato.
+
+### Verifica finale
+
+Prima controlla in locale:
+
+```bash
+curl http://127.0.0.1:3000/health
+```
+
+Poi verifica dal dominio pubblico:
+
+```bash
+curl -I https://chat.example.com/chat
+```
+
+Controlli utili:
+
+- `sudo systemctl status fastify-api`
+- `sudo systemctl status cloudflared`
+- `journalctl -u cloudflared -f`
+- `journalctl -u fastify-api -f`
+
+### Note pratiche
+
+- se usi PWA, APK e notifiche, il dominio pubblico stabile e' importante
+- se cambi hostname, aggiorna eventuali riferimenti Android/FCM e link pubblici
+- se vuoi protezione extra, puoi aggiungere in Cloudflare Access una policy davanti al dominio, ma per una chat pubblica di solito non serve
 
 ## Android wrapper
 
