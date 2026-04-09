@@ -323,6 +323,7 @@ const stmts = {
   countUsers:    db.prepare('SELECT COUNT(*) AS count FROM users'),
   countAdmins:   db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'"),
   countMessages: db.prepare('SELECT COUNT(*) AS count FROM messages'),
+  deleteUser:    db.prepare('DELETE FROM users WHERE username = ?'),
   createInvite: db.prepare(`
     INSERT INTO invites (token, created_by, role, created_at)
     VALUES (?, ?, ?, ?)
@@ -738,6 +739,32 @@ async function chatRoutes(app) {
     const hash = password ? hashPassword(password) : existing?.hash || null;
     stmts.upsertAdminUser.run(username, hash, role);
 
+    return {
+      ok: true,
+      users: stmts.listUsers.all().map(formatUser),
+    };
+  });
+
+  app.delete('/chat/admin/users/:username', async (request, reply) => {
+    const adminUser = requireAdmin(request, reply);
+    if (!adminUser) return;
+
+    const username = normalizeUsername(request.params.username);
+    if (!username) return reply.code(400).send({ error: 'Username mancante' });
+    if (username === adminUser.username) {
+      return reply.code(400).send({ error: 'Non puoi eliminare il tuo utente mentre sei collegato' });
+    }
+    if (username === PRIVATE_TRANSFER_OWNER) {
+      return reply.code(400).send({ error: 'Questo utente e collegato all archivio privato' });
+    }
+
+    const existing = stmts.getUser.get(username);
+    if (!existing) return reply.code(404).send({ error: 'Utente non trovato' });
+    if (normalizeRole(existing.role) === 'admin' && stmts.countAdmins.get().count <= 1) {
+      return reply.code(400).send({ error: 'Deve esistere almeno un admin' });
+    }
+
+    stmts.deleteUser.run(username);
     return {
       ok: true,
       users: stmts.listUsers.all().map(formatUser),

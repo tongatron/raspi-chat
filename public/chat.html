@@ -998,6 +998,7 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
+      flex: 1;
     }
     .admin-user-name {
       font-weight: 700;
@@ -1006,6 +1007,36 @@
     .admin-user-meta {
       color: var(--muted);
       font-size: .8rem;
+    }
+    .admin-user-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .admin-user-btn,
+    #admin-reset-btn,
+    #admin-delete-btn {
+      border: none;
+      border-radius: 12px;
+      padding: 8px 10px;
+      font: inherit;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .admin-user-btn {
+      background: rgba(15,34,59,.06);
+      color: var(--ink);
+    }
+    .admin-user-btn.danger,
+    #admin-delete-btn {
+      background: rgba(209,67,67,.12);
+      color: #c95252;
+    }
+    .admin-user.selected {
+      border-color: rgba(31,111,210,.30);
+      box-shadow: 0 0 0 1px rgba(31,111,210,.14) inset;
     }
     .admin-form {
       display: flex;
@@ -1049,6 +1080,19 @@
       color: white;
       cursor: pointer;
       box-shadow: 0 14px 24px rgba(23,118,77,.18);
+    }
+    .admin-form-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    #admin-reset-btn {
+      background: rgba(15,34,59,.06);
+      color: var(--ink);
+    }
+    #admin-delete-btn:disabled {
+      opacity: .48;
+      cursor: default;
     }
     .console-topbar,
     .console-card {
@@ -1399,6 +1443,11 @@
         align-items: flex-start;
         flex-direction: column;
       }
+      .admin-user-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+      }
       .private-list {
         flex: none;
         min-height: 280px;
@@ -1595,8 +1644,8 @@
         <div class="admin-list-body" id="admin-user-list"></div>
       </div>
       <div class="admin-card">
-        <h3>Impostazioni utenti</h3>
-        <div class="admin-copy">Per aggiornare un utente esistente usa lo stesso username. Lascia la password vuota per mantenerla invariata.</div>
+        <h3 id="admin-form-title">Crea o modifica utente</h3>
+        <div class="admin-copy" id="admin-form-copy">Per aggiornare un utente esistente usa lo stesso username. Lascia la password vuota per mantenerla invariata.</div>
         <div class="admin-form">
           <div class="admin-field">
             <label for="admin-username">Username</label>
@@ -1613,7 +1662,11 @@
             <label for="admin-password">Password</label>
             <input id="admin-password" type="password" placeholder="Nuova password o lascia vuoto" />
           </div>
-          <button id="admin-save-btn" type="button">Salva utente</button>
+          <div class="admin-form-actions">
+            <button id="admin-save-btn" type="button">Salva utente</button>
+            <button id="admin-reset-btn" type="button">Nuovo</button>
+            <button id="admin-delete-btn" type="button" disabled>Elimina</button>
+          </div>
         </div>
         <div class="admin-status" id="admin-status"></div>
         <div class="admin-divider"></div>
@@ -1658,6 +1711,8 @@ var adminUsersLoading = false;
 var scrollListenerBound = false;
 var latestInviteUrl = '';
 var consoleLoading = false;
+var selectedAdminUsername = '';
+var adminUsersCache = [];
 
 function playNotifSound() {
   try {
@@ -2332,6 +2387,7 @@ function renderAdminUsers(users, currentUsername) {
   users.forEach(function(user) {
     var item = document.createElement('div');
     item.className = 'admin-user';
+    if (selectedAdminUsername && user.username === selectedAdminUsername) item.classList.add('selected');
 
     var main = document.createElement('div');
     main.className = 'admin-user-main';
@@ -2349,10 +2405,56 @@ function renderAdminUsers(users, currentUsername) {
     var badge = document.createElement('span');
     badge.className = 'user-badge' + (user.role === 'admin' ? ' admin' : '');
     badge.textContent = user.role.toUpperCase();
-    item.appendChild(badge);
+    var actions = document.createElement('div');
+    actions.className = 'admin-user-actions';
+
+    var editBtn = document.createElement('button');
+    editBtn.className = 'admin-user-btn';
+    editBtn.type = 'button';
+    editBtn.textContent = 'Modifica';
+    editBtn.onclick = function() { startAdminEdit(user); };
+    actions.appendChild(editBtn);
+
+    if (user.username !== currentUsername && !user.isOwner) {
+      var deleteBtn = document.createElement('button');
+      deleteBtn.className = 'admin-user-btn danger';
+      deleteBtn.type = 'button';
+      deleteBtn.textContent = 'Elimina';
+      deleteBtn.onclick = function() { deleteAdminUser(user.username); };
+      actions.appendChild(deleteBtn);
+    }
+
+    actions.appendChild(badge);
+    item.appendChild(actions);
 
     list.appendChild(item);
   });
+}
+
+function resetAdminForm() {
+  selectedAdminUsername = '';
+  document.getElementById('admin-form-title').textContent = 'Crea o modifica utente';
+  document.getElementById('admin-form-copy').textContent = 'Per aggiornare un utente esistente usa lo stesso username. Lascia la password vuota per mantenerla invariata.';
+  document.getElementById('admin-username').value = '';
+  document.getElementById('admin-username').readOnly = false;
+  document.getElementById('admin-role').value = 'user';
+  document.getElementById('admin-password').value = '';
+  document.getElementById('admin-save-btn').textContent = 'Salva utente';
+  document.getElementById('admin-delete-btn').disabled = true;
+  if (adminUsersCache.length) renderAdminUsers(adminUsersCache, myName);
+}
+
+function startAdminEdit(user) {
+  selectedAdminUsername = user.username;
+  document.getElementById('admin-form-title').textContent = 'Modifica utente';
+  document.getElementById('admin-form-copy').textContent = 'Stai modificando un utente esistente. Lo username resta fisso; lascia la password vuota per non cambiarla.';
+  document.getElementById('admin-username').value = user.username;
+  document.getElementById('admin-username').readOnly = true;
+  document.getElementById('admin-role').value = user.role;
+  document.getElementById('admin-password').value = '';
+  document.getElementById('admin-save-btn').textContent = 'Salva modifiche';
+  document.getElementById('admin-delete-btn').disabled = user.username === myName || !!user.isOwner;
+  renderAdminUsers(adminUsersCache, myName);
 }
 
 async function loadAdminUsers() {
@@ -2363,7 +2465,12 @@ async function loadAdminUsers() {
     var res = await authFetch('/chat/admin/users');
     if (!res.ok) throw new Error('Errore admin');
     var data = await res.json();
-    renderAdminUsers(data.users || [], data.currentUser);
+    adminUsersCache = data.users || [];
+    renderAdminUsers(adminUsersCache, data.currentUser);
+    if (selectedAdminUsername) {
+      var selected = adminUsersCache.find(function(user) { return user.username === selectedAdminUsername; });
+      if (!selected) resetAdminForm();
+    }
     status.textContent = '';
   } catch (e) {
     status.textContent = 'Non riesco a caricare gli utenti.';
@@ -2392,16 +2499,36 @@ async function saveAdminUser() {
     });
     var data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Errore salvataggio');
-    renderAdminUsers(data.users || [], myName);
-    document.getElementById('admin-username').value = '';
-    document.getElementById('admin-password').value = '';
-    document.getElementById('admin-role').value = 'user';
+    adminUsersCache = data.users || [];
+    renderAdminUsers(adminUsersCache, myName);
+    resetAdminForm();
     status.textContent = 'Utente salvato.';
     loadLoginUsers();
   } catch (e) {
     status.textContent = e.message || 'Salvataggio non riuscito.';
   } finally {
     button.disabled = false;
+  }
+}
+
+async function deleteAdminUser(username) {
+  if (!isAdmin || !username) return;
+  var status = document.getElementById('admin-status');
+  if (!confirm('Eliminare l\'utente ' + username + '?')) return;
+  status.textContent = 'Elimino utente...';
+  try {
+    var res = await authFetch('/chat/admin/users/' + encodeURIComponent(username), {
+      method: 'DELETE'
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore eliminazione');
+    adminUsersCache = data.users || [];
+    renderAdminUsers(adminUsersCache, myName);
+    if (selectedAdminUsername === username) resetAdminForm();
+    status.textContent = 'Utente eliminato.';
+    loadLoginUsers();
+  } catch (e) {
+    status.textContent = e.message || 'Eliminazione non riuscita.';
   }
 }
 
@@ -2645,6 +2772,10 @@ document.getElementById('admin-btn').onclick = function() {
   if (nextView === 'admin') loadAdminUsers();
 };
 document.getElementById('admin-save-btn').onclick = saveAdminUser;
+document.getElementById('admin-reset-btn').onclick = resetAdminForm;
+document.getElementById('admin-delete-btn').onclick = function() {
+  if (selectedAdminUsername) deleteAdminUser(selectedAdminUsername);
+};
 document.getElementById('admin-invite-btn').onclick = createInvite;
 document.getElementById('admin-copy-invite-btn').onclick = copyInviteLink;
 document.getElementById('private-file-input').onchange = async function() {
