@@ -507,6 +507,8 @@
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(255,255,255,.70);
       box-shadow: var(--shadow-soft);
+      position: relative;
+      z-index: 100;
     }
     .header-main { display: flex; align-items: center; gap: 14px; min-width: 0; }
     .header-mark {
@@ -563,7 +565,7 @@
     #rooms-btn,
     #archive-btn,
     #admin-btn {
-      display: none;
+      display: inline-flex;
       height: 42px;
       border: none;
       border-radius: 4px;
@@ -598,6 +600,44 @@
       background: rgba(38,162,105,.14);
       color: #17764d;
     }
+    #admin-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 170px;
+      background: #ffffff;
+      border: 1px solid rgba(0,0,0,.14);
+      border-radius: 5px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.18);
+      padding: 4px;
+      z-index: 1000;
+      flex-direction: column;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+    body.theme-dark #admin-menu {
+      background: #1c2129;
+      border-color: rgba(255,255,255,.14);
+      box-shadow: 0 8px 24px rgba(0,0,0,.6);
+    }
+    #admin-menu.open { display: flex; }
+    #admin-menu button {
+      background: transparent;
+      border: none;
+      text-align: left;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: .92rem;
+      font-weight: 600;
+      color: #1d2a39;
+      border-radius: 3px;
+      cursor: pointer;
+      width: 100%;
+    }
+    body.theme-dark #admin-menu button { color: #f3f7fd; }
+    #admin-menu button:hover { background: rgba(15,34,59,.08); }
+    body.theme-dark #admin-menu button:hover { background: rgba(255,255,255,.08); }
     #logout-btn {
       height: 42px;
       border: none;
@@ -1804,9 +1844,16 @@
       </div>
     </div>
     <div class="header-actions">
-      <button id="console-btn" type="button">Console</button>
-      <button id="rooms-btn" type="button">Stanze</button>
-      <button id="admin-btn" type="button">Admin</button>
+      <div id="admin-menu-wrap" style="position:relative; display:none;">
+        <button id="admin-btn" type="button">Admin</button>
+        <div id="admin-menu" role="menu">
+          <button type="button" data-view="admin" role="menuitem">Utenti</button>
+          <button type="button" data-view="rooms" role="menuitem">Stanze</button>
+          <button type="button" data-view="console" role="menuitem">Console</button>
+        </div>
+      </div>
+      <button id="console-btn" type="button" style="display:none" hidden></button>
+      <button id="rooms-btn" type="button" style="display:none" hidden></button>
       <button class="toolbar-btn" id="theme-btn" title="Passa al tema scuro" aria-label="Passa al tema scuro">◐</button>
       <button class="toolbar-btn" id="notif-btn" title="Attiva notifiche">&#x1f514;</button>
       <button id="logout-btn" title="Esci">Esci</button>
@@ -2241,9 +2288,7 @@ async function joinAs(name, token) {
   setCurrentRoom(initialRoom ? initialRoom.id : '', initialRoom ? initialRoom.name : 'Chat');
   document.getElementById('login').style.display = 'none';
   document.getElementById('chat').style.display = 'flex';
-  document.getElementById('console-btn').style.display = isAdmin ? 'inline-flex' : 'none';
-  document.getElementById('rooms-btn').style.display = isAdmin ? 'inline-flex' : 'none';
-  document.getElementById('admin-btn').style.display = isAdmin ? 'inline-flex' : 'none';
+  document.getElementById('admin-menu-wrap').style.display = isAdmin ? 'inline-block' : 'none';
   initScrollListener();
   restoreTheme();
   setView('chat');
@@ -3131,24 +3176,30 @@ function restoreTheme() {
   setTheme(localStorage.getItem('chat-theme') || 'light');
 }
 
-document.getElementById('console-btn').onclick = function() {
+document.getElementById('admin-btn').onclick = function(e) {
   if (!isAdmin) return;
-  var nextView = currentView === 'console' ? 'chat' : 'console';
-  setView(nextView);
-  if (nextView === 'console') loadConsoleData();
+  e.stopPropagation();
+  document.getElementById('admin-menu').classList.toggle('open');
 };
-document.getElementById('rooms-btn').onclick = function() {
-  if (!isAdmin) return;
-  var nextView = currentView === 'rooms' ? 'chat' : 'rooms';
-  setView(nextView);
-  if (nextView === 'rooms') loadRoomsData();
-};
-document.getElementById('admin-btn').onclick = function() {
-  if (!isAdmin) return;
-  var nextView = currentView === 'admin' ? 'chat' : 'admin';
-  setView(nextView);
-  if (nextView === 'admin') loadAdminUsers();
-};
+document.querySelectorAll('#admin-menu button').forEach(function(btn) {
+  btn.onclick = function(e) {
+    e.stopPropagation();
+    if (!isAdmin) return;
+    var view = btn.getAttribute('data-view');
+    document.getElementById('admin-menu').classList.remove('open');
+    var nextView = currentView === view ? 'chat' : view;
+    setView(nextView);
+    if (nextView === 'console') loadConsoleData();
+    else if (nextView === 'rooms') loadRoomsData();
+    else if (nextView === 'admin') loadAdminUsers();
+  };
+});
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('admin-menu');
+  if (!menu || !menu.classList.contains('open')) return;
+  if (e.target.closest('#admin-menu-wrap')) return;
+  menu.classList.remove('open');
+});
 document.getElementById('admin-save-btn').onclick = saveAdminUser;
 document.getElementById('admin-reset-btn').onclick = resetAdminForm;
 document.getElementById('admin-delete-btn').onclick = function() {
