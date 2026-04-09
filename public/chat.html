@@ -245,6 +245,11 @@
     .login-copy { color: var(--muted); margin-bottom: 28px; font-size: 1rem; line-height: 1.55; }
     #step-users > p, #step-password > p { color: var(--muted); margin-bottom: 18px; font-size: .95rem; font-weight: 600; letter-spacing: .01em; }
     .user-list { display: flex; flex-direction: column; gap: 12px; }
+    .login-users-empty {
+      color: var(--muted);
+      font-size: .92rem;
+      padding: 8px 2px 2px;
+    }
     .user-btn {
       width: 100%;
       padding: 14px 16px;
@@ -260,6 +265,18 @@
       display: flex;
       align-items: center;
       gap: 12px;
+    }
+    .user-btn-copy {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .user-btn-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
     }
     .user-btn:hover {
       transform: translateY(-1px);
@@ -278,6 +295,27 @@
       font-weight: 800;
       font-size: .96rem;
       flex-shrink: 0;
+    }
+    .user-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 20px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: rgba(15,34,59,.06);
+      color: var(--muted);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+    .user-badge.admin {
+      background: rgba(31,111,210,.12);
+      color: var(--primary-strong);
+    }
+    .user-role-copy {
+      color: var(--muted);
+      font-size: .82rem;
     }
     #step-password { display: none; }
     .selected-user {
@@ -415,7 +453,8 @@
     #notif-btn { opacity: .56; }
     #notif-btn:hover { opacity: 1; }
     #console-btn,
-    #archive-btn {
+    #archive-btn,
+    #admin-btn {
       display: none;
       height: 42px;
       border: none;
@@ -432,10 +471,15 @@
       transition: transform .18s ease, background .18s ease, color .18s ease;
     }
     #console-btn:hover,
-    #archive-btn:hover { transform: translateY(-1px); background: rgba(15,34,59,.10); color: var(--ink); }
+    #archive-btn:hover,
+    #admin-btn:hover { transform: translateY(-1px); background: rgba(15,34,59,.10); color: var(--ink); }
     #archive-btn.active {
       background: var(--primary-soft);
       color: var(--primary-strong);
+    }
+    #admin-btn.active {
+      background: rgba(38,162,105,.14);
+      color: #17764d;
     }
     #logout-btn {
       height: 42px;
@@ -700,8 +744,18 @@
       flex: 1;
       overflow: hidden;
     }
+    #admin-view {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      flex: 1;
+      overflow: hidden;
+    }
     .private-card,
-    .private-list {
+    .private-list,
+    .admin-card,
+    .admin-list {
       background: var(--surface);
       border: 1px solid rgba(255,255,255,.72);
       border-radius: 26px;
@@ -883,6 +937,107 @@
       white-space: nowrap;
       font-size: .8rem;
     }
+    .admin-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
+      gap: 12px;
+      min-height: 0;
+      flex: 1;
+    }
+    .admin-card,
+    .admin-list {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+    }
+    .admin-card h3,
+    .admin-list h3 {
+      font-size: 1rem;
+      letter-spacing: -.02em;
+    }
+    .admin-copy,
+    .admin-empty,
+    .admin-status {
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: .88rem;
+    }
+    .admin-list-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      min-height: 0;
+    }
+    .admin-user {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+    }
+    .admin-user-main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .admin-user-name {
+      font-weight: 700;
+      word-break: break-word;
+    }
+    .admin-user-meta {
+      color: var(--muted);
+      font-size: .8rem;
+    }
+    .admin-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .admin-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .admin-field label {
+      color: var(--muted);
+      font-size: .8rem;
+      font-weight: 700;
+    }
+    .admin-field input,
+    .admin-field select {
+      width: 100%;
+      border: 1px solid rgba(21,39,66,.10);
+      border-radius: 14px;
+      background: rgba(255,255,255,.88);
+      color: var(--ink);
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+    }
+    .admin-field input:focus,
+    .admin-field select:focus {
+      border-color: rgba(31,111,210,.45);
+      box-shadow: 0 0 0 4px rgba(31,111,210,.10);
+      background: rgba(255,255,255,.96);
+    }
+    #admin-save-btn {
+      border: none;
+      border-radius: 14px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 700;
+      background: linear-gradient(180deg, #1b9b62, #17764d);
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 14px 24px rgba(23,118,77,.18);
+    }
 
     /* Link preview */
     .link-preview {
@@ -1003,6 +1158,7 @@
       }
       #console-btn,
       #archive-btn,
+      #admin-btn,
       #logout-btn {
         height: 38px;
         padding: 0 12px;
@@ -1016,7 +1172,23 @@
         overflow-y: auto;
         padding-bottom: 4px;
       }
+      #admin-view {
+        overflow-y: auto;
+        padding-bottom: 4px;
+      }
       .private-card, .private-list, .private-item { border-radius: 20px; }
+      .admin-layout {
+        grid-template-columns: 1fr;
+      }
+      .admin-card,
+      .admin-list {
+        padding: 14px;
+        border-radius: 20px;
+      }
+      .admin-user {
+        align-items: flex-start;
+        flex-direction: column;
+      }
       .private-list {
         flex: none;
         min-height: 280px;
@@ -1086,11 +1258,8 @@
     <p class="login-copy">Una stanza leggera e protetta per continuare la conversazione.</p>
     <div id="step-users">
       <p>Chi sei?</p>
-      <div class="user-list">
-        <button class="user-btn" onclick="selectUser('Giovanni','G','#dbeafe','#1d4ed8')"><span class="user-avatar" style="background:#dbeafe;color:#1d4ed8;">G</span> Giovanni</button>
-        <button class="user-btn" onclick="selectUser('Cabras','C','#dcfce7','#15803d')"><span class="user-avatar" style="background:#dcfce7;color:#15803d;">C</span> Cabras</button>
-        <button class="user-btn" onclick="selectUser('Test','T','#f3f4f6','#6b7280')"><span class="user-avatar" style="background:#f3f4f6;color:#6b7280;">T</span> Test</button>
-      </div>
+      <div class="user-list" id="user-list"></div>
+      <div class="login-users-empty" id="user-list-empty">Carico gli utenti...</div>
     </div>
     <div id="step-password">
       <div class="selected-user">
@@ -1121,6 +1290,7 @@
     <div class="header-actions">
       <a id="console-btn" href="/chat/console">Console</a>
       <button id="archive-btn" type="button">Archivio</button>
+      <button id="admin-btn" type="button">Admin</button>
       <button class="toolbar-btn" id="theme-btn" title="Passa al tema scuro" aria-label="Passa al tema scuro">◐</button>
       <button class="toolbar-btn" id="notif-btn" title="Attiva notifiche">&#x1f514;</button>
       <button id="logout-btn" title="Esci">Esci</button>
@@ -1172,6 +1342,38 @@
       <div id="private-upload-status"></div>
     </div>
   </section>
+  <section id="admin-view">
+    <div class="admin-layout">
+      <div class="admin-list">
+        <h3>Utenti</h3>
+        <div class="admin-copy">Ruoli disponibili: admin e user. Solo gli admin vedono questa sezione.</div>
+        <div class="admin-list-body" id="admin-user-list"></div>
+      </div>
+      <div class="admin-card">
+        <h3>Impostazioni utenti</h3>
+        <div class="admin-copy">Per aggiornare un utente esistente usa lo stesso username. Lascia la password vuota per mantenerla invariata.</div>
+        <div class="admin-form">
+          <div class="admin-field">
+            <label for="admin-username">Username</label>
+            <input id="admin-username" type="text" maxlength="30" placeholder="NuovoUtente" />
+          </div>
+          <div class="admin-field">
+            <label for="admin-role">Ruolo</label>
+            <select id="admin-role">
+              <option value="user">user</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+          <div class="admin-field">
+            <label for="admin-password">Password</label>
+            <input id="admin-password" type="password" placeholder="Nuova password o lascia vuoto" />
+          </div>
+          <button id="admin-save-btn" type="button">Salva utente</button>
+        </div>
+        <div class="admin-status" id="admin-status"></div>
+      </div>
+    </div>
+  </section>
 </div>
 
 
@@ -1196,6 +1398,10 @@ var canUsePrivateTransfers = false;
 var currentView = 'chat';
 var privateTransferLoading = false;
 var privateSelectedFile = null;
+var myRole = 'user';
+var isAdmin = false;
+var adminUsersLoading = false;
+var scrollListenerBound = false;
 
 function playNotifSound() {
   try {
@@ -1277,6 +1483,8 @@ async function loadMoreMessages() {
 // Auto-load on scroll near top
 var messagesEl;
 function initScrollListener() {
+  if (scrollListenerBound) return;
+  scrollListenerBound = true;
   messagesEl = document.getElementById('messages');
   messagesEl.addEventListener('scroll', function() {
     if (messagesEl.scrollTop < 80 && hasMore && !loadingMore) loadMoreMessages();
@@ -1291,6 +1499,8 @@ function trackTimestamp(ts) {
 var selectedUsername = null;
 var savedUser  = localStorage.getItem('chat-user');
 var savedToken = localStorage.getItem('chat-token');
+renderLoginUsers([]);
+loadLoginUsers();
 if (savedUser && savedToken) joinAs(savedUser, savedToken);
 
 function clearStoredAuth() {
@@ -1300,6 +1510,84 @@ function clearStoredAuth() {
 
 function sendLogout() {
   try { fetch('/chat/logout', { method: 'POST', keepalive: true }); } catch(e) {}
+}
+
+function getUserPalette(name) {
+  var palettes = [
+    ['#dbeafe', '#1d4ed8'],
+    ['#dcfce7', '#15803d'],
+    ['#fef3c7', '#b45309'],
+    ['#fce7f3', '#be185d'],
+    ['#ede9fe', '#6d28d9'],
+    ['#e0f2fe', '#0369a1'],
+    ['#f3f4f6', '#4b5563']
+  ];
+  var code = 0;
+  for (var i = 0; i < name.length; i++) code += name.charCodeAt(i);
+  return palettes[code % palettes.length];
+}
+
+function renderLoginUsers(users) {
+  var list = document.getElementById('user-list');
+  var empty = document.getElementById('user-list-empty');
+  list.innerHTML = '';
+  if (!users.length) {
+    empty.style.display = 'block';
+    empty.textContent = 'Nessun utente disponibile.';
+    return;
+  }
+  empty.style.display = 'none';
+  users.forEach(function(user) {
+    var palette = getUserPalette(user.username);
+    var btn = document.createElement('button');
+    btn.className = 'user-btn';
+    btn.type = 'button';
+    btn.onclick = function() { selectUser(user.username); };
+
+    var avatar = document.createElement('span');
+    avatar.className = 'user-avatar';
+    avatar.style.background = palette[0];
+    avatar.style.color = palette[1];
+    avatar.textContent = user.username.slice(0, 1).toUpperCase();
+    btn.appendChild(avatar);
+
+    var copy = document.createElement('span');
+    copy.className = 'user-btn-copy';
+    var head = document.createElement('span');
+    head.className = 'user-btn-head';
+    var name = document.createElement('span');
+    name.textContent = user.username;
+    head.appendChild(name);
+    if (user.role === 'admin') {
+      var badge = document.createElement('span');
+      badge.className = 'user-badge admin';
+      badge.textContent = 'ADMIN';
+      head.appendChild(badge);
+    }
+    copy.appendChild(head);
+
+    var role = document.createElement('span');
+    role.className = 'user-role-copy';
+    role.textContent = user.role === 'admin' ? 'Amministratore' : 'Utente';
+    copy.appendChild(role);
+
+    btn.appendChild(copy);
+    list.appendChild(btn);
+  });
+}
+
+async function loadLoginUsers() {
+  try {
+    var res = await fetch('/chat/login-users');
+    if (!res.ok) throw new Error('Errore utenti');
+    renderLoginUsers(await res.json());
+  } catch (e) {
+    renderLoginUsers([
+      { username: 'Giovanni', role: 'admin' },
+      { username: 'Cabras', role: 'user' },
+      { username: 'Test', role: 'user' }
+    ]);
+  }
 }
 
 function authHeaders(headers) {
@@ -1325,10 +1613,11 @@ async function authFetch(url, options) {
   return res;
 }
 
-function selectUser(name, initial, bg, color) {
+function selectUser(name) {
+  var palette = getUserPalette(name);
   selectedUsername = name;
-  document.getElementById('sel-avatar').textContent = initial;
-  document.getElementById('sel-avatar').style.cssText = 'background:'+bg+';color:'+color+';width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;flex-shrink:0;';
+  document.getElementById('sel-avatar').textContent = name.slice(0, 1).toUpperCase();
+  document.getElementById('sel-avatar').style.cssText = 'background:'+palette[0]+';color:'+palette[1]+';width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;flex-shrink:0;';
   document.getElementById('sel-name').textContent = name;
   document.getElementById('login-error').textContent = '';
   document.getElementById('pwd-input').value = '';
@@ -1353,7 +1642,7 @@ async function submitLogin() {
       var data = await res.json();
       localStorage.setItem('chat-user', selectedUsername);
       localStorage.setItem('chat-token', data.token);
-      joinAs(selectedUsername, data.token);
+      await joinAs(selectedUsername, data.token);
     } else {
       document.getElementById('login-error').textContent = 'Password errata';
       document.getElementById('pwd-input').value = '';
@@ -1364,13 +1653,17 @@ async function submitLogin() {
 }
 document.getElementById('pwd-input').onkeydown = function(e) { if (e.key === 'Enter') submitLogin(); };
 
-function joinAs(name, token) {
+async function joinAs(name, token) {
   myName = name; myToken = token;
-  canUsePrivateTransfers = name === 'Giovanni';
+  var session = await (await authFetch('/chat/me')).json();
+  myRole = session.role || 'user';
+  isAdmin = !!session.isAdmin;
+  canUsePrivateTransfers = !!session.canUsePrivateTransfers;
   document.getElementById('login').style.display = 'none';
   document.getElementById('chat').style.display = 'flex';
-  document.getElementById('console-btn').style.display = canUsePrivateTransfers ? 'inline-flex' : 'none';
+  document.getElementById('console-btn').style.display = isAdmin ? 'inline-flex' : 'none';
   document.getElementById('archive-btn').style.display = canUsePrivateTransfers ? 'inline-flex' : 'none';
+  document.getElementById('admin-btn').style.display = isAdmin ? 'inline-flex' : 'none';
   initScrollListener();
   restoreTheme();
   setView('chat');
@@ -1650,16 +1943,22 @@ document.addEventListener('paste', async function(e) {
 });
 
 function setView(view) {
-  var nextView = (view === 'private' && canUsePrivateTransfers) ? 'private' : 'chat';
+  var nextView = 'chat';
+  if (view === 'private' && canUsePrivateTransfers) nextView = 'private';
+  if (view === 'admin' && isAdmin) nextView = 'admin';
   currentView = nextView;
   document.getElementById('chat-main-view').style.display = nextView === 'chat' ? 'contents' : 'none';
   document.getElementById('private-transfer-view').style.display = nextView === 'private' ? 'flex' : 'none';
+  document.getElementById('admin-view').style.display = nextView === 'admin' ? 'flex' : 'none';
   var archiveBtn = document.getElementById('archive-btn');
   if (archiveBtn) {
     archiveBtn.classList.toggle('active', nextView === 'private');
-    archiveBtn.textContent = nextView === 'private' ? 'Chat' : 'Archivio';
-    archiveBtn.title = nextView === 'private' ? 'Torna alla chat' : 'Apri archivio';
-    archiveBtn.setAttribute('aria-label', archiveBtn.title);
+    archiveBtn.textContent = 'Archivio';
+  }
+  var adminBtn = document.getElementById('admin-btn');
+  if (adminBtn) {
+    adminBtn.classList.toggle('active', nextView === 'admin');
+    adminBtn.textContent = 'Admin';
   }
 }
 
@@ -1756,6 +2055,93 @@ async function loadPrivateTransfers() {
   privateTransferLoading = false;
 }
 
+function renderAdminUsers(users, currentUsername) {
+  var list = document.getElementById('admin-user-list');
+  list.innerHTML = '';
+  if (!users.length) {
+    var empty = document.createElement('div');
+    empty.className = 'admin-empty';
+    empty.textContent = 'Nessun utente trovato.';
+    list.appendChild(empty);
+    return;
+  }
+
+  users.forEach(function(user) {
+    var item = document.createElement('div');
+    item.className = 'admin-user';
+
+    var main = document.createElement('div');
+    main.className = 'admin-user-main';
+    var name = document.createElement('div');
+    name.className = 'admin-user-name';
+    name.textContent = user.username;
+    main.appendChild(name);
+
+    var meta = document.createElement('div');
+    meta.className = 'admin-user-meta';
+    meta.textContent = user.role + (user.username === currentUsername ? ' • tu' : '') + (user.isOwner ? ' • owner archivio' : '');
+    main.appendChild(meta);
+    item.appendChild(main);
+
+    var badge = document.createElement('span');
+    badge.className = 'user-badge' + (user.role === 'admin' ? ' admin' : '');
+    badge.textContent = user.role.toUpperCase();
+    item.appendChild(badge);
+
+    list.appendChild(item);
+  });
+}
+
+async function loadAdminUsers() {
+  if (!isAdmin || adminUsersLoading) return;
+  adminUsersLoading = true;
+  var status = document.getElementById('admin-status');
+  try {
+    var res = await authFetch('/chat/admin/users');
+    if (!res.ok) throw new Error('Errore admin');
+    var data = await res.json();
+    renderAdminUsers(data.users || [], data.currentUser);
+    status.textContent = '';
+  } catch (e) {
+    status.textContent = 'Non riesco a caricare gli utenti.';
+  }
+  adminUsersLoading = false;
+}
+
+async function saveAdminUser() {
+  if (!isAdmin) return;
+  var username = document.getElementById('admin-username').value.trim();
+  var role = document.getElementById('admin-role').value;
+  var password = document.getElementById('admin-password').value;
+  var status = document.getElementById('admin-status');
+  var button = document.getElementById('admin-save-btn');
+  if (!username) {
+    status.textContent = 'Inserisci uno username.';
+    return;
+  }
+  button.disabled = true;
+  status.textContent = 'Salvo utente...';
+  try {
+    var res = await authFetch('/chat/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username, role: role, password: password }),
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore salvataggio');
+    renderAdminUsers(data.users || [], myName);
+    document.getElementById('admin-username').value = '';
+    document.getElementById('admin-password').value = '';
+    document.getElementById('admin-role').value = 'user';
+    status.textContent = 'Utente salvato.';
+    loadLoginUsers();
+  } catch (e) {
+    status.textContent = e.message || 'Salvataggio non riuscito.';
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function uploadPrivateTransfer(file) {
   if (!file || !canUsePrivateTransfers) return;
   var status = document.getElementById('private-upload-status');
@@ -1846,6 +2232,13 @@ document.getElementById('archive-btn').onclick = function() {
   setView(nextView);
   if (nextView === 'private') loadPrivateTransfers();
 };
+document.getElementById('admin-btn').onclick = function() {
+  if (!isAdmin) return;
+  var nextView = currentView === 'admin' ? 'chat' : 'admin';
+  setView(nextView);
+  if (nextView === 'admin') loadAdminUsers();
+};
+document.getElementById('admin-save-btn').onclick = saveAdminUser;
 document.getElementById('private-file-input').onchange = async function() {
   var file = this.files[0];
   this.value = '';

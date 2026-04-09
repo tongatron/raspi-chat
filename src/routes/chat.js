@@ -28,6 +28,7 @@ const UPLOADS_DIR = path.join(process.cwd(), 'data', 'uploads');
 const PRIVATE_UPLOADS_DIR = path.join(process.cwd(), 'data', 'private-transfers');
 const DB_PATH = path.join(process.cwd(), 'data', 'chat.db');
 const CHAT_USERS_FILE = process.env.CHAT_USERS_FILE || path.join(process.cwd(), 'config', 'chat-users.json');
+const DEFAULT_ADMIN_USERNAME = normalizeUsername(process.env.DEFAULT_ADMIN_USERNAME || 'Giovanni');
 const PRIVATE_TRANSFER_OWNER = normalizeUsername(process.env.PRIVATE_TRANSFER_OWNER || 'Giovanni');
 const PRIVATE_TRANSFER_MAX_MB = Math.max(parseInt(process.env.PRIVATE_TRANSFER_MAX_MB || '512', 10) || 512, 50);
 const PRIVATE_TRANSFER_MAX_BYTES = PRIVATE_TRANSFER_MAX_MB * 1024 * 1024;
@@ -50,7 +51,8 @@ db.exec(`
   );
   CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
-    hash TEXT NOT NULL
+    hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user'
   );
   CREATE TABLE IF NOT EXISTS private_transfers (
     id TEXT PRIMARY KEY,
@@ -65,6 +67,7 @@ db.exec(`
 `);
 // Migration: add reply_to_id if missing (existing installs)
 try { db.exec('ALTER TABLE messages ADD COLUMN reply_to_id TEXT'); } catch(e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"); } catch(e) {}
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);
@@ -91,6 +94,7 @@ function loadConfiguredUsers() {
   for (const entry of parsed) {
     const username = normalizeUsername(entry?.username);
     const password = String(entry?.password || '');
+    const role = normalizeRole(entry?.role || (username === DEFAULT_ADMIN_USERNAME ? 'admin' : 'user'));
     if (!username || !password) {
       throw new Error(`[Auth] Each user in ${CHAT_USERS_FILE} must include non-empty username and password`);
     }
@@ -99,7 +103,7 @@ function loadConfiguredUsers() {
       throw new Error(`[Auth] Duplicate username "${username}" in ${CHAT_USERS_FILE}`);
     }
     seen.add(key);
-    users.push({ username, password });
+    users.push({ username, password, role });
   }
 
   return users;
@@ -110,6 +114,10 @@ const SESSION_COOKIE_NAME = 'chat_auth';
 
 function normalizeUsername(value) {
   return String(value || '').trim().slice(0, 30);
+}
+
+function normalizeRole(value) {
+  return String(value || '').trim().toLowerCase() === 'admin' ? 'admin' : 'user';
 }
 
 function encodeSessionCookie(username, token) {
@@ -163,22 +171,55 @@ function getCookieAuth(request) {
 }
 
 function getAuthenticatedUsername(request) {
+  const user = getAuthenticatedUser(request);
+  return user ? user.username : null;
+}
+
+function getAuthenticatedUser(request) {
   const cookieAuth = getCookieAuth(request);
   const headerUsername = normalizeUsername(request.headers['x-chat-username']);
   const username = headerUsername || cookieAuth?.username || '';
   const headerToken = String(request.headers['x-chat-token'] || '').trim();
   const token = headerToken || cookieAuth?.token || '';
-  return validateToken(username, token) ? username : null;
+  if (!validateToken(username, token)) return null;
+  const user = stmts.getAuthUser.get(username);
+  if (!user) return null;
+  return {
+    username: normalizeUsername(user.username),
+    role: normalizeRole(user.role),
+  };
 }
 
 function requireAuth(request, reply) {
-  const username = getAuthenticatedUsername(request);
-  if (!username) {
+  const user = getAuthenticatedUser(request);
+  if (!user) {
     reply.code(401).send({ error: 'Non autorizzato' });
     return null;
   }
 
-  return username;
+  return user.username;
+}
+
+function requireAuthUser(request, reply) {
+  const user = getAuthenticatedUser(request);
+  if (!user) {
+    reply.code(401).send({ error: 'Non autorizzato' });
+    return null;
+  }
+  return user;
+}
+
+function requireAdmin(request, reply) {
+  const user = getAuthenticatedUser(request);
+  if (!user) {
+    reply.code(401).send({ error: 'Non autorizzato' });
+    return null;
+  }
+  if (user.role !== 'admin') {
+    reply.code(403).send({ error: 'Permessi insufficienti' });
+    return null;
+  }
+  return user;
 }
 
 function requirePrivateAccess(request, reply) {
@@ -247,10 +288,28 @@ const stmts = {
   insertRead:    db.prepare('INSERT OR IGNORE INTO message_reads (message_id, username) VALUES (?, ?)'),
   deleteMessage: db.prepare('DELETE FROM messages WHERE id = ? AND username = ?'),
   deleteReads:   db.prepare('DELETE FROM message_reads WHERE message_id = ?'),
-  getUser:       db.prepare('SELECT hash FROM users WHERE username = ?'),
+  getUser:       db.prepare('SELECT hash, role FROM users WHERE username = ?'),
+  getAuthUser:   db.prepare('SELECT username, role FROM users WHERE username = ?'),
   getById:       db.prepare('SELECT id, username, text, image_url AS imageUrl FROM messages WHERE id = ?'),
-  syncUser:      db.prepare('INSERT INTO users (username, hash) VALUES (?, ?) ON CONFLICT(username) DO UPDATE SET hash = excluded.hash'),
+  syncUser:      db.prepare(`
+    INSERT INTO users (username, hash, role)
+    VALUES (?, ?, ?)
+    ON CONFLICT(username) DO UPDATE SET hash = excluded.hash, role = excluded.role
+  `),
+  upsertAdminUser: db.prepare(`
+    INSERT INTO users (username, hash, role)
+    VALUES (?, ?, ?)
+    ON CONFLICT(username) DO UPDATE SET
+      hash = COALESCE(excluded.hash, users.hash),
+      role = excluded.role
+  `),
+  listUsers:     db.prepare(`
+    SELECT username, role
+    FROM users
+    ORDER BY CASE role WHEN 'admin' THEN 0 ELSE 1 END, username COLLATE NOCASE ASC
+  `),
   countUsers:    db.prepare('SELECT COUNT(*) AS count FROM users'),
+  countAdmins:   db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'"),
   countMessages: db.prepare('SELECT COUNT(*) AS count FROM messages'),
   insertPrivateTransfer: db.prepare(`
     INSERT INTO private_transfers (id, username, original_name, stored_name, mime_type, size_bytes, note, timestamp)
@@ -281,7 +340,7 @@ const configuredUsers = loadConfiguredUsers();
 if (configuredUsers.length) {
   const syncUsers = db.transaction((users) => {
     for (const user of users) {
-      stmts.syncUser.run(user.username, hashPassword(user.password));
+      stmts.syncUser.run(user.username, hashPassword(user.password), user.role);
     }
   });
   syncUsers(configuredUsers);
@@ -334,6 +393,17 @@ function formatPrivateTransfer(row) {
     timestamp: row.timestamp,
     hasFile: !!row.storedName,
     downloadUrl: row.storedName ? `/chat/private-files/${encodeURIComponent(row.storedName)}` : null,
+  };
+}
+
+function formatUser(row) {
+  const username = normalizeUsername(row.username);
+  const role = normalizeRole(row.role);
+  return {
+    username,
+    role,
+    isAdmin: role === 'admin',
+    isOwner: username === PRIVATE_TRANSFER_OWNER,
   };
 }
 
@@ -543,6 +613,10 @@ async function chatRoutes(app) {
     return reply.type('image/png').send(fs.createReadStream(filePath));
   });
 
+  app.get('/chat/login-users', async () => {
+    return stmts.listUsers.all().map(formatUser);
+  });
+
   app.post('/chat/login', async (request, reply) => {
     const username = normalizeUsername(request.body?.username);
     const password = String(request.body?.password || '');
@@ -555,12 +629,59 @@ async function chatRoutes(app) {
     if (!crypto.timingSafeEqual(inputHash, storedHash)) return reply.code(401).send({ error: 'Credenziali non valide' });
     const token = generateToken(username);
     setSessionCookie(reply, username, token);
-    return { token };
+    return { token, username, role: normalizeRole(user.role), isAdmin: normalizeRole(user.role) === 'admin' };
   });
 
   app.post('/chat/logout', async (request, reply) => {
     clearSessionCookie(reply);
     return { ok: true };
+  });
+
+  app.get('/chat/me', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+    return {
+      username: user.username,
+      role: user.role,
+      isAdmin: user.role === 'admin',
+      canUsePrivateTransfers: user.username === PRIVATE_TRANSFER_OWNER,
+      canUseConsole: user.role === 'admin',
+    };
+  });
+
+  app.get('/chat/admin/users', async (request, reply) => {
+    const adminUser = requireAdmin(request, reply);
+    if (!adminUser) return;
+    return {
+      currentUser: adminUser.username,
+      users: stmts.listUsers.all().map(formatUser),
+    };
+  });
+
+  app.post('/chat/admin/users', async (request, reply) => {
+    const adminUser = requireAdmin(request, reply);
+    if (!adminUser) return;
+    const username = normalizeUsername(request.body?.username);
+    const password = String(request.body?.password || '');
+    const role = normalizeRole(request.body?.role);
+
+    if (!username) return reply.code(400).send({ error: 'Username mancante' });
+    if (!['admin', 'user'].includes(role)) return reply.code(400).send({ error: 'Ruolo non valido' });
+
+    const existing = stmts.getUser.get(username);
+    if (!existing && !password) return reply.code(400).send({ error: 'Password richiesta per il nuovo utente' });
+
+    if (existing && existing.role === 'admin' && role !== 'admin' && stmts.countAdmins.get().count <= 1) {
+      return reply.code(400).send({ error: 'Deve esistere almeno un admin' });
+    }
+
+    const hash = password ? hashPassword(password) : existing?.hash || null;
+    stmts.upsertAdminUser.run(username, hash, role);
+
+    return {
+      ok: true,
+      users: stmts.listUsers.all().map(formatUser),
+    };
   });
 
   // Pagination endpoint
