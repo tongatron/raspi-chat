@@ -819,6 +819,26 @@ async function chatRoutes(app) {
     return reply.type('image/png').send(fs.createReadStream(filePath));
   });
 
+  app.get('/chat/:assetName', async (request, reply) => {
+    const assetName = path.basename(String(request.params.assetName || ''));
+    const allowedAssets = new Map([
+      ['logo.png', 'image/png'],
+      ['logo-v2.png', 'image/png'],
+      ['logo-v3.png', 'image/png'],
+      ['logo-v4.png', 'image/png'],
+      ['favicon.ico', 'image/x-icon'],
+      ['favicon-v2.ico', 'image/x-icon'],
+      ['favicon-16.png', 'image/png'],
+      ['favicon-16-v2.png', 'image/png'],
+      ['favicon-32.png', 'image/png'],
+      ['favicon-32-v2.png', 'image/png'],
+    ]);
+    if (!allowedAssets.has(assetName)) return reply.code(404).send({ error: 'Not found' });
+    const filePath = path.join(process.cwd(), 'public', assetName);
+    if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
+    return reply.type(allowedAssets.get(assetName)).send(fs.createReadStream(filePath));
+  });
+
   app.get('/chat/login-users', async () => {
     return stmts.listUsers.all().map(formatUser);
   });

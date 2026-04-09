@@ -17,10 +17,10 @@
   <meta name="theme-color" content="#1f6fd2" />
   <meta property="og:title" content="Cabras Chat" />
   <meta property="og:description" content="Chat self-hosted su Raspberry Pi" />
-  <meta property="og:image" content="/chat/logo-v2.png" />
+  <meta property="og:image" content="/chat/logo-v4.png" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:image" content="/chat/logo-v2.png" />
+  <meta name="twitter:image" content="/chat/logo-v4.png" />
   <style>
     :root {
       --bg-top: #f4ede2;
@@ -256,24 +256,11 @@
       border-radius: 13px;
       position: relative;
       flex-shrink: 0;
-      background:
-        radial-gradient(circle at 28% 18%, rgba(255,255,255,.08), rgba(255,255,255,0) 30%),
-        linear-gradient(180deg, #121212 0%, #050505 62%, #000000 100%);
+      background: linear-gradient(180deg, #121212 0%, #050505 62%, #000000 100%);
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,.08),
         0 14px 24px rgba(0,0,0,.42);
       overflow: hidden;
-    }
-    .brand-mark::before {
-      content: "";
-      position: absolute;
-      inset: auto -18% 13px 28%;
-      height: 5px;
-      border-radius: 2px;
-      background: linear-gradient(90deg, rgba(255,59,59,.04), rgba(255,59,59,.96), rgba(255,214,214,.04));
-      transform: rotate(-24deg) skewX(-20deg);
-      box-shadow: 0 0 16px rgba(255,59,59,.34);
-      opacity: .92;
     }
     .brand-mark::after {
       content: "";
@@ -282,6 +269,15 @@
       border-radius: 10px;
       border: 1px solid rgba(255,255,255,.08);
       pointer-events: none;
+    }
+    .brand-mark img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center;
+      position: relative;
+      z-index: 0;
     }
     .brand-mark.tiny {
       width: 24px;
@@ -296,9 +292,7 @@
       border-radius: 7px;
     }
     .brand-bubble {
-      position: absolute;
-      border-radius: 12px;
-      transform: rotate(-6deg);
+      display: none;
     }
     .brand-bubble.back {
       left: 9px;
@@ -1774,8 +1768,7 @@
   <div class="login-box">
     <div class="login-eyebrow">
       <span class="brand-mark tiny" aria-hidden="true">
-        <span class="brand-bubble back"></span>
-        <span class="brand-bubble front"></span>
+        <img src="/chat/logo-v4.png" alt="" />
       </span>
       Chat privata
     </div>
@@ -1805,8 +1798,7 @@
     <div class="header-main">
       <div class="header-mark" aria-hidden="true">
         <span class="brand-mark">
-          <span class="brand-bubble back"></span>
-          <span class="brand-bubble front"></span>
+          <img src="/chat/logo-v4.png" alt="" />
         </span>
       </div>
       <div class="header-copy">
