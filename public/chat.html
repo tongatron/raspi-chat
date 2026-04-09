@@ -57,6 +57,10 @@
       overflow: hidden;
       position: relative;
     }
+    body.subpage-view {
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
     body::before {
       content: "";
       position: fixed;
@@ -500,6 +504,10 @@
       gap: 10px;
       animation: panelIn .35s ease both;
     }
+    body.subpage-view #chat {
+      height: auto;
+      min-height: 100dvh;
+    }
     header {
       min-height: 78px;
       padding: 14px 16px;
@@ -942,6 +950,13 @@
       flex: 1;
       overflow: hidden;
     }
+    body.subpage-view #rooms-view,
+    body.subpage-view #console-view,
+    body.subpage-view #admin-view {
+      flex: none;
+      min-height: auto;
+      overflow: visible;
+    }
     .private-card,
     .private-list,
     .rooms-card,
@@ -1143,6 +1158,12 @@
       min-height: 0;
       flex: 1;
     }
+    body.subpage-view .admin-layout,
+    body.subpage-view .rooms-layout {
+      min-height: auto;
+      flex: none;
+      align-items: start;
+    }
     .admin-card,
     .admin-list {
       min-height: 0;
@@ -1165,6 +1186,12 @@
       gap: 8px;
       overflow-y: auto;
       min-height: 0;
+    }
+    body.subpage-view .rooms-list-body,
+    body.subpage-view .admin-list-body,
+    body.subpage-view .console-grid {
+      overflow: visible;
+      min-height: auto;
     }
     .room-item {
       display: flex;
@@ -2778,6 +2805,7 @@ function setView(view) {
   if (view === 'admin' && isAdmin) nextView = 'admin';
   if (nextView !== 'console') stopConsoleAutoRefresh();
   currentView = nextView;
+  document.body.classList.toggle('subpage-view', nextView !== 'chat');
   document.getElementById('chat-main-view').style.display = nextView === 'chat' ? 'contents' : 'none';
   document.getElementById('rooms-view').style.display = nextView === 'rooms' ? 'flex' : 'none';
   document.getElementById('console-view').style.display = nextView === 'console' ? 'flex' : 'none';
@@ -3252,7 +3280,7 @@ function startConsoleAutoRefresh() {
       return;
     }
     loadConsoleData();
-  }, 5000);
+  }, 2000);
 }
 
 function pushConsolePoint(series, value) {
