@@ -792,10 +792,10 @@ async function chatRoutes(app) {
       start_url: '/chat', scope: '/', display: 'standalone', orientation: 'portrait',
       background_color: '#f0f0f0', theme_color: '#3b82f6',
       icons: [
-        { src: '/chat/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-        { src: '/chat/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-        { src: '/chat/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-        { src: '/chat/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        { src: '/chat/icon-192-v2.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/chat/icon-192-v2.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+        { src: '/chat/icon-512-v2.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: '/chat/icon-512-v2.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ],
     }));
 
