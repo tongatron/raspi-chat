@@ -713,15 +713,16 @@
     @media (hover: none) { .msg-wrap.me .delete-btn { opacity: .7; } }
 
     .reply-quote {
-      border-radius: 14px;
-      padding: 8px 10px;
+      padding: 2px 0 2px 10px;
       margin-bottom: 8px;
       font-size: .82rem;
       cursor: pointer;
-      border-left: 3px solid;
+      border-left: 2px solid;
+      background: transparent;
+      border-radius: 0;
     }
-    .me .reply-quote { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.56); }
-    .other .reply-quote { background: rgba(31,111,210,.08); border-color: var(--primary); }
+    .me .reply-quote { border-color: rgba(255,255,255,.56); }
+    .other .reply-quote { border-color: var(--primary); }
     .rq-name { font-weight: 700; font-size: .75rem; margin-bottom: 2px; }
     .me .rq-name { color: rgba(255,255,255,.96); }
     .other .rq-name { color: var(--primary-strong); }
