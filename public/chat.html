@@ -1835,7 +1835,7 @@
     }
   </style>
 </head>
-<body>
+<body class="theme-dark">
 
 <div id="login">
   <div class="login-box">
@@ -1893,7 +1893,6 @@
       </div>
       <button id="console-btn" type="button" style="display:none" hidden></button>
       <button id="rooms-btn" type="button" style="display:none" hidden></button>
-      <button class="toolbar-btn" id="theme-btn" title="Passa al tema scuro" aria-label="Passa al tema scuro">◐</button>
       <button class="toolbar-btn" id="notif-btn" title="Attiva notifiche">&#x1f514;</button>
       <button id="logout-btn" title="Esci">Esci</button>
     </div>
@@ -3194,25 +3193,10 @@ async function copyInviteLink() {
   }
 }
 
-function setTheme(theme) {
-  var normalized = theme === 'dark' ? 'dark' : 'light';
-  document.body.classList.toggle('theme-dark', normalized === 'dark');
-  localStorage.setItem('chat-theme', normalized);
+function applyDarkTheme() {
+  document.body.classList.add('theme-dark');
   var metaTheme = document.querySelector('meta[name="theme-color"]');
-  if (metaTheme) metaTheme.setAttribute('content', normalized === 'dark' ? '#111723' : '#1f6fd2');
-  var btn = document.getElementById('theme-btn');
-  if (!btn) return;
-  btn.textContent = normalized === 'dark' ? '☀' : '◐';
-  btn.title = normalized === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro';
-  btn.setAttribute('aria-label', btn.title);
-}
-
-function toggleTheme() {
-  setTheme(document.body.classList.contains('theme-dark') ? 'light' : 'dark');
-}
-
-function restoreTheme() {
-  setTheme(localStorage.getItem('chat-theme') || 'light');
+  if (metaTheme) metaTheme.setAttribute('content', '#111723');
 }
 
 document.getElementById('admin-btn').onclick = function(e) {
@@ -3251,8 +3235,7 @@ document.getElementById('room-create-btn').onclick = createRoom;
 document.getElementById('room-rename-btn').onclick = renameRoom;
 document.getElementById('room-invite-btn').onclick = inviteUsersToRoom;
 document.getElementById('room-remove-btn').onclick = removeUsersFromRoom;
-document.getElementById('theme-btn').onclick = toggleTheme;
-restoreTheme();
+applyDarkTheme();
 
 function openLightbox(src) { document.getElementById('lightbox-img').src = src; document.getElementById('lightbox').classList.add('open'); }
 document.getElementById('lightbox').onclick = function() { document.getElementById('lightbox').classList.remove('open'); };
