@@ -400,6 +400,10 @@ const stmts = {
     WHERE room_id = ?
     ORDER BY username COLLATE NOCASE ASC
   `),
+  deleteRoomMember: db.prepare(`
+    DELETE FROM room_members
+    WHERE room_id = ? AND username = ?
+  `),
   deleteRoomMembershipsByUser: db.prepare('DELETE FROM room_members WHERE username = ?'),
   countUsers:    db.prepare('SELECT COUNT(*) AS count FROM users'),
   countAdmins:   db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'"),
@@ -910,6 +914,43 @@ async function chatRoutes(app) {
     return {
       ok: true,
       room: loadRoomsForUser(user.username).find((room) => room.id === roomId) || access.room,
+      rooms: loadRoomsForUser(user.username),
+    };
+  });
+
+  app.delete('/chat/rooms/:roomId/members/:username', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+    if (user.role !== 'admin') {
+      return reply.code(403).send({ error: 'Solo un admin puo rimuovere utenti dalle stanze' });
+    }
+
+    const roomId = String(request.params.roomId || '').trim();
+    const targetUsername = normalizeUsername(request.params.username);
+    const access = requireRoomMember(request, reply, roomId, user);
+    if (!access) return;
+    if (!targetUsername) return reply.code(400).send({ error: 'Utente mancante' });
+    if (targetUsername === access.room.createdBy) {
+      return reply.code(400).send({ error: 'Non puoi rimuovere il creatore della stanza' });
+    }
+
+    const membership = stmts.getRoomMember.get(roomId, targetUsername);
+    if (!membership) return reply.code(404).send({ error: 'Utente non presente nella stanza' });
+
+    stmts.deleteRoomMember.run(roomId, targetUsername);
+
+    for (const client of clients.values()) {
+      if (client.username === targetUsername && client.roomId === roomId) {
+        try {
+          client.ws.send(JSON.stringify({ type: 'room_removed', roomId, username: targetUsername }));
+          client.ws.close();
+        } catch {}
+      }
+    }
+
+    return {
+      ok: true,
+      room: loadRoomsForUser(user.username).find((room) => room.id === roomId) || null,
       rooms: loadRoomsForUser(user.username),
     };
   });

@@ -1121,7 +1121,8 @@
     }
     .room-open-btn,
     #room-create-btn,
-    #room-invite-btn {
+    #room-invite-btn,
+    #room-remove-btn {
       border: none;
       border-radius: 12px;
       padding: 8px 10px;
@@ -1139,6 +1140,10 @@
     #room-invite-btn {
       background: rgba(255,87,87,.10);
       color: #d44a4a;
+    }
+    #room-remove-btn {
+      background: rgba(255,255,255,.06);
+      color: var(--muted);
     }
     .rooms-copy,
     .rooms-empty,
@@ -1850,6 +1855,11 @@
         <div class="rooms-copy" id="room-invite-copy">Apri una stanza a un altro utente gia presente in piattaforma.</div>
         <div class="room-members" id="room-invite-members"></div>
         <button id="room-invite-btn" type="button" disabled>Invita nella stanza</button>
+        <div class="admin-divider"></div>
+        <h3 id="room-remove-title">Rimuovi dalla stanza</h3>
+        <div class="rooms-copy" id="room-remove-copy">Solo l'admin puo' rimuovere persone dalle stanze.</div>
+        <div class="room-members" id="room-remove-members"></div>
+        <button id="room-remove-btn" type="button" disabled>Rimuovi dalla stanza</button>
         <div class="rooms-status" id="rooms-status"></div>
       </div>
     </div>
@@ -2367,6 +2377,14 @@ function handleMsg(msg) {
     location.reload();
     return;
   }
+  if (msg.type === 'room_removed') {
+    if (msg.roomId === currentRoomId) {
+      currentRoomId = '';
+      localStorage.removeItem('chat-room-id');
+      location.reload();
+      return;
+    }
+  }
   if (msg.type === 'history') {
     if (msg.roomId && msg.roomId !== currentRoomId) return;
     var containerEl = document.getElementById('messages');
@@ -2772,7 +2790,11 @@ function renderRooms(rooms, users) {
   renderRoomMemberOptions('room-invite-members', roomUsersCache.filter(function(user) {
     return !activeRoom || activeRoom.members.indexOf(user.username) === -1;
   }), []);
+  renderRoomMemberOptions('room-remove-members', roomUsersCache.filter(function(user) {
+    return activeRoom && activeRoom.members.indexOf(user.username) !== -1 && user.username !== myName && user.username !== activeRoom.createdBy;
+  }), []);
   document.getElementById('room-invite-btn').disabled = !activeRoom;
+  document.getElementById('room-remove-btn').disabled = !activeRoom || !isAdmin;
   document.getElementById('room-panel-title').textContent = activeRoom ? ('Stanza attiva: ' + activeRoom.name) : 'Nuova stanza';
   document.getElementById('room-panel-copy').textContent = activeRoom
     ? 'Puoi creare altre stanze oppure cambiare la stanza attiva qui sotto.'
@@ -2780,6 +2802,10 @@ function renderRooms(rooms, users) {
   document.getElementById('room-invite-title').textContent = activeRoom ? ('Invita in ' + activeRoom.name) : 'Invita utenti';
   document.getElementById('room-invite-copy').textContent = activeRoom
     ? 'Aggiungi altri utenti gia registrati alla stanza selezionata.'
+    : 'Seleziona prima una stanza.';
+  document.getElementById('room-remove-title').textContent = activeRoom ? ('Rimuovi da ' + activeRoom.name) : 'Rimuovi dalla stanza';
+  document.getElementById('room-remove-copy').textContent = activeRoom
+    ? (isAdmin ? 'Seleziona uno o piu utenti da rimuovere dalla stanza attiva.' : 'Solo l\'admin puo rimuovere persone dalle stanze.')
     : 'Seleziona prima una stanza.';
   if (status && !status.textContent) status.textContent = '';
 }
@@ -2849,6 +2875,38 @@ async function inviteUsersToRoom() {
     status.textContent = 'Inviti inviati.';
   } catch (e) {
     status.textContent = e.message || 'Invito non riuscito.';
+  }
+}
+
+async function removeUsersFromRoom() {
+  var room = getCurrentRoom();
+  var status = document.getElementById('rooms-status');
+  if (!room) {
+    status.textContent = 'Seleziona prima una stanza.';
+    return;
+  }
+  if (!isAdmin) {
+    status.textContent = 'Solo l\'admin puo rimuovere persone dalle stanze.';
+    return;
+  }
+  var members = getCheckedUsernames('room-remove-members');
+  if (!members.length) {
+    status.textContent = 'Seleziona almeno un utente da rimuovere.';
+    return;
+  }
+  status.textContent = 'Rimuovo utenti...';
+  try {
+    for (var i = 0; i < members.length; i++) {
+      var res = await authFetch('/chat/rooms/' + encodeURIComponent(room.id) + '/members/' + encodeURIComponent(members[i]), {
+        method: 'DELETE'
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Rimozione non riuscita');
+    }
+    await loadRoomsData();
+    status.textContent = 'Utenti rimossi dalla stanza.';
+  } catch (e) {
+    status.textContent = e.message || 'Rimozione non riuscita.';
   }
 }
 
@@ -3294,6 +3352,7 @@ document.getElementById('private-refresh-btn').onclick = loadPrivateTransfers;
 document.getElementById('console-refresh-btn').onclick = loadConsoleData;
 document.getElementById('room-create-btn').onclick = createRoom;
 document.getElementById('room-invite-btn').onclick = inviteUsersToRoom;
+document.getElementById('room-remove-btn').onclick = removeUsersFromRoom;
 document.getElementById('theme-btn').onclick = toggleTheme;
 restoreTheme();
 
