@@ -32,12 +32,28 @@ const DEFAULT_ADMIN_USERNAME = normalizeUsername(process.env.DEFAULT_ADMIN_USERN
 const PRIVATE_TRANSFER_OWNER = normalizeUsername(process.env.PRIVATE_TRANSFER_OWNER || 'Giovanni');
 const PRIVATE_TRANSFER_MAX_MB = Math.max(parseInt(process.env.PRIVATE_TRANSFER_MAX_MB || '512', 10) || 512, 50);
 const PRIVATE_TRANSFER_MAX_BYTES = PRIVATE_TRANSFER_MAX_MB * 1024 * 1024;
+const DEFAULT_ROOM_ID = 'cabras-giovanni';
+const DEFAULT_ROOM_NAME = String(process.env.DEFAULT_ROOM_NAME || 'Cabras Giovanni').trim() || 'Cabras Giovanni';
 
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.exec(`
+  CREATE TABLE IF NOT EXISTS rooms (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS room_members (
+    room_id TEXT NOT NULL,
+    username TEXT NOT NULL,
+    invited_by TEXT,
+    joined_at TEXT NOT NULL,
+    PRIMARY KEY (room_id, username)
+  );
   CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
+    room_id TEXT NOT NULL DEFAULT '${DEFAULT_ROOM_ID}',
     username TEXT NOT NULL,
     text TEXT,
     image_url TEXT,
@@ -75,6 +91,7 @@ db.exec(`
 `);
 // Migration: add reply_to_id if missing (existing installs)
 try { db.exec('ALTER TABLE messages ADD COLUMN reply_to_id TEXT'); } catch(e) {}
+try { db.exec(`ALTER TABLE messages ADD COLUMN room_id TEXT NOT NULL DEFAULT '${DEFAULT_ROOM_ID}'`); } catch(e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"); } catch(e) {}
 try { db.exec("ALTER TABLE invites ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"); } catch(e) {}
 try { db.exec("ALTER TABLE invites ADD COLUMN created_at TEXT"); } catch(e) {}
@@ -130,6 +147,10 @@ function normalizeUsername(value) {
 
 function normalizeRole(value) {
   return String(value || '').trim().toLowerCase() === 'admin' ? 'admin' : 'user';
+}
+
+function normalizeRoomName(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 60);
 }
 
 function encodeSessionCookie(username, token) {
@@ -245,6 +266,31 @@ function requirePrivateAccess(request, reply) {
   return username;
 }
 
+function requireRoomMember(request, reply, roomId, user) {
+  const authenticatedUser = user || requireAuthUser(request, reply);
+  if (!authenticatedUser) return null;
+  const room = stmts.getRoomById.get(roomId);
+  if (!room) {
+    reply.code(404).send({ error: 'Stanza non trovata' });
+    return null;
+  }
+  const membership = stmts.getRoomMember.get(roomId, authenticatedUser.username);
+  if (!membership) {
+    reply.code(403).send({ error: 'Accesso stanza non consentito' });
+    return null;
+  }
+  return {
+    user: authenticatedUser,
+    room: formatRoom({
+      id: room.id,
+      name: room.name,
+      createdBy: room.createdBy,
+      createdAt: room.createdAt,
+      members: stmts.listRoomMembers.all(roomId).map((entry) => entry.username).join(','),
+    }, authenticatedUser.username),
+  };
+}
+
 function getRequestAddress(request) {
   const forwarded = String(request.headers['x-forwarded-for'] || '').split(',')[0].trim();
   return forwarded || String(request.ip || request.socket?.remoteAddress || '').trim();
@@ -284,25 +330,26 @@ function clearSessionCookie(reply) {
 }
 
 const HISTORY_SQL = `
-  SELECT m.id, m.username, m.text, m.image_url AS imageUrl, m.timestamp, m.reply_to_id AS replyToId,
+  SELECT m.id, m.room_id AS roomId, m.username, m.text, m.image_url AS imageUrl, m.timestamp, m.reply_to_id AS replyToId,
          rm.username AS replyUsername, rm.text AS replyText, rm.image_url AS replyImageUrl,
          GROUP_CONCAT(r.username) AS readBy
   FROM messages m
   LEFT JOIN message_reads r ON r.message_id = m.id
   LEFT JOIN messages rm ON rm.id = m.reply_to_id
+  WHERE m.room_id = ?
   GROUP BY m.id
 `;
 
 const stmts = {
-  insertMessage: db.prepare('INSERT INTO messages (id, username, text, image_url, timestamp, reply_to_id) VALUES (?, ?, ?, ?, ?, ?)'),
+  insertMessage: db.prepare('INSERT INTO messages (id, room_id, username, text, image_url, timestamp, reply_to_id) VALUES (?, ?, ?, ?, ?, ?, ?)'),
   getHistory:    db.prepare(HISTORY_SQL + ' ORDER BY m.timestamp DESC LIMIT 100'),
-  getPage:       db.prepare(HISTORY_SQL + ' HAVING m.timestamp < ? ORDER BY m.timestamp DESC LIMIT ?'),
+  getPage:       db.prepare(HISTORY_SQL + ' AND m.timestamp < ? ORDER BY m.timestamp DESC LIMIT ?'),
   insertRead:    db.prepare('INSERT OR IGNORE INTO message_reads (message_id, username) VALUES (?, ?)'),
-  deleteMessage: db.prepare('DELETE FROM messages WHERE id = ? AND username = ?'),
+  deleteMessage: db.prepare('DELETE FROM messages WHERE id = ? AND room_id = ? AND username = ?'),
   deleteReads:   db.prepare('DELETE FROM message_reads WHERE message_id = ?'),
   getUser:       db.prepare('SELECT hash, role FROM users WHERE username = ?'),
   getAuthUser:   db.prepare('SELECT username, role FROM users WHERE username = ?'),
-  getById:       db.prepare('SELECT id, username, text, image_url AS imageUrl FROM messages WHERE id = ?'),
+  getById:       db.prepare('SELECT id, room_id AS roomId, username, text, image_url AS imageUrl FROM messages WHERE id = ? AND room_id = ?'),
   syncUser:      db.prepare(`
     INSERT INTO users (username, hash, role)
     VALUES (?, ?, ?)
@@ -320,6 +367,40 @@ const stmts = {
     FROM users
     ORDER BY CASE role WHEN 'admin' THEN 0 ELSE 1 END, username COLLATE NOCASE ASC
   `),
+  createRoom: db.prepare(`
+    INSERT INTO rooms (id, name, created_by, created_at)
+    VALUES (?, ?, ?, ?)
+  `),
+  addRoomMember: db.prepare(`
+    INSERT OR IGNORE INTO room_members (room_id, username, invited_by, joined_at)
+    VALUES (?, ?, ?, ?)
+  `),
+  getRoomMember: db.prepare(`
+    SELECT room_id AS roomId, username
+    FROM room_members
+    WHERE room_id = ? AND username = ?
+  `),
+  getRoomById: db.prepare(`
+    SELECT id, name, created_by AS createdBy, created_at AS createdAt
+    FROM rooms
+    WHERE id = ?
+  `),
+  listRoomsForUser: db.prepare(`
+    SELECT r.id, r.name, r.created_by AS createdBy, r.created_at AS createdAt,
+           GROUP_CONCAT(rm.username) AS members
+    FROM rooms r
+    JOIN room_members mine ON mine.room_id = r.id AND mine.username = ?
+    LEFT JOIN room_members rm ON rm.room_id = r.id
+    GROUP BY r.id
+    ORDER BY r.created_at ASC, r.name COLLATE NOCASE ASC
+  `),
+  listRoomMembers: db.prepare(`
+    SELECT username
+    FROM room_members
+    WHERE room_id = ?
+    ORDER BY username COLLATE NOCASE ASC
+  `),
+  deleteRoomMembershipsByUser: db.prepare('DELETE FROM room_members WHERE username = ?'),
   countUsers:    db.prepare('SELECT COUNT(*) AS count FROM users'),
   countAdmins:   db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'"),
   countMessages: db.prepare('SELECT COUNT(*) AS count FROM messages'),
@@ -381,10 +462,25 @@ if (configuredUsers.length) {
   }
 }
 
+const seedDefaultRoom = db.transaction(() => {
+  const existingRoom = stmts.getRoomById.get(DEFAULT_ROOM_ID);
+  if (!existingRoom) {
+    stmts.createRoom.run(DEFAULT_ROOM_ID, DEFAULT_ROOM_NAME, DEFAULT_ADMIN_USERNAME || 'system', new Date().toISOString());
+    const users = stmts.listUsers.all();
+    const joinedAt = new Date().toISOString();
+    for (const user of users) {
+      stmts.addRoomMember.run(DEFAULT_ROOM_ID, user.username, DEFAULT_ADMIN_USERNAME || 'system', joinedAt);
+    }
+  }
+  db.prepare(`UPDATE messages SET room_id = ? WHERE room_id IS NULL OR room_id = ''`).run(DEFAULT_ROOM_ID);
+});
+seedDefaultRoom();
+
 function formatRow(row) {
   return {
     type: 'message',
     id: row.id,
+    roomId: row.roomId,
     username: row.username,
     text: row.text || '',
     imageUrl: row.imageUrl || null,
@@ -399,8 +495,28 @@ function formatRow(row) {
   };
 }
 
-function loadHistory() {
-  return stmts.getHistory.all().reverse().map(formatRow);
+function formatRoom(row, currentUsername) {
+  const members = String(row.members || '')
+    .split(',')
+    .map((item) => normalizeUsername(item))
+    .filter(Boolean);
+  return {
+    id: row.id,
+    name: normalizeRoomName(row.name),
+    createdBy: normalizeUsername(row.createdBy),
+    createdAt: row.createdAt,
+    members,
+    memberCount: members.length,
+    isOwner: normalizeUsername(row.createdBy) === currentUsername,
+  };
+}
+
+function loadRoomsForUser(username) {
+  return stmts.listRoomsForUser.all(username).map((row) => formatRoom(row, username));
+}
+
+function loadHistory(roomId) {
+  return stmts.getHistory.all(roomId).reverse().map(formatRow);
 }
 
 function sanitizeUploadName(filename, fallback) {
@@ -579,12 +695,23 @@ const fcmTokens = new Map();
 
 function broadcast(msg) {
   const raw = JSON.stringify(msg);
-  for (const { ws } of clients.values()) {
-    if (ws.readyState === 1) ws.send(raw);
+  for (const client of clients.values()) {
+    if (client.ws.readyState === 1) client.ws.send(raw);
   }
 }
-function broadcastOnline() { broadcast({ type: 'online', users: onlineUsers() }); }
-function onlineUsers() { return [...new Set([...clients.values()].filter(c => c.username).map(c => c.username))]; }
+function broadcastToRoom(roomId, msg) {
+  const raw = JSON.stringify(msg);
+  for (const client of clients.values()) {
+    if (client.roomId !== roomId) continue;
+    if (client.ws.readyState === 1) client.ws.send(raw);
+  }
+}
+function broadcastOnline(roomId) { broadcastToRoom(roomId, { type: 'online', users: onlineUsers(roomId), roomId }); }
+function onlineUsers(roomId) {
+  return [...new Set([...clients.values()]
+    .filter((c) => c.username && (!roomId || c.roomId === roomId))
+    .map((c) => c.username))];
+}
 
 async function sendWebPush(msg, senderUsername) {
   const payload = JSON.stringify({ title: msg.username, body: msg.text ? msg.text.slice(0, 100) : '📎 Immagine', url: '/chat' });
@@ -701,12 +828,89 @@ async function chatRoutes(app) {
   app.get('/chat/me', async (request, reply) => {
     const user = requireAuthUser(request, reply);
     if (!user) return;
+    const rooms = loadRoomsForUser(user.username);
     return {
       username: user.username,
       role: user.role,
       isAdmin: user.role === 'admin',
       canUsePrivateTransfers: user.username === PRIVATE_TRANSFER_OWNER,
       canUseConsole: user.role === 'admin',
+      rooms,
+      defaultRoomId: rooms[0]?.id || DEFAULT_ROOM_ID,
+    };
+  });
+
+  app.get('/chat/rooms', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+    return {
+      rooms: loadRoomsForUser(user.username),
+      users: stmts.listUsers.all().map(formatUser),
+    };
+  });
+
+  app.post('/chat/rooms', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+
+    const name = normalizeRoomName(request.body?.name);
+    if (!name) return reply.code(400).send({ error: 'Nome stanza mancante' });
+
+    const requestedMembers = Array.isArray(request.body?.members) ? request.body.members : [];
+    const memberSet = new Set([user.username]);
+    for (const entry of requestedMembers) {
+      const username = normalizeUsername(entry);
+      if (!username) continue;
+      if (!stmts.getAuthUser.get(username)) return reply.code(400).send({ error: `Utente non trovato: ${username}` });
+      memberSet.add(username);
+    }
+
+    const roomId = crypto.randomBytes(8).toString('hex');
+    const createdAt = new Date().toISOString();
+    const createRoom = db.transaction(() => {
+      stmts.createRoom.run(roomId, name, user.username, createdAt);
+      for (const username of memberSet) {
+        stmts.addRoomMember.run(roomId, username, user.username, createdAt);
+      }
+    });
+    createRoom();
+
+    return {
+      ok: true,
+      room: loadRoomsForUser(user.username).find((room) => room.id === roomId) || null,
+      rooms: loadRoomsForUser(user.username),
+    };
+  });
+
+  app.post('/chat/rooms/:roomId/members', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+
+    const roomId = String(request.params.roomId || '').trim();
+    const access = requireRoomMember(request, reply, roomId, user);
+    if (!access) return;
+    if (!access.room.isOwner && user.role !== 'admin') {
+      return reply.code(403).send({ error: 'Solo il creatore stanza o un admin possono invitare utenti' });
+    }
+
+    const requestedMembers = Array.isArray(request.body?.members) ? request.body.members : [];
+    const normalized = [];
+    for (const entry of requestedMembers) {
+      const username = normalizeUsername(entry);
+      if (!username || username === user.username) continue;
+      if (!stmts.getAuthUser.get(username)) return reply.code(400).send({ error: `Utente non trovato: ${username}` });
+      normalized.push(username);
+    }
+
+    const joinedAt = new Date().toISOString();
+    for (const username of normalized) {
+      stmts.addRoomMember.run(roomId, username, user.username, joinedAt);
+    }
+
+    return {
+      ok: true,
+      room: loadRoomsForUser(user.username).find((room) => room.id === roomId) || access.room,
+      rooms: loadRoomsForUser(user.username),
     };
   });
 
@@ -764,6 +968,7 @@ async function chatRoutes(app) {
       return reply.code(400).send({ error: 'Deve esistere almeno un admin' });
     }
 
+    stmts.deleteRoomMembershipsByUser.run(username);
     stmts.deleteUser.run(username);
     return {
       ok: true,
@@ -827,12 +1032,15 @@ async function chatRoutes(app) {
 
   // Pagination endpoint
   app.get('/chat/messages', async (request, reply) => {
-    const username = requireAuth(request, reply);
-    if (!username) return;
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+    const roomId = String(request.query.roomId || '').trim() || DEFAULT_ROOM_ID;
+    const access = requireRoomMember(request, reply, roomId, user);
+    if (!access) return;
     const { before } = request.query;
     if (!before) return reply.code(400).send({ error: 'before richiesto' });
     const limit = Math.min(parseInt(request.query.limit) || 50, 100);
-    const rows = stmts.getPage.all(before, limit);
+    const rows = stmts.getPage.all(roomId, before, limit);
     return rows.reverse().map(formatRow);
   });
 
@@ -1189,7 +1397,7 @@ async function chatRoutes(app) {
 
   app.get('/chat/ws', { websocket: true }, (socket) => {
     const id = crypto.randomUUID();
-    clients.set(id, { ws: socket, username: null });
+    clients.set(id, { ws: socket, username: null, roomId: null });
 
     socket.on('message', (raw) => {
       let msg;
@@ -1204,19 +1412,35 @@ async function chatRoutes(app) {
           socket.close();
           return;
         }
+        const roomId = String(msg.roomId || '').trim() || DEFAULT_ROOM_ID;
+        const room = stmts.getRoomById.get(roomId);
+        const membership = room ? stmts.getRoomMember.get(roomId, username) : null;
+        if (!room || !membership) {
+          socket.send(JSON.stringify({ type: 'room_error' }));
+          socket.close();
+          return;
+        }
+        const previousRoomId = client.roomId;
         client.username = username;
+        client.roomId = roomId;
         if (msg.fcmToken) { fcmTokens.set(username, msg.fcmToken); }
-        socket.send(JSON.stringify({ type: 'history', messages: loadHistory() }));
-        broadcastOnline();
+        socket.send(JSON.stringify({
+          type: 'history',
+          roomId,
+          roomName: room.name,
+          messages: loadHistory(roomId),
+        }));
+        if (previousRoomId && previousRoomId !== roomId) broadcastOnline(previousRoomId);
+        broadcastOnline(roomId);
         return;
       }
 
       if (!client?.username) return;
 
       if (msg.type === 'typing') {
-        const out = JSON.stringify({ type: 'typing', username: client.username });
+        const out = JSON.stringify({ type: 'typing', username: client.username, roomId: client.roomId });
         for (const [cid, c] of clients) {
-          if (cid !== id && c.ws.readyState === 1) c.ws.send(out);
+          if (cid !== id && c.roomId === client.roomId && c.ws.readyState === 1) c.ws.send(out);
         }
         return;
       }
@@ -1227,17 +1451,17 @@ async function chatRoutes(app) {
           for (const msgId of ids) stmts.insertRead.run(msgId, username);
         });
         insertMany(ids, client.username);
-        broadcast({ type: 'read', ids, reader: client.username });
+        broadcastToRoom(client.roomId, { type: 'read', ids, reader: client.username, roomId: client.roomId });
         return;
       }
 
       if (msg.type === 'delete') {
         const msgId = msg.id ? String(msg.id).slice(0, 36) : null;
         if (!msgId) return;
-        const result = stmts.deleteMessage.run(msgId, client.username);
+        const result = stmts.deleteMessage.run(msgId, client.roomId, client.username);
         if (result.changes > 0) {
           stmts.deleteReads.run(msgId);
-          broadcast({ type: 'deleted', id: msgId });
+          broadcastToRoom(client.roomId, { type: 'deleted', id: msgId, roomId: client.roomId });
         }
         return;
       }
@@ -1249,12 +1473,12 @@ async function chatRoutes(app) {
         if (!text && !imageUrl) return;
         let replyTo = null;
         if (replyToId) {
-          const replied = stmts.getById.get(replyToId);
+          const replied = stmts.getById.get(replyToId, client.roomId);
           if (replied) replyTo = { id: replied.id, username: replied.username, text: replied.text || '', imageUrl: replied.imageUrl || null };
         }
-        const out = { type: 'message', id: crypto.randomUUID(), username: client.username, text, imageUrl, timestamp: new Date().toISOString(), readBy: [], replyTo };
-        stmts.insertMessage.run(out.id, out.username, out.text, out.imageUrl, out.timestamp, replyToId);
-        broadcast(out);
+        const out = { type: 'message', id: crypto.randomUUID(), roomId: client.roomId, username: client.username, text, imageUrl, timestamp: new Date().toISOString(), readBy: [], replyTo };
+        stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, replyToId);
+        broadcastToRoom(client.roomId, out);
         sendAllPush(out, client.username);
       }
     });
@@ -1262,7 +1486,7 @@ async function chatRoutes(app) {
     socket.on('close', () => {
       const client = clients.get(id);
       clients.delete(id);
-      if (client?.username) broadcastOnline();
+      if (client?.username && client.roomId) broadcastOnline(client.roomId);
     });
   });
 }

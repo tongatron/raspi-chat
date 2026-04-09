@@ -539,6 +539,7 @@
     #notif-btn { opacity: .56; }
     #notif-btn:hover { opacity: 1; }
     #console-btn,
+    #rooms-btn,
     #archive-btn,
     #admin-btn {
       display: none;
@@ -557,11 +558,16 @@
       transition: transform .18s ease, background .18s ease, color .18s ease;
     }
     #console-btn:hover,
+    #rooms-btn:hover,
     #archive-btn:hover,
     #admin-btn:hover { transform: translateY(-1px); background: rgba(15,34,59,.10); color: var(--ink); }
     #console-btn.active {
       background: rgba(122,180,255,.16);
       color: var(--primary-strong);
+    }
+    #rooms-btn.active {
+      background: rgba(255,87,87,.12);
+      color: #d44a4a;
     }
     #archive-btn.active {
       background: var(--primary-soft);
@@ -834,6 +840,14 @@
       flex: 1;
       overflow: hidden;
     }
+    #rooms-view {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      flex: 1;
+      overflow: hidden;
+    }
     #console-view {
       display: none;
       flex-direction: column;
@@ -852,6 +866,8 @@
     }
     .private-card,
     .private-list,
+    .rooms-card,
+    .rooms-list,
     .admin-card,
     .admin-list {
       background: var(--surface);
@@ -1042,6 +1058,13 @@
       min-height: 0;
       flex: 1;
     }
+    .rooms-layout {
+      display: grid;
+      grid-template-columns: minmax(280px, .95fr) minmax(0, 1.05fr);
+      gap: 12px;
+      min-height: 0;
+      flex: 1;
+    }
     .admin-card,
     .admin-list {
       min-height: 0;
@@ -1049,6 +1072,113 @@
       flex-direction: column;
       gap: 12px;
       padding: 16px;
+    }
+    .rooms-card,
+    .rooms-list {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+    }
+    .rooms-list-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      min-height: 0;
+    }
+    .room-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .room-item.active {
+      border-color: rgba(31,111,210,.28);
+      box-shadow: 0 0 0 1px rgba(31,111,210,.12) inset;
+    }
+    .room-item-main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+    .room-item-name {
+      font-weight: 700;
+      word-break: break-word;
+    }
+    .room-item-meta {
+      color: var(--muted);
+      font-size: .8rem;
+      word-break: break-word;
+    }
+    .room-open-btn,
+    #room-create-btn,
+    #room-invite-btn {
+      border: none;
+      border-radius: 12px;
+      padding: 8px 10px;
+      font: inherit;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .room-open-btn,
+    #room-create-btn {
+      background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+      color: white;
+      box-shadow: 0 14px 24px rgba(31,111,210,.18);
+    }
+    #room-invite-btn {
+      background: rgba(255,87,87,.10);
+      color: #d44a4a;
+    }
+    .rooms-copy,
+    .rooms-empty,
+    .rooms-status {
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: .88rem;
+    }
+    .room-members {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .room-member-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(15,34,59,.06);
+      color: var(--ink);
+      font-size: .84rem;
+    }
+    .room-member-option input {
+      accent-color: var(--primary);
+    }
+    #room-name-input {
+      width: 100%;
+      border: 1px solid rgba(21,39,66,.10);
+      border-radius: 14px;
+      background: rgba(255,255,255,.88);
+      color: var(--ink);
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+    }
+    #room-name-input:focus {
+      border-color: rgba(31,111,210,.45);
+      box-shadow: 0 0 0 4px rgba(31,111,210,.10);
+      background: rgba(255,255,255,.96);
     }
     .admin-card h3,
     .admin-list h3 {
@@ -1496,6 +1626,7 @@
         font-size: 1rem;
       }
       #console-btn,
+      #rooms-btn,
       #archive-btn,
       #admin-btn,
       #logout-btn {
@@ -1515,12 +1646,19 @@
         overflow-y: auto;
         padding-bottom: 4px;
       }
+      #rooms-view {
+        overflow-y: auto;
+        padding-bottom: 4px;
+      }
       #console-view {
         overflow-y: auto;
         padding-bottom: 4px;
       }
       .private-card, .private-list, .private-item { border-radius: 20px; }
       .admin-layout {
+        grid-template-columns: 1fr;
+      }
+      .rooms-layout {
         grid-template-columns: 1fr;
       }
       .console-grid {
@@ -1541,7 +1679,9 @@
         text-align: left;
       }
       .admin-card,
-      .admin-list {
+      .admin-list,
+      .rooms-card,
+      .rooms-list {
         padding: 14px;
         border-radius: 20px;
       }
@@ -1665,6 +1805,7 @@
     </div>
     <div class="header-actions">
       <button id="console-btn" type="button">Console</button>
+      <button id="rooms-btn" type="button">Stanze</button>
       <button id="archive-btn" type="button">Archivio</button>
       <button id="admin-btn" type="button">Admin</button>
       <button class="toolbar-btn" id="theme-btn" title="Passa al tema scuro" aria-label="Passa al tema scuro">◐</button>
@@ -1691,6 +1832,28 @@
     <button class="icon-btn" id="send-btn" title="Invia">&#x27A4;</button>
   </div>
   </div>
+  <section id="rooms-view">
+    <div class="rooms-layout">
+      <div class="rooms-list">
+        <h3>Stanze</h3>
+        <div class="rooms-copy">Scegli la stanza attiva oppure creane una nuova con altri utenti della piattaforma.</div>
+        <div class="rooms-list-body" id="rooms-list-body"></div>
+      </div>
+      <div class="rooms-card">
+        <h3 id="room-panel-title">Nuova stanza</h3>
+        <div class="rooms-copy" id="room-panel-copy">Crea una nuova stanza privata e invita subito altri utenti registrati.</div>
+        <input id="room-name-input" type="text" maxlength="60" placeholder="Nome stanza" />
+        <div class="room-members" id="room-create-members"></div>
+        <button id="room-create-btn" type="button">Crea stanza</button>
+        <div class="admin-divider"></div>
+        <h3 id="room-invite-title">Invita utenti</h3>
+        <div class="rooms-copy" id="room-invite-copy">Apri una stanza a un altro utente gia presente in piattaforma.</div>
+        <div class="room-members" id="room-invite-members"></div>
+        <button id="room-invite-btn" type="button" disabled>Invita nella stanza</button>
+        <div class="rooms-status" id="rooms-status"></div>
+      </div>
+    </div>
+  </section>
   <section id="private-transfer-view">
     <div class="private-list">
       <div class="private-list-head">
@@ -1830,6 +1993,10 @@ var latestInviteUrl = '';
 var consoleLoading = false;
 var selectedAdminUsername = '';
 var adminUsersCache = [];
+var roomsCache = [];
+var roomUsersCache = [];
+var currentRoomId = localStorage.getItem('chat-room-id') || '';
+var currentRoomName = 'Chat';
 
 function playNotifSound() {
   try {
@@ -1882,10 +2049,10 @@ function scrollToMessage(id) {
 
 // Pagination
 async function loadMoreMessages() {
-  if (loadingMore || !hasMore || !oldestTimestamp) return;
+  if (loadingMore || !hasMore || !oldestTimestamp || !currentRoomId) return;
   loadingMore = true;
   try {
-    var res = await authFetch('/chat/messages?before=' + encodeURIComponent(oldestTimestamp) + '&limit=50');
+    var res = await authFetch('/chat/messages?roomId=' + encodeURIComponent(currentRoomId) + '&before=' + encodeURIComponent(oldestTimestamp) + '&limit=50');
     var messages = await res.json();
     if (!messages.length) {
       hasMore = false;
@@ -1934,6 +2101,17 @@ if (savedUser && savedToken) joinAs(savedUser, savedToken);
 function clearStoredAuth() {
   localStorage.removeItem('chat-user');
   localStorage.removeItem('chat-token');
+}
+
+function setCurrentRoom(roomId, roomName) {
+  currentRoomId = roomId || '';
+  currentRoomName = roomName || 'Chat';
+  if (currentRoomId) localStorage.setItem('chat-room-id', currentRoomId);
+  document.querySelector('header h2').textContent = currentRoomName || 'Chat';
+}
+
+function getCurrentRoom() {
+  return roomsCache.find(function(room) { return room.id === currentRoomId; }) || null;
 }
 
 function sendLogout() {
@@ -2087,15 +2265,21 @@ async function joinAs(name, token) {
   myRole = session.role || 'user';
   isAdmin = !!session.isAdmin;
   canUsePrivateTransfers = !!session.canUsePrivateTransfers;
+  roomsCache = session.rooms || [];
+  roomUsersCache = [];
+  var initialRoom = roomsCache.find(function(room) { return room.id === currentRoomId; }) || roomsCache[0] || null;
+  setCurrentRoom(initialRoom ? initialRoom.id : '', initialRoom ? initialRoom.name : 'Chat');
   document.getElementById('login').style.display = 'none';
   document.getElementById('chat').style.display = 'flex';
   document.getElementById('console-btn').style.display = isAdmin ? 'inline-flex' : 'none';
+  document.getElementById('rooms-btn').style.display = 'inline-flex';
   document.getElementById('archive-btn').style.display = canUsePrivateTransfers ? 'inline-flex' : 'none';
   document.getElementById('admin-btn').style.display = isAdmin ? 'inline-flex' : 'none';
   initScrollListener();
   restoreTheme();
   setView('chat');
   if (canUsePrivateTransfers) loadPrivateTransfers();
+  await loadRoomsData();
   connect();
   setTimeout(initPush, 2000);
 }
@@ -2167,7 +2351,7 @@ async function togglePush() {
 // WebSocket
 function connect() {
   ws = new WebSocket(WS_URL);
-  ws.onopen = function() { ws.send(JSON.stringify({ type: 'join', username: myName, token: myToken })); };
+  ws.onopen = function() { ws.send(JSON.stringify({ type: 'join', username: myName, token: myToken, roomId: currentRoomId })); };
   ws.onmessage = function(e) { handleMsg(JSON.parse(e.data)); };
   ws.onclose = function() { setTimeout(connect, 2000); };
 }
@@ -2177,7 +2361,19 @@ function handleMsg(msg) {
     sendLogout();
     clearStoredAuth(); location.reload(); return;
   }
+  if (msg.type === 'room_error') {
+    currentRoomId = '';
+    localStorage.removeItem('chat-room-id');
+    location.reload();
+    return;
+  }
   if (msg.type === 'history') {
+    if (msg.roomId && msg.roomId !== currentRoomId) return;
+    var containerEl = document.getElementById('messages');
+    containerEl.innerHTML = '<div id="typing-indicator"></div>';
+    msgElements = {};
+    oldestTimestamp = null;
+    hasMore = true;
     var unreadIds = [];
     msg.messages.forEach(function(m) {
       document.getElementById('messages').appendChild(buildMessage(m));
@@ -2372,11 +2568,13 @@ document.addEventListener('paste', async function(e) {
 
 function setView(view) {
   var nextView = 'chat';
+  if (view === 'rooms') nextView = 'rooms';
   if (view === 'private' && canUsePrivateTransfers) nextView = 'private';
   if (view === 'console' && isAdmin) nextView = 'console';
   if (view === 'admin' && isAdmin) nextView = 'admin';
   currentView = nextView;
   document.getElementById('chat-main-view').style.display = nextView === 'chat' ? 'contents' : 'none';
+  document.getElementById('rooms-view').style.display = nextView === 'rooms' ? 'flex' : 'none';
   document.getElementById('private-transfer-view').style.display = nextView === 'private' ? 'flex' : 'none';
   document.getElementById('console-view').style.display = nextView === 'console' ? 'flex' : 'none';
   document.getElementById('admin-view').style.display = nextView === 'admin' ? 'flex' : 'none';
@@ -2384,6 +2582,11 @@ function setView(view) {
   if (consoleBtn) {
     consoleBtn.classList.toggle('active', nextView === 'console');
     consoleBtn.textContent = 'Console';
+  }
+  var roomsBtn = document.getElementById('rooms-btn');
+  if (roomsBtn) {
+    roomsBtn.classList.toggle('active', nextView === 'rooms');
+    roomsBtn.textContent = 'Stanze';
   }
   var archiveBtn = document.getElementById('archive-btn');
   if (archiveBtn) {
@@ -2488,6 +2691,184 @@ async function loadPrivateTransfers() {
     status.textContent = 'Non riesco a caricare l\'archivio privato.';
   }
   privateTransferLoading = false;
+}
+
+function renderRoomMemberOptions(targetId, users, selectedNames) {
+  var target = document.getElementById(targetId);
+  target.innerHTML = '';
+  var selectedSet = new Set(selectedNames || []);
+  var options = (users || []).filter(function(user) { return user.username !== myName; });
+  if (!options.length) {
+    var empty = document.createElement('div');
+    empty.className = 'rooms-empty';
+    empty.textContent = 'Nessun altro utente disponibile.';
+    target.appendChild(empty);
+    return;
+  }
+  options.forEach(function(user) {
+    var label = document.createElement('label');
+    label.className = 'room-member-option';
+    var checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = user.username;
+    checkbox.checked = selectedSet.has(user.username);
+    label.appendChild(checkbox);
+    var text = document.createElement('span');
+    text.textContent = user.username + (user.role === 'admin' ? ' • admin' : '');
+    label.appendChild(text);
+    target.appendChild(label);
+  });
+}
+
+function getCheckedUsernames(targetId) {
+  return Array.from(document.querySelectorAll('#' + targetId + ' input[type="checkbox"]:checked'))
+    .map(function(input) { return input.value; });
+}
+
+function renderRooms(rooms, users) {
+  roomsCache = rooms || [];
+  roomUsersCache = users || roomUsersCache;
+  var list = document.getElementById('rooms-list-body');
+  var status = document.getElementById('rooms-status');
+  list.innerHTML = '';
+  if (!roomsCache.length) {
+    var empty = document.createElement('div');
+    empty.className = 'rooms-empty';
+    empty.textContent = 'Nessuna stanza disponibile.';
+    list.appendChild(empty);
+  } else {
+    roomsCache.forEach(function(room) {
+      var item = document.createElement('div');
+      item.className = 'room-item' + (room.id === currentRoomId ? ' active' : '');
+      item.onclick = function() { switchRoom(room.id); };
+
+      var main = document.createElement('div');
+      main.className = 'room-item-main';
+      var name = document.createElement('div');
+      name.className = 'room-item-name';
+      name.textContent = room.name;
+      main.appendChild(name);
+      var meta = document.createElement('div');
+      meta.className = 'room-item-meta';
+      meta.textContent = room.members.join(', ') || 'Solo tu';
+      main.appendChild(meta);
+      item.appendChild(main);
+
+      var openBtn = document.createElement('button');
+      openBtn.className = 'room-open-btn';
+      openBtn.type = 'button';
+      openBtn.textContent = room.id === currentRoomId ? 'Attiva' : 'Apri';
+      openBtn.onclick = function(event) {
+        event.stopPropagation();
+        switchRoom(room.id);
+      };
+      item.appendChild(openBtn);
+      list.appendChild(item);
+    });
+  }
+
+  var activeRoom = getCurrentRoom();
+  renderRoomMemberOptions('room-create-members', roomUsersCache, []);
+  renderRoomMemberOptions('room-invite-members', roomUsersCache.filter(function(user) {
+    return !activeRoom || activeRoom.members.indexOf(user.username) === -1;
+  }), []);
+  document.getElementById('room-invite-btn').disabled = !activeRoom;
+  document.getElementById('room-panel-title').textContent = activeRoom ? ('Stanza attiva: ' + activeRoom.name) : 'Nuova stanza';
+  document.getElementById('room-panel-copy').textContent = activeRoom
+    ? 'Puoi creare altre stanze oppure cambiare la stanza attiva qui sotto.'
+    : 'Crea una nuova stanza privata e invita subito altri utenti registrati.';
+  document.getElementById('room-invite-title').textContent = activeRoom ? ('Invita in ' + activeRoom.name) : 'Invita utenti';
+  document.getElementById('room-invite-copy').textContent = activeRoom
+    ? 'Aggiungi altri utenti gia registrati alla stanza selezionata.'
+    : 'Seleziona prima una stanza.';
+  if (status && !status.textContent) status.textContent = '';
+}
+
+async function loadRoomsData() {
+  if (!myName || !myToken) return;
+  var res = await authFetch('/chat/rooms');
+  var data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Errore stanze');
+  if (!currentRoomId || !(data.rooms || []).some(function(room) { return room.id === currentRoomId; })) {
+    var firstRoom = (data.rooms || [])[0] || null;
+    setCurrentRoom(firstRoom ? firstRoom.id : '', firstRoom ? firstRoom.name : 'Chat');
+  } else {
+    var current = (data.rooms || []).find(function(room) { return room.id === currentRoomId; });
+    if (current) setCurrentRoom(current.id, current.name);
+  }
+  renderRooms(data.rooms || [], data.users || []);
+}
+
+async function createRoom() {
+  var name = document.getElementById('room-name-input').value.trim();
+  var status = document.getElementById('rooms-status');
+  if (!name) {
+    status.textContent = 'Inserisci un nome stanza.';
+    return;
+  }
+  status.textContent = 'Creo stanza...';
+  try {
+    var res = await authFetch('/chat/rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, members: getCheckedUsernames('room-create-members') }),
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Creazione non riuscita');
+    document.getElementById('room-name-input').value = '';
+    await loadRoomsData();
+    if (data.room) switchRoom(data.room.id, true);
+    status.textContent = 'Stanza creata.';
+  } catch (e) {
+    status.textContent = e.message || 'Creazione stanza non riuscita.';
+  }
+}
+
+async function inviteUsersToRoom() {
+  var room = getCurrentRoom();
+  var status = document.getElementById('rooms-status');
+  if (!room) {
+    status.textContent = 'Seleziona prima una stanza.';
+    return;
+  }
+  var members = getCheckedUsernames('room-invite-members');
+  if (!members.length) {
+    status.textContent = 'Seleziona almeno un utente da invitare.';
+    return;
+  }
+  status.textContent = 'Invito utenti...';
+  try {
+    var res = await authFetch('/chat/rooms/' + encodeURIComponent(room.id) + '/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ members: members }),
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Invito non riuscito');
+    await loadRoomsData();
+    status.textContent = 'Inviti inviati.';
+  } catch (e) {
+    status.textContent = e.message || 'Invito non riuscito.';
+  }
+}
+
+function switchRoom(roomId, fromFreshData) {
+  var room = roomsCache.find(function(entry) { return entry.id === roomId; });
+  if (!room) return;
+  setCurrentRoom(room.id, room.name);
+  renderRooms(roomsCache, roomUsersCache);
+  if (!fromFreshData) document.getElementById('rooms-status').textContent = 'Stanza attiva: ' + room.name;
+  oldestTimestamp = null;
+  hasMore = true;
+  loadingMore = false;
+  document.getElementById('messages').innerHTML = '<div id="typing-indicator"></div>';
+  msgElements = {};
+  setView('chat');
+  if (ws && ws.readyState <= 1) {
+    try { ws.close(); } catch (e) {}
+  } else {
+    connect();
+  }
 }
 
 function renderAdminUsers(users, currentUsername) {
@@ -2882,6 +3263,11 @@ document.getElementById('console-btn').onclick = function() {
   setView(nextView);
   if (nextView === 'console') loadConsoleData();
 };
+document.getElementById('rooms-btn').onclick = function() {
+  var nextView = currentView === 'rooms' ? 'chat' : 'rooms';
+  setView(nextView);
+  if (nextView === 'rooms') loadRoomsData();
+};
 document.getElementById('admin-btn').onclick = function() {
   if (!isAdmin) return;
   var nextView = currentView === 'admin' ? 'chat' : 'admin';
@@ -2906,6 +3292,8 @@ document.getElementById('private-submit-btn').onclick = function() {
 document.getElementById('private-save-note-btn').onclick = savePrivateNote;
 document.getElementById('private-refresh-btn').onclick = loadPrivateTransfers;
 document.getElementById('console-refresh-btn').onclick = loadConsoleData;
+document.getElementById('room-create-btn').onclick = createRoom;
+document.getElementById('room-invite-btn').onclick = inviteUsersToRoom;
 document.getElementById('theme-btn').onclick = toggleTheme;
 restoreTheme();
 
