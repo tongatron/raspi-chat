@@ -926,9 +926,7 @@ async function chatRoutes(app) {
   });
 
   app.get('/chat/console', async (request, reply) => {
-    return reply.type('text/html').header('Cache-Control', 'no-store').send(
-      fs.readFileSync(path.join(process.cwd(), 'public', 'chat-console.html'), 'utf8')
-    );
+    return reply.redirect('/chat');
   });
 
   app.get('/chat/invite/:token', async (request, reply) => {

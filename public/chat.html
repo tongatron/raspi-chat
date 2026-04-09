@@ -473,6 +473,10 @@
     #console-btn:hover,
     #archive-btn:hover,
     #admin-btn:hover { transform: translateY(-1px); background: rgba(15,34,59,.10); color: var(--ink); }
+    #console-btn.active {
+      background: rgba(122,180,255,.16);
+      color: var(--primary-strong);
+    }
     #archive-btn.active {
       background: var(--primary-soft);
       color: var(--primary-strong);
@@ -737,6 +741,14 @@
     #image-preview button:hover { background: rgba(15,34,59,.06); color: var(--ink); }
 
     #private-transfer-view {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      flex: 1;
+      overflow: hidden;
+    }
+    #console-view {
       display: none;
       flex-direction: column;
       gap: 12px;
@@ -1038,6 +1050,133 @@
       cursor: pointer;
       box-shadow: 0 14px 24px rgba(23,118,77,.18);
     }
+    .console-topbar,
+    .console-card {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,.72);
+      border-radius: 26px;
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .console-topbar {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .console-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: .76rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .console-topbar h3,
+    .console-card h3 {
+      font-size: 1rem;
+      letter-spacing: -.02em;
+    }
+    .console-copy,
+    #console-status-line,
+    .console-row .label {
+      color: var(--muted);
+    }
+    .console-copy,
+    #console-status-line {
+      line-height: 1.45;
+      font-size: .88rem;
+    }
+    .console-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    #console-refresh-btn {
+      border: none;
+      border-radius: 14px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+      color: white;
+      box-shadow: 0 14px 24px rgba(31,111,210,.18);
+    }
+    .console-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .console-card {
+      padding: 16px;
+      grid-column: span 6;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .console-card.full {
+      grid-column: 1 / -1;
+    }
+    .console-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .console-stat,
+    .console-row {
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .console-stat-label {
+      color: var(--muted);
+      font-size: .8rem;
+      margin-bottom: 6px;
+    }
+    .console-stat-value {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      word-break: break-word;
+    }
+    .console-list {
+      display: grid;
+      gap: 8px;
+    }
+    .console-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .console-row .value {
+      text-align: right;
+      font-weight: 700;
+      word-break: break-word;
+    }
+    .console-ok { color: var(--success); }
+    .console-warn { color: var(--warning); }
+    #console-details {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font: inherit;
+      color: var(--muted);
+      margin: 0;
+    }
     .admin-divider {
       height: 1px;
       background: var(--border);
@@ -1226,9 +1365,30 @@
         overflow-y: auto;
         padding-bottom: 4px;
       }
+      #console-view {
+        overflow-y: auto;
+        padding-bottom: 4px;
+      }
       .private-card, .private-list, .private-item { border-radius: 20px; }
       .admin-layout {
         grid-template-columns: 1fr;
+      }
+      .console-grid {
+        grid-template-columns: 1fr;
+      }
+      .console-card {
+        grid-column: 1 / -1;
+        border-radius: 20px;
+        padding: 14px;
+      }
+      .console-stats {
+        grid-template-columns: 1fr;
+      }
+      .console-row {
+        flex-direction: column;
+      }
+      .console-row .value {
+        text-align: left;
       }
       .admin-card,
       .admin-list {
@@ -1338,7 +1498,7 @@
       </div>
     </div>
     <div class="header-actions">
-      <a id="console-btn" href="/chat/console">Console</a>
+      <button id="console-btn" type="button">Console</button>
       <button id="archive-btn" type="button">Archivio</button>
       <button id="admin-btn" type="button">Admin</button>
       <button class="toolbar-btn" id="theme-btn" title="Passa al tema scuro" aria-label="Passa al tema scuro">◐</button>
@@ -1390,6 +1550,41 @@
       </div>
       <textarea id="private-note" placeholder="Scrivi una nota o incolla un link"></textarea>
       <div id="private-upload-status"></div>
+    </div>
+  </section>
+  <section id="console-view">
+    <div class="console-topbar">
+      <div>
+        <div class="console-eyebrow">Console</div>
+        <h3>Raspberry e Chat</h3>
+        <div class="console-copy">Cruscotto rapido per controllare stato Raspberry, chat e collegamenti.</div>
+      </div>
+      <div class="console-actions">
+        <button id="console-refresh-btn" type="button">Aggiorna</button>
+      </div>
+    </div>
+    <div id="console-status-line">Carico dati...</div>
+    <div class="console-grid" id="console-grid" hidden>
+      <article class="console-card">
+        <h3>Raspberry</h3>
+        <div class="console-stats" id="raspberry-stats"></div>
+      </article>
+      <article class="console-card">
+        <h3>Chat</h3>
+        <div class="console-stats" id="chat-stats"></div>
+      </article>
+      <article class="console-card">
+        <h3>Test rapidi</h3>
+        <div class="console-list" id="test-list"></div>
+      </article>
+      <article class="console-card">
+        <h3>Rete</h3>
+        <div class="console-list" id="network-list"></div>
+      </article>
+      <article class="console-card full">
+        <h3>Dettagli</h3>
+        <pre id="console-details"></pre>
+      </article>
     </div>
   </section>
   <section id="admin-view">
@@ -1462,6 +1657,7 @@ var isAdmin = false;
 var adminUsersLoading = false;
 var scrollListenerBound = false;
 var latestInviteUrl = '';
+var consoleLoading = false;
 
 function playNotifSound() {
   try {
@@ -2005,11 +2201,18 @@ document.addEventListener('paste', async function(e) {
 function setView(view) {
   var nextView = 'chat';
   if (view === 'private' && canUsePrivateTransfers) nextView = 'private';
+  if (view === 'console' && isAdmin) nextView = 'console';
   if (view === 'admin' && isAdmin) nextView = 'admin';
   currentView = nextView;
   document.getElementById('chat-main-view').style.display = nextView === 'chat' ? 'contents' : 'none';
   document.getElementById('private-transfer-view').style.display = nextView === 'private' ? 'flex' : 'none';
+  document.getElementById('console-view').style.display = nextView === 'console' ? 'flex' : 'none';
   document.getElementById('admin-view').style.display = nextView === 'admin' ? 'flex' : 'none';
+  var consoleBtn = document.getElementById('console-btn');
+  if (consoleBtn) {
+    consoleBtn.classList.toggle('active', nextView === 'console');
+    consoleBtn.textContent = 'Console';
+  }
   var archiveBtn = document.getElementById('archive-btn');
   if (archiveBtn) {
     archiveBtn.classList.toggle('active', nextView === 'private');
@@ -2202,6 +2405,92 @@ async function saveAdminUser() {
   }
 }
 
+function formatLoadAvg(values) {
+  return (values || []).map(function(v) { return Number(v || 0).toFixed(2); }).join(' • ');
+}
+
+function addConsoleStat(target, label, value) {
+  var el = document.createElement('div');
+  el.className = 'console-stat';
+  el.innerHTML = '<div class="console-stat-label"></div><div class="console-stat-value"></div>';
+  el.querySelector('.console-stat-label').textContent = label;
+  el.querySelector('.console-stat-value').textContent = value;
+  target.appendChild(el);
+}
+
+function addConsoleRow(target, label, value, klass) {
+  var row = document.createElement('div');
+  row.className = 'console-row';
+  row.innerHTML = '<div class="label"></div><div class="value"></div>';
+  row.querySelector('.label').textContent = label;
+  row.querySelector('.value').textContent = value;
+  if (klass) row.querySelector('.value').classList.add(klass);
+  target.appendChild(row);
+}
+
+async function loadConsoleData() {
+  if (!isAdmin || consoleLoading) return;
+  consoleLoading = true;
+  var status = document.getElementById('console-status-line');
+  var grid = document.getElementById('console-grid');
+  status.textContent = 'Aggiorno dati...';
+  try {
+    var res = await authFetch('/chat/console/data');
+    if (res.status === 403) {
+      status.textContent = 'Accesso console non consentito.';
+      grid.hidden = true;
+      return;
+    }
+    if (!res.ok) throw new Error('Console non disponibile');
+    var data = await res.json();
+
+    var raspberry = document.getElementById('raspberry-stats');
+    var chat = document.getElementById('chat-stats');
+    var tests = document.getElementById('test-list');
+    var network = document.getElementById('network-list');
+    raspberry.innerHTML = '';
+    chat.innerHTML = '';
+    tests.innerHTML = '';
+    network.innerHTML = '';
+
+    addConsoleStat(raspberry, 'Hostname', data.raspberry.hostname || 'n/d');
+    addConsoleStat(raspberry, 'Uptime', data.raspberry.uptimeHuman || 'n/d');
+    addConsoleStat(raspberry, 'Temperatura', data.raspberry.temperatureC != null ? (data.raspberry.temperatureC.toFixed(1) + ' °C') : 'n/d');
+    addConsoleStat(raspberry, 'Load avg', formatLoadAvg(data.raspberry.loadAvg));
+    addConsoleStat(raspberry, 'RAM usata', formatBytes(data.raspberry.memory.used) + ' / ' + formatBytes(data.raspberry.memory.total));
+    addConsoleStat(raspberry, 'Disco usato', data.raspberry.disk ? (formatBytes(data.raspberry.disk.used) + ' / ' + formatBytes(data.raspberry.disk.total)) : 'n/d');
+
+    addConsoleStat(chat, 'Utenti online', String(data.chat.onlineCount));
+    addConsoleStat(chat, 'Messaggi chat', String(data.chat.messageCount));
+    addConsoleStat(chat, 'Elementi archivio', String(data.chat.privateTransferCount));
+    addConsoleStat(chat, 'Web push', String(data.chat.pushSubscriptions));
+    addConsoleStat(chat, 'FCM token', String(data.chat.fcmTokens));
+    addConsoleStat(chat, 'Node', data.raspberry.node || 'n/d');
+
+    addConsoleRow(tests, 'Cookie auth', data.tests.authCookiePresent ? 'OK' : 'Assente', data.tests.authCookiePresent ? 'console-ok' : 'console-warn');
+    addConsoleRow(tests, 'SQLite', data.tests.sqliteOk ? 'OK' : 'Errore', data.tests.sqliteOk ? 'console-ok' : 'console-warn');
+    addConsoleRow(tests, 'Accesso locale', data.tests.localAccess ? 'Si' : 'No', data.tests.localAccess ? 'console-ok' : 'console-warn');
+    addConsoleRow(tests, 'Limite upload remoto', data.tests.uploadRemoteLimitMb + ' MB');
+    addConsoleRow(tests, 'Limite upload locale', data.tests.uploadLocalLimitMb + ' MB');
+    addConsoleRow(tests, 'Push VAPID', data.chat.vapidConfigured ? 'Configurato' : 'Assente', data.chat.vapidConfigured ? 'console-ok' : 'console-warn');
+    addConsoleRow(tests, 'FCM', data.chat.fcmConfigured ? 'Configurato' : 'Assente', data.chat.fcmConfigured ? 'console-ok' : 'console-warn');
+
+    addConsoleRow(network, 'IP locali', (data.raspberry.localIps || []).join(', ') || 'n/d');
+    addConsoleRow(network, 'CPU', (data.raspberry.cpuModel || 'n/d') + ' • ' + data.raspberry.cpuCount + ' core');
+    addConsoleRow(network, 'Piattaforma', data.raspberry.platform || 'n/d');
+    addConsoleRow(network, 'Online in chat', (data.chat.usersOnline || []).join(', ') || 'Nessuno');
+
+    document.getElementById('console-details').textContent = JSON.stringify(data, null, 2);
+    status.textContent = 'Ultimo aggiornamento: ' + new Date(data.generatedAt).toLocaleString('it-IT');
+    grid.hidden = false;
+  } catch (e) {
+    grid.hidden = true;
+    status.textContent = 'Non riesco a caricare la console.';
+  } finally {
+    consoleLoading = false;
+  }
+}
+
 function renderInvite(invite) {
   latestInviteUrl = invite && invite.url ? invite.url : '';
   document.getElementById('admin-invite-link').value = latestInviteUrl;
@@ -2343,6 +2632,12 @@ document.getElementById('archive-btn').onclick = function() {
   setView(nextView);
   if (nextView === 'private') loadPrivateTransfers();
 };
+document.getElementById('console-btn').onclick = function() {
+  if (!isAdmin) return;
+  var nextView = currentView === 'console' ? 'chat' : 'console';
+  setView(nextView);
+  if (nextView === 'console') loadConsoleData();
+};
 document.getElementById('admin-btn').onclick = function() {
   if (!isAdmin) return;
   var nextView = currentView === 'admin' ? 'chat' : 'admin';
@@ -2362,6 +2657,7 @@ document.getElementById('private-submit-btn').onclick = function() {
 };
 document.getElementById('private-save-note-btn').onclick = savePrivateNote;
 document.getElementById('private-refresh-btn').onclick = loadPrivateTransfers;
+document.getElementById('console-refresh-btn').onclick = loadConsoleData;
 document.getElementById('theme-btn').onclick = toggleTheme;
 restoreTheme();
 
