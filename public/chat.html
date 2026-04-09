@@ -2328,7 +2328,7 @@ async function joinAs(name, token) {
   document.getElementById('chat').style.display = 'flex';
   document.getElementById('admin-menu-wrap').style.display = isAdmin ? 'inline-block' : 'none';
   initScrollListener();
-  restoreTheme();
+  applyDarkTheme();
   setView('chat');
   if (isAdmin) await loadRoomsData();
   connect();
