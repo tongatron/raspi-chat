@@ -721,8 +721,13 @@ async function sendWebPush(msg, senderUsername) {
   const payload = JSON.stringify({ title: msg.username, body: msg.text ? msg.text.slice(0, 100) : '📎 Immagine', url: '/chat' });
   for (const [username, sub] of pushSubs) {
     if (username === senderUsername) continue;
-    try { await webpush.sendNotification(sub, payload); }
-    catch (err) { if (err.statusCode === 410 || err.statusCode === 404) pushSubs.delete(username); }
+    try {
+      await webpush.sendNotification(sub, payload);
+      console.log(`[Push] WebPush sent to ${username}`);
+    } catch (err) {
+      console.error(`[Push] WebPush failed for ${username}: ${err.statusCode || err.code || 'unknown'} ${err.message || err}`);
+      if (err.statusCode === 410 || err.statusCode === 404) pushSubs.delete(username);
+    }
   }
 }
 async function sendFCMPush(msg, senderUsername) {
@@ -1124,6 +1129,19 @@ async function chatRoutes(app) {
       vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
       fcmConfigured: admin.apps.length > 0,
     };
+    if (to && pushSubs.has(to)) {
+      try {
+        await webpush.sendNotification(
+          pushSubs.get(to),
+          JSON.stringify({ title: 'Test', body: 'Notifica Web Push di test!', url: '/chat' })
+        );
+        info.webPushTestResult = 'sent';
+      } catch (e) {
+        info.webPushTestResult = 'error: ' + e.message;
+      }
+    } else if (to) {
+      info.webPushTestResult = 'missing-subscription';
+    }
     if (to && fcmTokens.has(to)) {
       try {
         await admin.messaging().send({ token: fcmTokens.get(to), android: { priority: 'high', notification: { title: 'Test', body: 'Notifica di test!', channelId: 'chat_messages' } } });
