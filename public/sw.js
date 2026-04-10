@@ -11,8 +11,8 @@ self.addEventListener('push', event => {
       if (focused) return;
       return self.registration.showNotification(data.title || 'Chat', {
         body: data.body || '',
-        icon: '/chat/icon-192-v2.png',
-        badge: '/chat/icon-192-v2.png',
+        icon: '/chat/assets/icon-192-v2.png',
+        badge: '/chat/assets/icon-192-v2.png',
         data: { url: '/chat' },
         vibrate: [100, 50, 100],
         tag: 'chat-message',
