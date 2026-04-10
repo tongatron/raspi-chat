@@ -885,7 +885,7 @@ async function chatRoutes(app) {
   app.get('/chat/icon-:size.png', async (request, reply) => {
     const filePath = path.join(process.cwd(), 'public', `icon-${request.params.size}.png`);
     if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
-    return reply.type('image/png').send(fs.createReadStream(filePath));
+    return reply.type('image/png').header('Cache-Control', 'no-cache, must-revalidate').send(fs.createReadStream(filePath));
   });
 
   app.get('/chat/:assetName', async (request, reply) => {
@@ -905,7 +905,7 @@ async function chatRoutes(app) {
     if (!allowedAssets.has(assetName)) return reply.code(404).send({ error: 'Not found' });
     const filePath = path.join(process.cwd(), 'public', assetName);
     if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
-    return reply.type(allowedAssets.get(assetName)).send(fs.createReadStream(filePath));
+    return reply.type(allowedAssets.get(assetName)).header('Cache-Control', 'no-cache, must-revalidate').send(fs.createReadStream(filePath));
   });
 
   app.get('/chat/login-users', async () => {
