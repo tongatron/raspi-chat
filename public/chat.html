@@ -2085,11 +2085,9 @@
       </div>
       <button id="console-btn" type="button" style="display:none" hidden></button>
       <button id="rooms-btn" type="button" style="display:none" hidden></button>
-      <button class="toolbar-btn" id="notif-btn" title="Attiva notifiche">&#x1f514;</button>
       <button id="logout-btn" title="Esci">Esci</button>
     </div>
   </header>
-  <div id="notif-banner" onclick="enablePush()">Tocca qui per attivare le notifiche</div>
   <div id="debug-log"></div>
   <div id="chat-main-view">
   <div id="messages"><div id="typing-indicator"></div></div>
@@ -2737,46 +2735,20 @@ async function initPush() {
     swReg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
     swReg = await navigator.serviceWorker.ready;
     var perm = Notification.permission;
+    if (perm === 'denied') return;
+    if (perm !== 'granted') perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
     var vapidResp = await authFetch('/chat/vapid-public-key');
     var serverKey = (await vapidResp.json()).key;
     var savedKey = localStorage.getItem('chat-vapid-key');
     var sub = null;
     try { sub = await swReg.pushManager.getSubscription(); } catch(e) {}
-    var btn = document.getElementById('notif-btn');
-    var banner = document.getElementById('notif-banner');
     if (sub && savedKey !== serverKey) { try { await sub.unsubscribe(); } catch(e) {} sub = null; }
-    if (sub) {
-      btn.style.opacity = '1'; banner.style.display = 'none';
-      await authFetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON()}) });
-    } else if (perm === 'granted') { await subscribePush(serverKey); }
-    else if (perm !== 'denied') { banner.style.display = 'block'; }
-    btn.onclick = togglePush;
-  } catch(e) {}
-}
-async function subscribePush(vapidKey) {
-  try {
-    if (!vapidKey) { vapidKey = (await (await authFetch('/chat/vapid-public-key')).json()).key; }
-    var sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) });
-    localStorage.setItem('chat-vapid-key', vapidKey);
-    await authFetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON()}) });
-    document.getElementById('notif-btn').style.opacity = '1';
-    document.getElementById('notif-banner').style.display = 'none';
-  } catch(e) {}
-}
-async function enablePush() {
-  var p = await Notification.requestPermission();
-  if (p === 'granted') await subscribePush();
-  else document.getElementById('notif-banner').style.display = 'none';
-}
-async function togglePush() {
-  try {
-    var sub = await swReg.pushManager.getSubscription();
-    if (sub) {
-      await sub.unsubscribe(); localStorage.removeItem('chat-vapid-key');
-      await authFetch('/chat/push-unsubscribe', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName}) });
-      document.getElementById('notif-btn').style.opacity = '.5'; return;
+    if (!sub) {
+      sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(serverKey) });
+      localStorage.setItem('chat-vapid-key', serverKey);
     }
-    await enablePush();
+    await authFetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON()}) });
   } catch(e) {}
 }
 
