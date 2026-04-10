@@ -23,7 +23,6 @@
   <meta name="twitter:image" content="/chat/logo-v4.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&display=swap" rel="stylesheet" />
   <style>
     :root {
       --bg-top: #090d14;
@@ -51,7 +50,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body {
-      font-family: "Titillium Web", "Avenir Next", "Segoe UI", "Trebuchet MS", sans-serif;
+      font-family: "Avenir Next", "Segoe UI", "Trebuchet MS", sans-serif;
       background: linear-gradient(180deg, var(--bg-top), var(--bg-mid) 46%, var(--bg-bottom));
       color: var(--ink);
       min-height: 100dvh;
@@ -555,7 +554,8 @@
     #console-btn,
     #rooms-btn,
     #archive-btn,
-    #admin-btn {
+    #admin-btn,
+    #user-rooms-btn {
       display: inline-flex;
       height: 42px;
       border: none;
@@ -1757,6 +1757,47 @@
     #lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 4px; box-shadow: 0 30px 60px rgba(0,0,0,.22); }
     #lightbox.open { display: flex; }
 
+    #new-room-dialog {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 1100;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+    }
+    #new-room-dialog.open { display: flex; }
+    #new-room-panel {
+      background: #1c2129;
+      border: 1px solid rgba(229,239,252,.18);
+      border-radius: 6px;
+      box-shadow: 0 18px 42px rgba(0,0,0,.5);
+      padding: 20px;
+      width: min(380px, 90vw);
+      color: var(--ink);
+    }
+    #new-room-create-btn {
+      border: none;
+      border-radius: 4px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 700;
+      background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+      color: white;
+      cursor: pointer;
+    }
+    #new-room-cancel-btn {
+      border: none;
+      border-radius: 4px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 700;
+      background: rgba(255,255,255,.08);
+      color: var(--muted);
+      cursor: pointer;
+    }
+
     /* Misc */
     #notif-banner {
       display: none;
@@ -2242,6 +2283,24 @@
 
 <div id="lightbox"><img id="lightbox-img" src="" alt="" /></div>
 
+<div id="new-room-dialog">
+  <div id="new-room-panel">
+    <h3 style="margin:0 0 12px">Nuova stanza</h3>
+    <div class="admin-field">
+      <label for="new-room-name">Nome stanza</label>
+      <input id="new-room-name" type="text" placeholder="Es. Progetto, Famiglia..." />
+    </div>
+    <div class="admin-field" style="margin-top:8px">
+      <label>Invita utenti</label>
+      <div id="new-room-users" style="max-height:180px;overflow-y:auto"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button id="new-room-create-btn" type="button" onclick="createUserRoom()">Crea stanza</button>
+      <button id="new-room-cancel-btn" type="button" onclick="document.getElementById('new-room-dialog').classList.remove('open')">Annulla</button>
+    </div>
+  </div>
+</div>
+
 <script>
 var WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/chat/ws';
 var ws, myName, myToken, pendingImageUrl = null, swReg = null;
@@ -2399,15 +2458,14 @@ function renderUserRoomsMenu() {
   var wrap = document.getElementById('user-rooms-wrap');
   var menu = document.getElementById('user-rooms-menu');
   if (!wrap || !menu) return;
-  wrap.style.display = !isAdmin && roomsCache.length > 1 ? 'inline-block' : 'none';
+  wrap.style.display = 'inline-block';
   menu.classList.remove('open');
   menu.innerHTML = '';
-  if (isAdmin || roomsCache.length <= 1) return;
   roomsCache.forEach(function(room) {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.setAttribute('role', 'menuitem');
-    btn.textContent = room.id === currentRoomId ? (room.name + ' • Attiva') : room.name;
+    btn.textContent = room.id === currentRoomId ? (room.name + ' \u2022 Attiva') : room.name;
     btn.onclick = function(e) {
       e.stopPropagation();
       menu.classList.remove('open');
@@ -2415,6 +2473,72 @@ function renderUserRoomsMenu() {
     };
     menu.appendChild(btn);
   });
+  var sep = document.createElement('div');
+  sep.style.cssText = 'height:1px;background:rgba(229,239,252,.14);margin:4px 0;';
+  menu.appendChild(sep);
+  var newBtn = document.createElement('button');
+  newBtn.type = 'button';
+  newBtn.setAttribute('role', 'menuitem');
+  newBtn.textContent = '+ Nuova stanza...';
+  newBtn.style.color = 'var(--primary)';
+  newBtn.onclick = function(e) {
+    e.stopPropagation();
+    menu.classList.remove('open');
+    openNewRoomDialog();
+  };
+  menu.appendChild(newBtn);
+}
+
+async function openNewRoomDialog() {
+  var dialog = document.getElementById('new-room-dialog');
+  var usersList = document.getElementById('new-room-users');
+  document.getElementById('new-room-name').value = '';
+  usersList.innerHTML = '<div style="color:var(--muted);padding:8px">Caricamento...</div>';
+  dialog.classList.add('open');
+  try {
+    var res = await authFetch('/chat/my-rooms');
+    var data = await res.json();
+    usersList.innerHTML = '';
+    (data.users || []).forEach(function(u) {
+      if (u.username === myName) return;
+      var label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:.92rem;';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = u.username;
+      cb.className = 'new-room-cb';
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(u.username));
+      usersList.appendChild(label);
+    });
+  } catch(e) {
+    usersList.innerHTML = '<div style="color:var(--muted)">Errore caricamento utenti</div>';
+  }
+}
+
+async function createUserRoom() {
+  var name = document.getElementById('new-room-name').value.trim();
+  if (!name) { alert('Inserisci un nome per la stanza'); return; }
+  var members = [];
+  document.querySelectorAll('.new-room-cb:checked').forEach(function(cb) { members.push(cb.value); });
+  try {
+    var res = await authFetch('/chat/my-rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, members: members })
+    });
+    var data = await res.json();
+    if (data.ok && data.room) {
+      roomsCache = data.rooms || roomsCache;
+      renderUserRoomsMenu();
+      document.getElementById('new-room-dialog').classList.remove('open');
+      openRoom(data.room.id, false);
+    } else {
+      alert(data.error || 'Errore nella creazione');
+    }
+  } catch(e) {
+    alert('Errore di rete');
+  }
 }
 
 function sendLogout() {
@@ -2574,7 +2698,8 @@ async function joinAs(name, token) {
   document.getElementById('login').style.display = 'none';
   document.getElementById('chat').style.display = 'flex';
   document.getElementById('admin-menu-wrap').style.display = isAdmin ? 'inline-block' : 'none';
-  document.getElementById('user-rooms-wrap').style.display = !isAdmin && roomsCache.length > 1 ? 'inline-block' : 'none';
+  document.getElementById('user-rooms-wrap').style.display = 'inline-block';
+  renderUserRoomsMenu();
   renderUserRoomsMenu();
   initScrollListener();
   setView('chat');
@@ -3557,7 +3682,6 @@ document.getElementById('admin-btn').onclick = function(e) {
   document.getElementById('admin-menu').classList.toggle('open');
 };
 document.getElementById('user-rooms-btn').onclick = function(e) {
-  if (isAdmin || roomsCache.length <= 1) return;
   e.stopPropagation();
   document.getElementById('admin-menu').classList.remove('open');
   document.getElementById('user-rooms-menu').classList.toggle('open');

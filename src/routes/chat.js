@@ -836,6 +836,48 @@ async function chatRoutes(app) {
     };
   });
 
+  app.get('/chat/my-rooms', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+    return {
+      rooms: loadRoomsForUser(user.username),
+      users: stmts.listUsers.all().map(u => ({ username: u.username })),
+    };
+  });
+
+  app.post('/chat/my-rooms', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+
+    const name = normalizeRoomName(request.body?.name);
+    if (!name) return reply.code(400).send({ error: 'Nome stanza mancante' });
+
+    const requestedMembers = Array.isArray(request.body?.members) ? request.body.members : [];
+    const memberSet = new Set([user.username]);
+    for (const entry of requestedMembers) {
+      const username = normalizeUsername(entry);
+      if (!username) continue;
+      if (!stmts.getAuthUser.get(username)) return reply.code(400).send({ error: `Utente non trovato: ${username}` });
+      memberSet.add(username);
+    }
+
+    const roomId = crypto.randomBytes(8).toString('hex');
+    const createdAt = new Date().toISOString();
+    const createRoom = db.transaction(() => {
+      stmts.createRoom.run(roomId, name, user.username, createdAt);
+      for (const username of memberSet) {
+        stmts.addRoomMember.run(roomId, username, user.username, createdAt);
+      }
+    });
+    createRoom();
+
+    return {
+      ok: true,
+      room: loadRoomsForUser(user.username).find((room) => room.id === roomId) || null,
+      rooms: loadRoomsForUser(user.username),
+    };
+  });
+
   app.get('/chat/rooms', async (request, reply) => {
     const user = requireAdmin(request, reply);
     if (!user) return;
