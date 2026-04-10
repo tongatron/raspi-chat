@@ -83,6 +83,13 @@ try { db.exec("ALTER TABLE invites ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"
 try { db.exec("ALTER TABLE invites ADD COLUMN created_at TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE invites ADD COLUMN used_at TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE invites ADD COLUMN used_by TEXT"); } catch(e) {}
+try { db.exec(`
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    username TEXT PRIMARY KEY,
+    subscription TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )
+`); } catch(e) {}
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);
@@ -392,6 +399,9 @@ const stmts = {
   countAdmins:   db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'"),
   countMessages: db.prepare('SELECT COUNT(*) AS count FROM messages'),
   deleteUser:    db.prepare('DELETE FROM users WHERE username = ?'),
+  upsertPushSub: db.prepare('INSERT OR REPLACE INTO push_subscriptions (username, subscription, updated_at) VALUES (?, ?, ?)'),
+  deletePushSub: db.prepare('DELETE FROM push_subscriptions WHERE username = ?'),
+  listPushSubs:  db.prepare('SELECT username, subscription FROM push_subscriptions'),
   createInvite: db.prepare(`
     INSERT INTO invites (token, created_by, role, created_at)
     VALUES (?, ?, ?, ?)
@@ -635,6 +645,12 @@ async function buildYoutubePreview(url) {
 const clients   = new Map();
 const pushSubs  = new Map();
 
+// Load persisted push subscriptions
+for (const row of stmts.listPushSubs.all()) {
+  try { pushSubs.set(row.username, JSON.parse(row.subscription)); } catch(e) {}
+}
+console.log(`[Push] Loaded ${pushSubs.size} persisted subscriptions`);
+
 function broadcast(msg) {
   const raw = JSON.stringify(msg);
   for (const client of clients.values()) {
@@ -664,7 +680,7 @@ async function sendWebPush(msg, senderUsername) {
       console.log(`[Push] WebPush sent to ${username}`);
     } catch (err) {
       console.error(`[Push] WebPush failed for ${username}: ${err.statusCode || err.code || 'unknown'} ${err.message || err}`);
-      if (err.statusCode === 410 || err.statusCode === 404) pushSubs.delete(username);
+      if (err.statusCode === 410 || err.statusCode === 404) { pushSubs.delete(username); stmts.deletePushSub.run(username); }
     }
   }
 }
@@ -1162,12 +1178,14 @@ async function chatRoutes(app) {
     const { subscription } = request.body || {};
     if (!subscription) return reply.code(400).send({ error: 'Dati mancanti' });
     pushSubs.set(username, subscription);
+    stmts.upsertPushSub.run(username, JSON.stringify(subscription), new Date().toISOString());
     return { ok: true };
   });
   app.delete('/chat/push-unsubscribe', async (request, reply) => {
     const username = requireAuth(request, reply);
     if (!username) return;
     pushSubs.delete(username);
+    stmts.deletePushSub.run(username);
     return { ok: true };
   });
   app.get('/chat/vapid-public-key', async (request, reply) => {
