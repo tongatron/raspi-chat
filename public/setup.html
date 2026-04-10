@@ -321,16 +321,8 @@
 
         <section class="section" data-step="3">
           <div>
-            <h2>4. Archivio e notifiche</h2>
-            <p class="muted">Qui scegli chi puo' usare l'archivio personale e se vuoi generare subito le chiavi Web Push.</p>
-          </div>
-          <div class="cols">
-            <label>Owner archivio
-              <input id="archive-owner" placeholder="Giovanni" />
-            </label>
-            <label>Limite upload archivio (MB)
-              <input id="archive-limit" type="number" min="50" step="50" />
-            </label>
+            <h2>4. Notifiche</h2>
+            <p class="muted">Qui decidi se generare subito le chiavi Web Push per la PWA.</p>
           </div>
           <label class="toggle">
             <input id="enable-push" type="checkbox" checked />
@@ -369,7 +361,7 @@
       ['Controlli', 'Verifica cartella, permessi e prerequisiti'],
       ['Base', 'Nome chat, host, porta e rete'],
       ['Utenti', 'Admin e primi utenti'],
-      ['Push', 'Archivio privato e notifiche'],
+      ['Push', 'Notifiche Web Push'],
       ['Installa', 'Riepilogo e scrittura finale']
     ];
 
@@ -472,8 +464,6 @@
         hostname: qs('public-hostname').value.trim(),
         adminUsername: qs('admin-username').value.trim(),
         adminPassword: qs('admin-password').value,
-        privateTransferOwner: qs('archive-owner').value.trim(),
-        privateTransferMaxMb: Number(qs('archive-limit').value || 250),
         enableWebPush: qs('enable-push').checked,
         vapidEmail: qs('vapid-email').value.trim(),
         users: readUsers()
@@ -490,9 +480,6 @@
         if (!data.adminUsername) return 'Serve uno username admin.';
         if (!data.adminPassword || data.adminPassword.length < 8) return 'La password admin deve avere almeno 8 caratteri.';
       }
-      if (currentStep === 3) {
-        if (!data.privateTransferOwner) return 'Serve un owner per l archivio.';
-      }
       return '';
     }
 
@@ -503,7 +490,6 @@
         '<div><strong>Rete</strong><div class="muted">' + escapeHtml(data.networkMode) + (data.hostname ? ' · ' + escapeHtml(data.hostname) : ' · solo locale') + '</div></div>',
         '<div><strong>Fastify</strong><div class="muted">' + escapeHtml((data.host || '127.0.0.1') + ':' + (data.port || 3000)) + '</div></div>',
         '<div><strong>Admin</strong><div class="muted">' + escapeHtml(data.adminUsername || '-') + '</div></div>',
-        '<div><strong>Archivio</strong><div class="muted">' + escapeHtml(data.privateTransferOwner || '-') + ' · ' + escapeHtml(String(data.privateTransferMaxMb || 250)) + ' MB</div></div>',
         '<div><strong>Push</strong><div class="muted">' + (data.enableWebPush ? 'Web Push attive' : 'Disattivate') + '</div></div>',
         '<div><strong>Utenti extra</strong><div class="muted">' + escapeHtml(String(data.users.filter(function(user) { return user.username; }).length)) + '</div></div>'
       ].join('');
@@ -525,8 +511,6 @@
       qs('app-port').value = defaults.port || 3000;
       qs('public-hostname').value = defaults.hostname || '';
       qs('admin-username').value = defaults.adminUsername || 'Giovanni';
-      qs('archive-owner').value = defaults.privateTransferOwner || defaults.adminUsername || 'Giovanni';
-      qs('archive-limit').value = defaults.privateTransferMaxMb || 250;
       qs('enable-push').checked = defaults.enableWebPush !== false;
       qs('vapid-email').value = (defaults.vapidEmail || '').replace(/^mailto:/, '');
       (defaults.users || []).filter(function(user) {
@@ -593,7 +577,7 @@
         setError(error.message || String(error));
       }
     };
-    ['chat-name', 'network-mode', 'app-host', 'app-port', 'public-hostname', 'admin-username', 'admin-password', 'archive-owner', 'archive-limit', 'enable-push', 'vapid-email'].forEach(function(id) {
+    ['chat-name', 'network-mode', 'app-host', 'app-port', 'public-hostname', 'admin-username', 'admin-password', 'enable-push', 'vapid-email'].forEach(function(id) {
       var node = qs(id);
       node.oninput = renderSummary;
       node.onchange = renderSummary;

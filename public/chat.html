@@ -2341,6 +2341,7 @@ var adminUsersCache = [];
 var roomsCache = [];
 var roomUsersCache = [];
 var currentRoomId = localStorage.getItem('chat-room-id') || '';
+var unreadRooms = {};
 var currentRoomName = 'Chat';
 
 function playNotifSound() {
@@ -2452,8 +2453,28 @@ function setCurrentRoom(roomId, roomName) {
   currentRoomId = roomId || '';
   currentRoomName = roomName || 'Chat';
   if (currentRoomId) localStorage.setItem('chat-room-id', currentRoomId);
+  delete unreadRooms[currentRoomId];
   document.querySelector('header h2').textContent = currentRoomName || 'Chat';
   renderUserRoomsMenu();
+  updateUnreadBadge();
+}
+
+function updateUnreadBadge() {
+  var btn = document.getElementById('user-rooms-btn');
+  if (!btn) return;
+  var count = Object.keys(unreadRooms).length;
+  var dot = document.getElementById('rooms-unread-dot');
+  if (count > 0) {
+    if (!dot) {
+      dot = document.createElement('span');
+      dot.id = 'rooms-unread-dot';
+      btn.appendChild(dot);
+    }
+    dot.textContent = count;
+    dot.style.display = 'inline-flex';
+  } else if (dot) {
+    dot.style.display = 'none';
+  }
 }
 
 function getCurrentRoom() {
@@ -2812,6 +2833,10 @@ function handleMsg(msg) {
       var entry = msgElements[id];
       if (entry && entry.statusEl) { entry.statusEl.textContent = ''; }
     });
+  }
+  else if (msg.type === 'unread') {
+    unreadRooms[msg.roomId] = true;
+    updateUnreadBadge();
   }
   else if (msg.type === 'deleted') {
     var entry = msgElements[msg.id];

@@ -665,6 +665,16 @@ function broadcastToRoom(roomId, msg) {
   }
 }
 function broadcastOnline(roomId) { broadcastToRoom(roomId, { type: 'online', users: onlineUsers(roomId), roomId }); }
+function notifyUnread(roomId, roomName, senderUsername) {
+  const members = stmts.listRoomMembers.all(roomId).map(r => r.username);
+  const note = JSON.stringify({ type: 'unread', roomId, roomName, from: senderUsername });
+  for (const client of clients.values()) {
+    if (client.roomId === roomId) continue;
+    if (!client.username || !members.includes(client.username)) continue;
+    if (client.username === senderUsername) continue;
+    if (client.ws.readyState === 1) client.ws.send(note);
+  }
+}
 function onlineUsers(roomId) {
   return [...new Set([...clients.values()]
     .filter((c) => c.username && (!roomId || c.roomId === roomId))
@@ -1443,6 +1453,8 @@ async function chatRoutes(app) {
         const out = { type: 'message', id: crypto.randomUUID(), roomId: client.roomId, username: client.username, text, imageUrl, timestamp: new Date().toISOString(), readBy: [], replyTo };
         stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, replyToId);
         broadcastToRoom(client.roomId, out);
+        const roomRow = stmts.getRoomById.get(client.roomId);
+        notifyUnread(client.roomId, roomRow ? roomRow.name : '', client.username);
         sendAllPush(out, client.username);
       }
     });

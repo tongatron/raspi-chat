@@ -10,7 +10,6 @@ mkdir -p "${APP_DIR}"
 mkdir -p "${APP_DIR}/config"
 mkdir -p "${APP_DIR}/data"
 mkdir -p "${APP_DIR}/data/uploads"
-mkdir -p "${APP_DIR}/data/private-transfers"
 mkdir -p "${APP_DIR}/data/setup-generated"
 mkdir -p "${APP_DIR}/public/backgrounds"
 

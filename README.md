@@ -14,7 +14,6 @@ Il progetto include:
 - upload immagini
 - preview link
 - notifiche Web Push
-- archivio privato per file/note
 
 URL live di riferimento:
 
@@ -123,7 +122,6 @@ Lo wizard `/setup` fa queste cose:
 - controlla che la cartella sia scrivibile
 - raccoglie nome chat, host, porta e modalita' rete
 - crea l'utente admin iniziale e gli utenti base
-- imposta owner e limite dell'archivio privato
 - genera automaticamente le chiavi VAPID per le Web Push
 - scrive `.env`
 - scrive `config/chat-users.json`
@@ -166,8 +164,6 @@ Le principali sono gia' documentate in [.env.example](/Users/tonga/Documents/Git
 - `TOKEN_SECRET`
 - `DEFAULT_ADMIN_USERNAME`
 - `DEFAULT_ROOM_NAME`
-- `PRIVATE_TRANSFER_OWNER`
-- `PRIVATE_TRANSFER_MAX_MB`
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`
 
 ## Deploy tipico
@@ -308,9 +304,6 @@ Privati:
 - `POST /chat/upload`
 - `GET /chat/images/:filename`
 - `GET /chat/preview`
-- `GET /chat/private-transfers`
-- `POST /chat/private-transfers/upload`
-- `POST /chat/private-transfers/note`
 - `GET /chat/console/data`
 
 ## Verifica veloce

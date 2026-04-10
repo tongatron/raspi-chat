@@ -47,12 +47,6 @@ function toPort(value) {
   return parsed;
 }
 
-function toLimitMb(value, fallback) {
-  const parsed = parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 50) return fallback;
-  return parsed;
-}
-
 function isTruthy(value) {
   return value === true || value === 'true' || value === 1 || value === '1';
 }
@@ -157,10 +151,6 @@ function renderEnvFile(values) {
     `DEFAULT_ADMIN_USERNAME=${escapeEnvValue(values.DEFAULT_ADMIN_USERNAME)}`,
     `DEFAULT_ROOM_NAME=${escapeEnvValue(values.DEFAULT_ROOM_NAME)}`,
     '',
-    '# Private archive',
-    `PRIVATE_TRANSFER_OWNER=${escapeEnvValue(values.PRIVATE_TRANSFER_OWNER)}`,
-    `PRIVATE_TRANSFER_MAX_MB=${escapeEnvValue(values.PRIVATE_TRANSFER_MAX_MB)}`,
-    '',
     '# Web Push',
     `VAPID_PUBLIC_KEY=${escapeEnvValue(values.VAPID_PUBLIC_KEY)}`,
     `VAPID_PRIVATE_KEY=${escapeEnvValue(values.VAPID_PRIVATE_KEY)}`,
@@ -198,8 +188,6 @@ function setupDefaults(request) {
     port: toPort(envValues.PORT || 3000),
     networkMode: envValues.SETUP_NETWORK_MODE || 'lan',
     adminUsername: normalizeUsername(envValues.DEFAULT_ADMIN_USERNAME || adminUser?.username || 'Giovanni') || 'Giovanni',
-    privateTransferOwner: normalizeUsername(envValues.PRIVATE_TRANSFER_OWNER || adminUser?.username || 'Giovanni') || 'Giovanni',
-    privateTransferMaxMb: toLimitMb(envValues.PRIVATE_TRANSFER_MAX_MB || 250, 250),
     vapidEmail: normalizeVapidEmail(envValues.VAPID_EMAIL || 'admin@example.com'),
     enableWebPush: !!(envValues.VAPID_PUBLIC_KEY && envValues.VAPID_PRIVATE_KEY),
     users,
@@ -370,13 +358,10 @@ async function setupRoutes(app) {
     const adminUsername = normalizeUsername(body.adminUsername);
     const adminPassword = String(body.adminPassword || '');
     const vapidEmail = normalizeVapidEmail(body.vapidEmail || 'admin@example.com');
-    const privateTransferOwner = normalizeUsername(body.privateTransferOwner || adminUsername);
-    const privateTransferMaxMb = toLimitMb(body.privateTransferMaxMb || 250, 250);
     const enableWebPush = body.enableWebPush !== false;
 
     if (!adminUsername) return reply.code(400).send({ error: 'Username admin mancante' });
     if (adminPassword.length < 8) return reply.code(400).send({ error: 'Password admin troppo corta (minimo 8 caratteri)' });
-    if (!privateTransferOwner) return reply.code(400).send({ error: 'Owner archivio mancante' });
     if ((networkMode === 'nginx' || networkMode === 'cloudflare') && !hostname) {
       return reply.code(400).send({ error: 'Hostname pubblico richiesto per nginx o Cloudflare' });
     }
@@ -396,7 +381,6 @@ async function setupRoutes(app) {
     ensureDir(path.join(process.cwd(), 'config'));
     ensureDir(path.join(process.cwd(), 'data'));
     ensureDir(path.join(process.cwd(), 'data', 'uploads'));
-    ensureDir(path.join(process.cwd(), 'data', 'private-transfers'));
     ensureDir(path.join(process.cwd(), 'public', 'backgrounds'));
     ensureDir(GENERATED_DIR);
 
@@ -411,8 +395,6 @@ async function setupRoutes(app) {
       TOKEN_SECRET: existingEnv.TOKEN_SECRET || crypto.randomBytes(32).toString('hex'),
       DEFAULT_ADMIN_USERNAME: adminUsername,
       DEFAULT_ROOM_NAME: chatName,
-      PRIVATE_TRANSFER_OWNER: privateTransferOwner,
-      PRIVATE_TRANSFER_MAX_MB: String(privateTransferMaxMb),
       VAPID_PUBLIC_KEY: vapidKeys.publicKey,
       VAPID_PRIVATE_KEY: vapidKeys.privateKey,
       VAPID_EMAIL: enableWebPush ? vapidEmail : '',
@@ -430,7 +412,6 @@ async function setupRoutes(app) {
         adminUsername,
         hostname,
         networkMode,
-        privateTransferOwner,
         users: users.map((entry) => ({ username: entry.username, role: entry.role })),
       }, null, 2) + '\n',
       'utf8'
