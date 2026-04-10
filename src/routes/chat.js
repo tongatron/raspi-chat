@@ -146,6 +146,18 @@ function normalizeRoomName(value) {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 60);
 }
 
+function slugPart(value) {
+  return normalizeUsername(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 24) || 'user';
+}
+
+function buildDirectRoomId(userA, userB) {
+  return ['dm', slugPart(userA), slugPart(userB)].join('-');
+}
+
 function encodeSessionCookie(username, token) {
   return Buffer.from(JSON.stringify({ username, token }), 'utf8').toString('base64url');
 }
@@ -521,19 +533,88 @@ function formatInvite(row, request) {
   };
 }
 
+function sendWebPushToUser(username, payload) {
+  const sub = pushSubs.get(username);
+  if (!sub) return Promise.resolve(false);
+  return webpush.sendNotification(sub, JSON.stringify(payload))
+    .then(() => true)
+    .catch((err) => {
+      console.error(`[Push] Direct WebPush failed for ${username}: ${err.statusCode || err.code || 'unknown'} ${err.message || err}`);
+      if (err.statusCode === 410 || err.statusCode === 404) {
+        pushSubs.delete(username);
+        stmts.deletePushSub.run(username);
+      }
+      return false;
+    });
+}
+
+function createInitialRoomForUser(username, createdBy, now) {
+  const owner = normalizeUsername(createdBy) || DEFAULT_ADMIN_USERNAME;
+  if (!owner || owner === username) {
+    stmts.addRoomMember.run(DEFAULT_ROOM_ID, username, owner || 'system', now);
+    return {
+      invitedBy: owner || null,
+      firstRoomId: DEFAULT_ROOM_ID,
+      firstRoomName: DEFAULT_ROOM_NAME,
+    };
+  }
+
+  const roomId = buildDirectRoomId(owner, username);
+  const roomName = `${owner}, ${username}`;
+  if (!stmts.getRoomById.get(roomId)) {
+    stmts.createRoom.run(roomId, roomName, owner, now);
+  }
+  stmts.addRoomMember.run(roomId, owner, owner, now);
+  stmts.addRoomMember.run(roomId, username, owner, now);
+  stmts.insertMessage.run(
+    crypto.randomUUID(),
+    roomId,
+    'Raspi Chat',
+    `${username} ha completato la registrazione ed e' entrato nella stanza.`,
+    null,
+    now,
+    null
+  );
+  return {
+    invitedBy: owner,
+    firstRoomId: roomId,
+    firstRoomName: roomName,
+  };
+}
+
 const registerUserFromInvite = db.transaction(({ token, username, password, now }) => {
   const invite = stmts.getInvite.get(token);
   if (!invite) return { error: 'Invito non trovato', status: 404 };
   if (invite.usedAt) return { error: 'Invito gia usato', status: 410 };
   if (stmts.getUser.get(username)) return { error: 'Nome gia usato', status: 409 };
 
-  stmts.syncUser.run(username, hashPassword(password), normalizeRole(invite.role));
+  const role = normalizeRole(invite.role);
+  const createdBy = normalizeUsername(invite.createdBy) || DEFAULT_ADMIN_USERNAME;
+
+  stmts.syncUser.run(username, hashPassword(password), role);
   const result = stmts.markInviteUsed.run(now, username, token);
   if (!result.changes) return { error: 'Invito non piu disponibile', status: 409 };
+  const roomInfo = createInitialRoomForUser(username, createdBy, now);
 
   return {
     ok: true,
-    role: normalizeRole(invite.role),
+    role,
+    invitedBy: roomInfo.invitedBy,
+    firstRoomId: roomInfo.firstRoomId,
+    firstRoomName: roomInfo.firstRoomName,
+  };
+});
+
+const registerUserDirect = db.transaction(({ username, password, now }) => {
+  if (stmts.getUser.get(username)) return { error: 'Nome gia usato', status: 409 };
+  stmts.syncUser.run(username, hashPassword(password), 'user');
+  const roomInfo = createInitialRoomForUser(username, DEFAULT_ADMIN_USERNAME, now);
+  return {
+    ok: true,
+    role: 'user',
+    invitedBy: roomInfo.invitedBy,
+    firstRoomId: roomInfo.firstRoomId,
+    firstRoomName: roomInfo.firstRoomName,
   };
 });
 
@@ -1160,10 +1241,54 @@ async function chatRoutes(app) {
     const result = registerUserFromInvite({ token, username, password, now: new Date().toISOString() });
     if (!result.ok) return reply.code(result.status || 400).send({ error: result.error || 'Registrazione non riuscita' });
 
+    const tokenValue = generateToken(username);
+    setSessionCookie(reply, username, tokenValue);
+    if (result.firstRoomId && result.invitedBy && result.invitedBy !== username) {
+      notifyUnread(result.firstRoomId, result.firstRoomName || 'Nuova stanza', 'Raspi Chat');
+      await sendWebPushToUser(result.invitedBy, {
+        title: 'Raspi Chat',
+        body: `${username} si e' registrato ed e' entrato nella tua stanza.`,
+        url: '/chat',
+      });
+    }
+
     return {
       ok: true,
       username,
       role: result.role,
+      token: tokenValue,
+      firstRoomId: result.firstRoomId || DEFAULT_ROOM_ID,
+      firstRoomName: result.firstRoomName || DEFAULT_ROOM_NAME,
+      loginUrl: '/chat',
+    };
+  });
+
+  app.post('/register', async (request, reply) => {
+    const username = normalizeUsername(request.body?.username);
+    const password = String(request.body?.password || '');
+    if (!username) return reply.code(400).send({ error: 'Nome mancante' });
+    if (password.length < 4) return reply.code(400).send({ error: 'Password troppo corta' });
+    const result = registerUserDirect({ username, password, now: new Date().toISOString() });
+    if (!result.ok) return reply.code(result.status || 400).send({ error: result.error || 'Registrazione non riuscita' });
+
+    const tokenValue = generateToken(username);
+    setSessionCookie(reply, username, tokenValue);
+    if (result.firstRoomId && result.invitedBy && result.invitedBy !== username) {
+      notifyUnread(result.firstRoomId, result.firstRoomName || 'Nuova stanza', 'Raspi Chat');
+      await sendWebPushToUser(result.invitedBy, {
+        title: 'Raspi Chat',
+        body: `${username} si e' registrato ed e' entrato nella tua stanza.`,
+        url: '/chat',
+      });
+    }
+
+    return {
+      ok: true,
+      username,
+      role: result.role,
+      token: tokenValue,
+      firstRoomId: result.firstRoomId || DEFAULT_ROOM_ID,
+      firstRoomName: result.firstRoomName || DEFAULT_ROOM_NAME,
       loginUrl: '/chat',
     };
   });

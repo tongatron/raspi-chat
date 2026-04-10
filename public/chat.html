@@ -226,7 +226,7 @@
     }
 
     /* Login */
-    #login { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    #login, #onboarding { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
     .login-box {
       width: min(430px, 100%);
       padding: 34px;
@@ -253,6 +253,87 @@
       letter-spacing: .08em;
       text-transform: uppercase;
       margin-bottom: 16px;
+    }
+    .onboarding-box {
+      width: min(760px, 100%);
+      padding: 32px;
+      text-align: left;
+      border-radius: 6px;
+      background: var(--surface);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,.72);
+      box-shadow: var(--shadow);
+      animation: panelIn .45s ease both;
+    }
+    .onboarding-head {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+    .onboarding-head h1 {
+      font-size: clamp(1.9rem, 4vw, 2.5rem);
+      letter-spacing: -.04em;
+      margin-bottom: 8px;
+    }
+    .onboarding-copy {
+      color: var(--muted);
+      font-size: .98rem;
+      line-height: 1.55;
+      max-width: 46rem;
+      margin: 0 auto;
+    }
+    .onboarding-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .onboarding-card {
+      padding: 18px;
+      border-radius: 5px;
+      background: rgba(17,25,37,.84);
+      border: 1px solid rgba(229,239,252,.16);
+    }
+    .onboarding-card h3 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+    .onboarding-card p {
+      color: var(--muted);
+      font-size: .94rem;
+      line-height: 1.5;
+    }
+    .onboarding-links {
+      padding: 16px 18px;
+      border-radius: 5px;
+      background: rgba(17,25,37,.84);
+      border: 1px solid rgba(229,239,252,.16);
+      margin-bottom: 18px;
+    }
+    .onboarding-links h3 {
+      font-size: .98rem;
+      margin-bottom: 10px;
+    }
+    .onboarding-links code {
+      display: block;
+      width: 100%;
+      overflow-wrap: anywhere;
+      padding: 10px 12px;
+      border-radius: 4px;
+      background: rgba(8,14,24,.88);
+      border: 1px solid rgba(229,239,252,.14);
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .86rem;
+      margin-top: 8px;
+    }
+    .onboarding-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    .onboarding-btn {
+      min-width: 180px;
     }
     .brand-mark {
       width: 48px;
@@ -1835,8 +1916,10 @@
     @keyframes pulseDot { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 4px rgba(38,162,105,.14); } 40% { transform: scale(1.08); box-shadow: 0 0 0 7px rgba(38,162,105,.08); } }
 
     @media (max-width: 760px) {
-      #login { padding: 16px; }
+      #login, #onboarding { padding: 16px; }
       .login-box { padding: 28px 22px; border-radius: 6px; }
+      .onboarding-box { padding: 24px 20px; border-radius: 6px; }
+      .onboarding-grid { grid-template-columns: 1fr; }
       #chat { padding: 8px; gap: 8px; }
       header {
         padding: 12px 14px;
@@ -2049,6 +2132,42 @@
       <div class="login-error" id="login-error"></div>
       <button class="login-submit" id="login-submit" onclick="submitLogin()">Entra</button>
       <button class="back-link" onclick="backToUsers()">Cambia utente</button>
+    </div>
+  </div>
+</div>
+
+<div id="onboarding" style="display:none">
+  <div class="onboarding-box">
+    <div class="onboarding-head">
+      <div class="login-eyebrow">
+        <span class="brand-mark tiny" aria-hidden="true">
+          <img src="/chat/logo-v4.png" alt="" />
+        </span>
+        Primo accesso
+      </div>
+      <h1>Benvenuto in Raspi Chat</h1>
+      <p class="onboarding-copy">Prima di entrare trovi qui i link utili e il modo migliore per installare la chat come web app sul telefono.</p>
+    </div>
+
+    <div class="onboarding-grid">
+      <div class="onboarding-card">
+        <h3>Android</h3>
+        <p>Per una PWA più affidabile usa Chrome su Android. Apri la chat, tocca il menu del browser e scegli <strong>Aggiungi a schermata Home</strong> o <strong>Installa app</strong>.</p>
+      </div>
+      <div class="onboarding-card">
+        <h3>iPhone / iPad</h3>
+        <p>Su iOS apri la chat in Safari, tocca <strong>Condividi</strong> e poi <strong>Aggiungi a Home</strong>. In questo modo la chat si apre come app separata.</p>
+      </div>
+    </div>
+
+    <div class="onboarding-links">
+      <h3>Link di accesso</h3>
+      <code id="onboarding-home-url"></code>
+      <code id="onboarding-chat-url"></code>
+    </div>
+
+    <div class="onboarding-actions">
+      <button class="login-submit onboarding-btn" id="onboarding-enter-btn" type="button">Accedi</button>
     </div>
   </div>
 </div>
@@ -2343,6 +2462,7 @@ var roomUsersCache = [];
 var currentRoomId = localStorage.getItem('chat-room-id') || '';
 var unreadRooms = {};
 var currentRoomName = 'Chat';
+var ONBOARDING_KEY = 'chat-onboarding-seen-v1';
 
 function playNotifSound() {
   try {
@@ -2440,13 +2560,53 @@ function trackTimestamp(ts) {
 var selectedUsername = null;
 var savedUser  = localStorage.getItem('chat-user');
 var savedToken = localStorage.getItem('chat-token');
-renderLoginUsers([]);
-loadLoginUsers();
-if (savedUser && savedToken) joinAs(savedUser, savedToken);
+if (savedUser && savedToken) {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('onboarding').style.display = 'none';
+  renderLoginUsers([]);
+  loadLoginUsers();
+  joinAs(savedUser, savedToken);
+} else {
+  showLogin();
+}
 
 function clearStoredAuth() {
   localStorage.removeItem('chat-user');
   localStorage.removeItem('chat-token');
+}
+
+function resetSessionUi() {
+  myName = null;
+  myToken = null;
+  roomsCache = [];
+  roomUsersCache = [];
+  currentRoomId = '';
+  currentRoomName = 'Chat';
+  unreadRooms = {};
+  selectedUsername = null;
+  if (ws) {
+    try { ws.onclose = null; ws.close(); } catch (e) {}
+    ws = null;
+  }
+  document.getElementById('chat').style.display = 'none';
+  document.getElementById('onboarding').style.display = 'none';
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('step-password').style.display = 'none';
+  document.getElementById('step-users').style.display = 'block';
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.querySelector('header h2').textContent = 'Chat';
+  document.getElementById('online-list').textContent = '';
+  renderLoginUsers([]);
+  loadLoginUsers();
+}
+
+function showLogin() {
+  document.getElementById('onboarding').style.display = 'none';
+  document.getElementById('chat').style.display = 'none';
+  document.getElementById('login').style.display = 'flex';
+  renderLoginUsers([]);
+  loadLoginUsers();
 }
 
 function setCurrentRoom(roomId, roomName) {
@@ -2666,8 +2826,8 @@ async function authFetch(url, options) {
   if (res.status === 401) {
     sendLogout();
     clearStoredAuth();
-    if (ws) ws.close();
-    location.reload();
+    localStorage.setItem(ONBOARDING_KEY, '1');
+    resetSessionUi();
     throw new Error('Non autorizzato');
   }
   return res;
@@ -2723,6 +2883,19 @@ async function joinAs(name, token) {
   var initialRoom = roomsCache.find(function(room) { return room.id === currentRoomId; }) || roomsCache[0] || null;
   setCurrentRoom(initialRoom ? initialRoom.id : '', initialRoom ? initialRoom.name : 'Chat');
   document.getElementById('login').style.display = 'none';
+  await enterChatApp();
+}
+
+function showOnboarding() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('chat').style.display = 'none';
+  document.getElementById('onboarding').style.display = 'flex';
+  document.getElementById('onboarding-home-url').textContent = location.origin + '/';
+  document.getElementById('onboarding-chat-url').textContent = location.origin + '/chat';
+}
+
+async function enterChatApp() {
+  document.getElementById('onboarding').style.display = 'none';
   document.getElementById('chat').style.display = 'flex';
   document.getElementById('admin-menu-wrap').style.display = isAdmin ? 'inline-block' : 'none';
   document.getElementById('user-rooms-wrap').style.display = 'inline-block';
@@ -2731,15 +2904,20 @@ async function joinAs(name, token) {
   initScrollListener();
   setView('chat');
   if (isAdmin) await loadRoomsData();
-  connect();
+  if (!ws || ws.readyState > 1) connect();
   setTimeout(initPush, 2000);
 }
+
+document.getElementById('onboarding-enter-btn').onclick = async function() {
+  localStorage.setItem(ONBOARDING_KEY, '1');
+  showLogin();
+};
 
 document.getElementById('logout-btn').onclick = function() {
   sendLogout();
   clearStoredAuth();
-  if (ws) ws.close();
-  location.reload();
+  localStorage.setItem(ONBOARDING_KEY, '1');
+  resetSessionUi();
 };
 
 // Push

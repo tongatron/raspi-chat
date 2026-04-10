@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Registrati</title>
+  <title>Raspi Chat — Registrati</title>
   <meta name="robots" content="noindex,nofollow" />
-  <meta property="og:title" content="Cabras Chat — Registrazione" />
+  <meta property="og:title" content="Raspi Chat — Registrazione" />
   <meta property="og:image" content="/chat/logo-v2.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="/chat/logo-v2.png" />
@@ -224,10 +224,14 @@
         });
         var data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Registrazione non riuscita');
-        setStatus('Account creato. Ora puoi entrare in chat.', 'ok');
-        inviteMetaEl.textContent = 'Registrazione completata.';
-        form.reset();
-        submitBtn.disabled = true;
+        localStorage.setItem('chat-user', data.username);
+        localStorage.setItem('chat-token', data.token);
+        if (data.firstRoomId) localStorage.setItem('chat-room-id', data.firstRoomId);
+        setStatus('Account creato. Accesso in corso...', 'ok');
+        inviteMetaEl.textContent = 'Registrazione completata. Ti porto in chat.';
+        setTimeout(function() {
+          location.href = '/chat';
+        }, 300);
       } catch (e) {
         setStatus(e.message || 'Registrazione non riuscita', 'error');
         submitBtn.disabled = false;
