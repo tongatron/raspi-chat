@@ -385,6 +385,9 @@ const stmts = {
     WHERE room_id = ? AND username = ?
   `),
   deleteRoomMembershipsByUser: db.prepare('DELETE FROM room_members WHERE username = ?'),
+  deleteRoom: db.prepare('DELETE FROM rooms WHERE id = ?'),
+  deleteRoomMembers: db.prepare('DELETE FROM room_members WHERE room_id = ?'),
+  deleteRoomMessages: db.prepare('DELETE FROM messages WHERE room_id = ?'),
   countUsers:    db.prepare('SELECT COUNT(*) AS count FROM users'),
   countAdmins:   db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'"),
   countMessages: db.prepare('SELECT COUNT(*) AS count FROM messages'),
@@ -937,6 +940,27 @@ async function chatRoutes(app) {
       ok: true,
       room: loadRoomsForUser(user.username).find((room) => room.id === roomId) || null,
       rooms: loadRoomsForUser(user.username),
+    };
+  });
+
+  app.delete('/chat/rooms/:roomId', async (request, reply) => {
+    const user = requireAdmin(request, reply);
+    if (!user) return;
+
+    const roomId = String(request.params.roomId || '').trim();
+    if (!roomId) return reply.code(400).send({ error: 'ID stanza mancante' });
+
+    const deleteAll = db.transaction(() => {
+      stmts.deleteRoomMessages.run(roomId);
+      stmts.deleteRoomMembers.run(roomId);
+      stmts.deleteRoom.run(roomId);
+    });
+    deleteAll();
+
+    return {
+      ok: true,
+      rooms: loadRoomsForUser(user.username),
+      users: stmts.listUsers.all().map(formatUser),
     };
   });
 

@@ -1289,13 +1289,15 @@
       background: rgba(38,162,105,.12);
       color: #2aa96d;
     }
-    #room-remove-btn {
+    #room-remove-btn,
+    #room-delete-btn {
       background: rgba(255,87,87,.10);
       color: #d44a4a;
     }
     #room-rename-btn:disabled,
     #room-invite-btn:disabled,
     #room-remove-btn:disabled,
+    #room-delete-btn:disabled,
     #room-create-btn:disabled {
       opacity: .5;
       cursor: default;
@@ -2146,6 +2148,11 @@
             <div class="rooms-copy compact" id="room-remove-copy">Seleziona chi togliere dalla stanza attiva.</div>
             <div class="room-members" id="room-remove-members"></div>
             <button id="room-remove-btn" type="button" disabled>Rimuovi dalla stanza</button>
+          </section>
+          <section>
+            <h3>Elimina stanza</h3>
+            <div class="rooms-copy compact">Elimina definitivamente la stanza attiva e tutti i suoi messaggi.</div>
+            <button id="room-delete-btn" type="button" disabled>Elimina stanza</button>
           </section>
         </div>
         <div class="rooms-status" id="rooms-status"></div>
@@ -3111,6 +3118,7 @@ function renderRooms(rooms, users) {
   document.getElementById('room-invite-btn').disabled = !activeRoom;
   document.getElementById('room-rename-btn').disabled = !activeRoom;
   document.getElementById('room-remove-btn').disabled = !activeRoom || !isAdmin;
+  document.getElementById('room-delete-btn').disabled = !activeRoom || !isAdmin;
   document.getElementById('room-panel-title').textContent = activeRoom ? activeRoom.name : 'Nessuna stanza selezionata';
   document.getElementById('room-panel-copy').textContent = activeRoom
     ? 'Puoi rinominare la stanza attiva oppure gestire chi ne fa parte.'
@@ -3259,6 +3267,26 @@ async function removeUsersFromRoom() {
     status.textContent = 'Utenti rimossi dalla stanza.';
   } catch (e) {
     status.textContent = e.message || 'Rimozione non riuscita.';
+  }
+}
+
+async function deleteRoom() {
+  var room = getCurrentRoom();
+  if (!room) return;
+  if (!confirm('Eliminare la stanza "' + room.name + '" e tutti i suoi messaggi?')) return;
+  var status = document.getElementById('rooms-status');
+  try {
+    var res = await authFetch('/chat/rooms/' + encodeURIComponent(room.id), { method: 'DELETE' });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Eliminazione non riuscita');
+    roomsCache = data.rooms || [];
+    var first = roomsCache[0];
+    if (first) { setCurrentRoom(first.id, first.name); } else { setCurrentRoom('', 'Chat'); }
+    renderRooms(roomsCache, data.users || roomUsersCache);
+    renderUserRoomsMenu();
+    status.textContent = 'Stanza eliminata.';
+  } catch (e) {
+    status.textContent = e.message || 'Eliminazione non riuscita.';
   }
 }
 
@@ -3717,6 +3745,7 @@ document.getElementById('room-create-btn').onclick = createRoom;
 document.getElementById('room-rename-btn').onclick = renameRoom;
 document.getElementById('room-invite-btn').onclick = inviteUsersToRoom;
 document.getElementById('room-remove-btn').onclick = removeUsersFromRoom;
+document.getElementById('room-delete-btn').onclick = deleteRoom;
 
 function openLightbox(src) { document.getElementById('lightbox-img').src = src; document.getElementById('lightbox').classList.add('open'); }
 document.getElementById('lightbox').onclick = function() { document.getElementById('lightbox').classList.remove('open'); };
