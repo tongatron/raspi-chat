@@ -606,7 +606,14 @@
       text-overflow: ellipsis;
     }
     #online-list:empty::before { content: "Connessione in corso"; }
-    .header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
     .toolbar-btn {
       width: 42px;
       height: 42px;
@@ -719,7 +726,29 @@
     body .menu-sep {
       border-top-color: rgba(255,255,255,.12);
     }
-    #settings-btn { width: 48px; height: 48px; font-size: 1.5rem; }
+    #user-rooms-wrap { order: 20; }
+    #console-btn { order: 30; }
+    #rooms-btn { order: 40; }
+    #settings-wrap {
+      position: relative;
+      order: 99;
+      flex-shrink: 0;
+    }
+    #settings-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 6px;
+      font-size: 1.85rem;
+      font-weight: 700;
+      background: rgba(31,111,210,.14);
+      color: var(--primary-strong);
+      box-shadow: 0 10px 22px rgba(31,111,210,.14);
+    }
+    #settings-btn:hover {
+      background: rgba(31,111,210,.22);
+      color: var(--primary-strong);
+      box-shadow: 0 14px 28px rgba(31,111,210,.20);
+    }
     /* Messages */
     #chat-main-view { display: contents; }
     #messages {
@@ -1955,7 +1984,9 @@
         height: 14px;
       }
       .header-actions {
-        margin-left: auto;
+        width: 100%;
+        margin-left: 0;
+        justify-content: flex-end;
         gap: 6px;
       }
       .toolbar-btn {
@@ -2182,8 +2213,10 @@
         <button id="user-rooms-btn" type="button">Stanze</button>
         <div id="user-rooms-menu" role="menu"></div>
       </div>
-      <div id="settings-wrap" style="position:relative;">
-        <button id="settings-btn" class="toolbar-btn" type="button" title="Impostazioni">&#x2699;</button>
+      <button id="console-btn" type="button" style="display:none" hidden></button>
+      <button id="rooms-btn" type="button" style="display:none" hidden></button>
+      <div id="settings-wrap">
+        <button id="settings-btn" class="toolbar-btn" type="button" title="Impostazioni" aria-label="Impostazioni">&#x2699;</button>
         <div id="settings-menu" role="menu">
           <button type="button" data-view="chat" role="menuitem" class="admin-only" style="display:none">Chat</button>
           <button type="button" data-view="admin" role="menuitem" class="admin-only" style="display:none">Utenti</button>
@@ -2193,8 +2226,6 @@
           <button type="button" id="logout-menu-btn" role="menuitem">Esci</button>
         </div>
       </div>
-      <button id="console-btn" type="button" style="display:none" hidden></button>
-      <button id="rooms-btn" type="button" style="display:none" hidden></button>
     </div>
   </header>
   <div id="debug-log"></div>
