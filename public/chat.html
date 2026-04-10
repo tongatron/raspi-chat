@@ -101,7 +101,6 @@
     body .user-btn,
     body .pwd-input,
     body .toolbar-btn,
-    body #logout-btn,
     body #attach-btn,
     body #image-preview button,
     body #reply-cancel,
@@ -114,7 +113,6 @@
     body .user-btn,
     body .pwd-input,
     body .toolbar-btn,
-    body #logout-btn,
     body #attach-btn,
     body #image-preview,
     body #debug-log,
@@ -125,7 +123,6 @@
     body .toolbar-btn:hover,
     body #attach-btn:hover,
     body #console-btn:hover,
-    body #logout-btn:hover,
     body #image-preview button:hover,
     body #reply-cancel:hover,
     body .reply-btn:hover,
@@ -635,7 +632,6 @@
     #console-btn,
     #rooms-btn,
     #archive-btn,
-    #admin-btn,
     #user-rooms-btn {
       display: inline-flex;
       height: 42px;
@@ -654,8 +650,7 @@
     }
     #console-btn:hover,
     #rooms-btn:hover,
-    #archive-btn:hover,
-    #admin-btn:hover { transform: translateY(-1px); background: rgba(15,34,59,.10); color: var(--ink); }
+    #archive-btn:hover { transform: translateY(-1px); background: rgba(15,34,59,.10); color: var(--ink); }
     #console-btn.active {
       background: rgba(122,180,255,.16);
       color: var(--primary-strong);
@@ -668,15 +663,11 @@
       background: var(--primary-soft);
       color: var(--primary-strong);
     }
-    #admin-btn.active {
-      background: rgba(38,162,105,.14);
-      color: #17764d;
-    }
-    #admin-menu, #user-rooms-menu {
+    #settings-menu, #user-rooms-menu {
       display: none;
       position: absolute;
       top: calc(100% + 6px);
-      right: 0;
+      left: 0;
       min-width: 170px;
       background: #ffffff;
       border: 1px solid rgba(0,0,0,.14);
@@ -688,15 +679,19 @@
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
     }
-    body #admin-menu,
+    #user-rooms-menu {
+      left: auto;
+      right: 0;
+    }
+    body #settings-menu,
     body #user-rooms-menu {
       background: #1c2129;
       border-color: rgba(255,255,255,.14);
       box-shadow: 0 8px 24px rgba(0,0,0,.6);
     }
-    #admin-menu.open,
+    #settings-menu.open,
     #user-rooms-menu.open { display: flex; }
-    #admin-menu button,
+    #settings-menu button,
     #user-rooms-menu button {
       background: transparent;
       border: none;
@@ -710,25 +705,21 @@
       cursor: pointer;
       width: 100%;
     }
-    body #admin-menu button,
+    body #settings-menu button,
     body #user-rooms-menu button { color: #f3f7fd; }
-    #admin-menu button:hover,
+    #settings-menu button:hover,
     #user-rooms-menu button:hover { background: rgba(15,34,59,.08); }
-    body #admin-menu button:hover,
+    body #settings-menu button:hover,
     body #user-rooms-menu button:hover { background: rgba(255,255,255,.08); }
-    #logout-btn {
-      height: 42px;
+    .menu-sep {
       border: none;
-      border-radius: 4px;
-      padding: 0 16px;
-      background: rgba(15,34,59,.06);
-      color: var(--muted);
-      font-size: .88rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform .18s ease, background .18s ease, color .18s ease;
+      border-top: 1px solid rgba(0,0,0,.10);
+      margin: 4px 8px;
     }
-    #logout-btn:hover { transform: translateY(-1px); background: rgba(15,34,59,.10); color: var(--ink); }
+    body .menu-sep {
+      border-top-color: rgba(255,255,255,.12);
+    }
+    #settings-btn { width: 48px; height: 48px; font-size: 1.5rem; }
     /* Messages */
     #chat-main-view { display: contents; }
     #messages {
@@ -1975,9 +1966,7 @@
       }
       #console-btn,
       #rooms-btn,
-      #archive-btn,
-      #admin-btn,
-      #logout-btn {
+      #archive-btn {
         height: 38px;
         padding: 0 12px;
         font-size: .8rem;
@@ -2193,18 +2182,19 @@
         <button id="user-rooms-btn" type="button">Stanze</button>
         <div id="user-rooms-menu" role="menu"></div>
       </div>
-      <div id="admin-menu-wrap" style="position:relative; display:none;">
-        <button id="admin-btn" type="button">Admin</button>
-        <div id="admin-menu" role="menu">
-          <button type="button" data-view="chat" role="menuitem">Chat</button>
-          <button type="button" data-view="admin" role="menuitem">Utenti</button>
-          <button type="button" data-view="rooms" role="menuitem">Stanze</button>
-          <button type="button" data-view="console" role="menuitem">Console</button>
+      <div id="settings-wrap" style="position:relative;">
+        <button id="settings-btn" class="toolbar-btn" type="button" title="Impostazioni">&#x2699;</button>
+        <div id="settings-menu" role="menu">
+          <button type="button" data-view="chat" role="menuitem" class="admin-only" style="display:none">Chat</button>
+          <button type="button" data-view="admin" role="menuitem" class="admin-only" style="display:none">Utenti</button>
+          <button type="button" data-view="rooms" role="menuitem" class="admin-only" style="display:none">Stanze</button>
+          <button type="button" data-view="console" role="menuitem" class="admin-only" style="display:none">Console</button>
+          <hr class="menu-sep admin-only" style="display:none" />
+          <button type="button" id="logout-menu-btn" role="menuitem">Esci</button>
         </div>
       </div>
       <button id="console-btn" type="button" style="display:none" hidden></button>
       <button id="rooms-btn" type="button" style="display:none" hidden></button>
-      <button id="logout-btn" title="Esci">Esci</button>
     </div>
   </header>
   <div id="debug-log"></div>
@@ -2897,7 +2887,9 @@ function showOnboarding() {
 async function enterChatApp() {
   document.getElementById('onboarding').style.display = 'none';
   document.getElementById('chat').style.display = 'flex';
-  document.getElementById('admin-menu-wrap').style.display = isAdmin ? 'inline-block' : 'none';
+  document.querySelectorAll('#settings-menu .admin-only').forEach(function(el) {
+    el.style.display = isAdmin ? '' : 'none';
+  });
   document.getElementById('user-rooms-wrap').style.display = 'inline-block';
   renderUserRoomsMenu();
   renderUserRoomsMenu();
@@ -2913,7 +2905,7 @@ document.getElementById('onboarding-enter-btn').onclick = async function() {
   showLogin();
 };
 
-document.getElementById('logout-btn').onclick = function() {
+document.getElementById('logout-menu-btn').onclick = function() {
   sendLogout();
   clearStoredAuth();
   localStorage.setItem(ONBOARDING_KEY, '1');
@@ -3180,11 +3172,6 @@ function setView(view) {
   if (roomsBtn) {
     roomsBtn.classList.toggle('active', nextView === 'rooms');
     roomsBtn.textContent = 'Stanze';
-  }
-  var adminBtn = document.getElementById('admin-btn');
-  if (adminBtn) {
-    adminBtn.classList.toggle('active', nextView === 'admin');
-    adminBtn.textContent = 'Admin';
   }
   if (nextView === 'console') startConsoleAutoRefresh();
 }
@@ -3879,23 +3866,22 @@ async function copyInviteLink() {
   }
 }
 
-document.getElementById('admin-btn').onclick = function(e) {
-  if (!isAdmin) return;
+document.getElementById('settings-btn').onclick = function(e) {
   e.stopPropagation();
   document.getElementById('user-rooms-menu').classList.remove('open');
-  document.getElementById('admin-menu').classList.toggle('open');
+  document.getElementById('settings-menu').classList.toggle('open');
 };
 document.getElementById('user-rooms-btn').onclick = function(e) {
   e.stopPropagation();
-  document.getElementById('admin-menu').classList.remove('open');
+  document.getElementById('settings-menu').classList.remove('open');
   document.getElementById('user-rooms-menu').classList.toggle('open');
 };
-document.querySelectorAll('#admin-menu button').forEach(function(btn) {
+document.querySelectorAll('#settings-menu button[data-view]').forEach(function(btn) {
   btn.onclick = function(e) {
     e.stopPropagation();
     if (!isAdmin) return;
     var view = btn.getAttribute('data-view');
-    document.getElementById('admin-menu').classList.remove('open');
+    document.getElementById('settings-menu').classList.remove('open');
     var nextView = currentView === view ? 'chat' : view;
     setView(nextView);
     if (nextView === 'console') loadConsoleData();
@@ -3904,10 +3890,10 @@ document.querySelectorAll('#admin-menu button').forEach(function(btn) {
   };
 });
 document.addEventListener('click', function(e) {
-  var adminMenu = document.getElementById('admin-menu');
+  var settingsMenu = document.getElementById('settings-menu');
   var userRoomsMenu = document.getElementById('user-rooms-menu');
-  if (e.target.closest('#admin-menu-wrap') || e.target.closest('#user-rooms-wrap')) return;
-  if (adminMenu) adminMenu.classList.remove('open');
+  if (e.target.closest('#settings-wrap') || e.target.closest('#user-rooms-wrap')) return;
+  if (settingsMenu) settingsMenu.classList.remove('open');
   if (userRoomsMenu) userRoomsMenu.classList.remove('open');
 });
 document.getElementById('admin-save-btn').onclick = saveAdminUser;
