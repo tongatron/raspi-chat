@@ -1,7 +1,7 @@
-# cabras-chat
+# raspi-chat
 
 <p align="center">
-  <img src="public/logo.png" alt="Cabras Chat" width="220" />
+  <img src="public/logo.png" alt="Raspi Chat" width="220" />
 </p>
 
 Chat web self-hosted pensata per Raspberry Pi e piccoli server domestici.
@@ -45,7 +45,7 @@ Non contiene:
 ## Struttura
 
 ```text
-cabras-chat/
+raspi-chat/
 ├── config/                      Esempi configurazione utenti
 ├── ops/                         Esempi deploy Raspberry
 ├── public/                      Frontend, PWA
@@ -67,8 +67,8 @@ cabras-chat/
 ### Locale
 
 ```bash
-git clone https://github.com/tongatron/cabras-chat.git
-cd cabras-chat
+git clone https://github.com/tongatron/raspi-chat.git
+cd raspi-chat
 npm install
 npm run check
 npm start
@@ -85,8 +85,8 @@ Se invece hai gia' `.env` e `config/chat-users.json`, la chat sara' disponibile 
 ### Raspberry Pi
 
 ```bash
-git clone https://github.com/tongatron/cabras-chat.git /srv/apps/cabras-chat
-cd /srv/apps/cabras-chat
+git clone https://github.com/tongatron/raspi-chat.git /srv/apps/raspi-chat
+cd /srv/apps/raspi-chat
 bash ops/install-rpi.sh
 ```
 
@@ -157,7 +157,7 @@ Esempio:
 
 ### Variabili ambiente
 
-Le principali sono gia' documentate in [.env.example](/Users/tonga/Documents/GitHub/cabras-chat/.env.example):
+Le principali sono gia' documentate in [.env.example](/Users/tonga/Documents/GitHub/raspi-chat/.env.example):
 
 - `HOST`, `PORT`
 - `CHAT_USERS_FILE`
@@ -177,7 +177,7 @@ Assetto consigliato su Raspberry:
 
 Percorso consigliato:
 
-`/srv/apps/cabras-chat`
+`/srv/apps/raspi-chat`
 
 ## Cloudflare
 
@@ -201,7 +201,7 @@ Scenario tipico:
 1. aggiungi il dominio a Cloudflare se non e' gia' li'
 2. installa `cloudflared` sulla Raspberry seguendo la guida ufficiale
 3. autentica `cloudflared` con il tuo account Cloudflare
-4. crea un tunnel dedicato, per esempio `cabras-chat`
+4. crea un tunnel dedicato, per esempio `raspi-chat`
 5. collega un hostname pubblico al tunnel, per esempio `chat.example.com`
 6. configura l'ingress del tunnel verso `http://127.0.0.1:3000`
 7. installa `cloudflared` come servizio systemd
@@ -212,8 +212,8 @@ Dopo aver installato `cloudflared`:
 
 ```bash
 cloudflared tunnel login
-cloudflared tunnel create cabras-chat
-cloudflared tunnel route dns cabras-chat chat.example.com
+cloudflared tunnel create raspi-chat
+cloudflared tunnel route dns raspi-chat chat.example.com
 ```
 
 Config di esempio in `/etc/cloudflared/config.yml`:
@@ -333,7 +333,7 @@ Se invece vuoi:
 - storage locale
 - facilità di modifica
 
-allora `cabras-chat` e' una base piu' leggera e piu' adatta a Raspberry/home server.
+allora `raspi-chat` e' una base piu' leggera e piu' adatta a Raspberry/home server.
 
 ## Prossimi passi consigliati
 
