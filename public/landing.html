@@ -131,6 +131,20 @@
       font-size: clamp(1rem, 2vw, 1.12rem);
     }
 
+    .hero-logo-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 22px 0 0;
+    }
+
+    .hero-logo {
+      width: min(320px, calc(100vw - 56px));
+      aspect-ratio: 1 / 1;
+      object-fit: contain;
+      border-radius: 6px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+    }
+
     .status-badge-wrap {
       display: flex;
       justify-content: center;
@@ -220,6 +234,10 @@
         padding: 42px 8px 24px;
       }
 
+      .hero-logo {
+        width: min(280px, calc(100vw - 40px));
+      }
+
     }
   </style>
 </head>
@@ -239,6 +257,9 @@
     <section class="hero">
       <div class="eyebrow">Raspi Chat</div>
       <h1>Raspi Chat</h1>
+      <div class="hero-logo-wrap">
+        <img class="hero-logo" src="/chat/assets/raspinew.png" alt="Raspi Chat logo" />
+      </div>
       <p class="lead">Progetto self-hosted pensato per piccoli gruppi, con stanze private, notifiche web e amministrazione semplice.</p>
     </section>
 
