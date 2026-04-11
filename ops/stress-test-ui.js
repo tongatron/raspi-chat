@@ -64,12 +64,12 @@ async function login(username, password) {
   return r.body.token;
 }
 
-function openWs(token, roomId, onMsg) {
+function openWs(username, token, roomId, onMsg) {
   const WebSocket = require('ws');
   const wsUrl = TARGET.replace(/^http/, 'ws') + '/chat/ws';
-  const ws = new WebSocket(wsUrl, { headers: { Authorization: `Bearer ${token}` }, rejectUnauthorized: false });
+  const ws = new WebSocket(wsUrl, { rejectUnauthorized: false });
   ws.on('open', () => {
-    ws.send(JSON.stringify({ type: 'join', roomId }));
+    ws.send(JSON.stringify({ type: 'join', roomId, username, token }));
   });
   ws.on('message', raw => {
     try { onMsg(JSON.parse(raw)); } catch(_) {}
@@ -186,7 +186,7 @@ async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePe
   const intervalMs = Math.round(60000 / Math.max(1, ratePerMin));
   const worker = { username: adminUser || username, token, ws: null, sent: 0, errors: 0, timer: null };
 
-  worker.ws = openWs(token, roomId || 'general', msg => {
+  worker.ws = openWs(worker.username, token, roomId || 'cabras-giovanni', msg => {
     if (msg.type === 'message') {
       testStats.received++;
     }
@@ -379,8 +379,8 @@ const HTML = `<!DOCTYPE html>
           <input type="range" id="cfg-duration" min="10" max="300" value="60" step="10" oninput="document.getElementById('lbl-dur').textContent=this.value" />
         </div>
         <div class="field">
-          <label>Room ID (default: general)</label>
-          <input type="text" id="cfg-room" value="general" />
+          <label>Room ID (default: cabras-giovanni)</label>
+          <input type="text" id="cfg-room" value="cabras-giovanni" />
         </div>
         <div class="field">
           <label>Username admin (per login)</label>
@@ -553,7 +553,7 @@ function startTest() {
     users:      parseInt(document.getElementById('cfg-users').value),
     ratePerMin: parseInt(document.getElementById('cfg-rate').value),
     duration:   parseInt(document.getElementById('cfg-duration').value),
-    roomId:     document.getElementById('cfg-room').value || 'general',
+    roomId:     document.getElementById('cfg-room').value || 'cabras-giovanni',
     adminUser:  document.getElementById('cfg-user').value,
     adminPass:  document.getElementById('cfg-pass').value,
     ramp:       document.getElementById('cfg-ramp').checked,
