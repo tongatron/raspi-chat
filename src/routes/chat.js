@@ -803,21 +803,35 @@ function onlineUsers(roomId) {
     .map((c) => c.username))];
 }
 
-async function sendWebPush(msg, senderUsername) {
-  const payload = JSON.stringify({ title: msg.username, body: msg.text ? msg.text.slice(0, 100) : '📎 Immagine', url: '/chat' });
+async function sendWebPush(msg, senderUsername, roomId) {
+  // Only send to members of the room who are NOT currently active in it
+  const members = new Set(stmts.listRoomMembers.all(roomId).map(r => r.username));
+  const activeInRoom = new Set();
+  for (const client of clients.values()) {
+    if (client.roomId === roomId && client.username) activeInRoom.add(client.username);
+  }
+  const roomRow = stmts.getRoomById.get(roomId);
+  const roomName = roomRow ? roomRow.name : 'Chat';
+  const payload = JSON.stringify({
+    title: `${msg.username} · ${roomName}`,
+    body: msg.text ? msg.text.slice(0, 100) : '📎 Immagine',
+    url: '/chat'
+  });
   for (const [username, sub] of pushSubs) {
-    if (username === senderUsername) continue;
+    if (username === senderUsername) continue;       // non mandare al mittente
+    if (!members.has(username)) continue;            // solo membri della stanza
+    if (activeInRoom.has(username)) continue;        // già connesso in questa stanza
     try {
       await webpush.sendNotification(sub, payload);
-      console.log(`[Push] WebPush sent to ${username}`);
+      console.log(`[Push] WebPush sent to ${username} for room ${roomId}`);
     } catch (err) {
       console.error(`[Push] WebPush failed for ${username}: ${err.statusCode || err.code || 'unknown'} ${err.message || err}`);
       if (err.statusCode === 410 || err.statusCode === 404) { pushSubs.delete(username); stmts.deletePushSub.run(username); }
     }
   }
 }
-async function sendAllPush(msg, senderUsername) {
-  await sendWebPush(msg, senderUsername);
+async function sendAllPush(msg, senderUsername, roomId) {
+  await sendWebPush(msg, senderUsername, roomId);
 }
 
 function decodeHtmlEntities(value) {
@@ -1640,7 +1654,7 @@ async function chatRoutes(app) {
         broadcastToRoom(client.roomId, out);
         const roomRow = stmts.getRoomById.get(client.roomId);
         notifyUnread(client.roomId, roomRow ? roomRow.name : '', client.username);
-        sendAllPush(out, client.username);
+        sendAllPush(out, client.username, client.roomId);
       }
     });
 
