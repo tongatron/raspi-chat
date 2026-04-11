@@ -4,67 +4,71 @@
   <img src="public/assets/raspinew-home.png" alt="Raspi Chat" width="320" />
 </p>
 
-Chat web self-hosted pensata per Raspberry Pi e piccoli server domestici.
+<p align="center">
+  <a href="README.it.md">🇮🇹 Leggi in italiano</a>
+</p>
 
-Il progetto include:
-- backend Node.js/Fastify
-- frontend web/PWA senza framework
-- messaggi realtime via WebSocket
-- SQLite locale
-- upload immagini
-- preview link
-- notifiche Web Push
+Self-hosted web chat designed for Raspberry Pi and small home servers.
 
-URL live di riferimento:
+The project includes:
+- Node.js/Fastify backend
+- Web/PWA frontend with no framework
+- Realtime messages via WebSocket
+- Local SQLite
+- Image upload
+- Link preview
+- Web Push notifications
+
+Live reference URL:
 
 `https://chat.tongatron.org/chat`
 
-## A chi serve
+## Who is it for
 
-Questo progetto ha senso se vuoi:
-- una chat semplice da self-hostare
-- qualcosa di piu' leggero di Matrix, Rocket.Chat o simili
-- un'app che possa girare bene anche su Raspberry vecchie
-- una base chiara da adattare a chat privata, di famiglia o di piccola community
+This project makes sense if you want:
+- a simple chat to self-host
+- something lighter than Matrix, Rocket.Chat or similar
+- an app that runs well even on older Raspberry Pi boards
+- a clear codebase to adapt for a private, family or small community chat
 
-Non e' pensato come alternativa enterprise a Slack/Discord. E' una codebase pragmatica, piccola e modificabile.
+It is not meant as an enterprise alternative to Slack/Discord. It is a pragmatic, small and hackable codebase.
 
-## Stato attuale
+## Current state
 
-La repo e' la source of truth della chat.
+The repo is the source of truth for the chat.
 
-Contiene:
-- web app e backend
-- asset pubblici
-- documentazione di deploy
+It contains:
+- web app and backend
+- public assets
+- deploy documentation
 
-Non contiene:
+It does not contain:
 - `.env`
 - `config/chat-users.json`
 
-## Struttura
+## Structure
 
 ```text
 raspi-chat/
-├── config/                      Esempi configurazione utenti
-├── ops/                         Esempi deploy Raspberry
+├── config/                      User configuration examples
+├── ops/                         Raspberry deploy examples
 ├── public/                      Frontend, PWA
-├── src/                         Backend Fastify
+├── src/                         Fastify backend
 ├── .env.example
 ├── package.json
 └── server.js
 ```
 
-## Requisiti minimi
+## Minimum requirements
 
 - Node.js 20+
 - npm
-- Linux o Raspberry Pi OS
-- reverse proxy opzionale ma consigliato
+- Linux or Raspberry Pi OS
+- Reverse proxy optional but recommended
 
-## Installazione rapida
+## Quick install
 
-### Locale
+### Local
 
 ```bash
 git clone https://github.com/tongatron/raspi-chat.git
@@ -74,11 +78,11 @@ npm run check
 npm start
 ```
 
-Se non hai ancora configurato il progetto, apri:
+If you have not configured the project yet, open:
 
 `http://127.0.0.1:3000/setup`
 
-Se invece hai gia' `.env` e `config/chat-users.json`, la chat sara' disponibile su:
+If you already have `.env` and `config/chat-users.json`, the chat will be available at:
 
 `http://127.0.0.1:3000/chat`
 
@@ -90,14 +94,14 @@ cd /srv/apps/raspi-chat
 bash ops/install-rpi.sh
 ```
 
-Poi:
-1. avvia una volta l'app con `npm start`
-2. apri il wizard su `http://raspberrypi.local:3000/setup` oppure `http://IP-DELLA-RASPBERRY:3000/setup`
-3. completa i passaggi web
-4. usa i file generati in `data/setup-generated/`
-5. abilita `systemd`
+Then:
+1. Start the app once with `npm start`
+2. Open the wizard at `http://raspberrypi.local:3000/setup` or `http://RASPBERRY-IP:3000/setup`
+3. Complete the web steps
+4. Use the generated files in `data/setup-generated/`
+5. Enable `systemd`
 
-Comandi utili:
+Useful commands:
 
 ```bash
 sudo systemctl daemon-reload
@@ -106,59 +110,59 @@ sudo systemctl status fastify-api
 journalctl -u fastify-api -f
 ```
 
-## Setup guidato via web
+## Web-based guided setup
 
-Il percorso pensato per chi installa il progetto per la prima volta e':
+The recommended path for first-time installs:
 
 1. `bash ops/install-rpi.sh`
 2. `npm start`
-3. apri `/setup`
-4. compila i passaggi
-5. copia i file generati
-6. abilita il servizio
+3. Open `/setup`
+4. Fill in the steps
+5. Copy the generated files
+6. Enable the service
 
-Lo wizard `/setup` fa queste cose:
+The `/setup` wizard does the following:
 
-- controlla che la cartella sia scrivibile
-- raccoglie nome chat, host, porta e modalita' rete
-- crea l'utente admin iniziale e gli utenti base
-- genera automaticamente le chiavi VAPID per le Web Push
-- scrive `.env`
-- scrive `config/chat-users.json`
-- crea `data/setup-complete.json`
-- genera:
+- checks that the folder is writable
+- collects chat name, host, port and network mode
+- creates the initial admin user and base users
+- automatically generates VAPID keys for Web Push
+- writes `.env`
+- writes `config/chat-users.json`
+- creates `data/setup-complete.json`
+- generates:
   - `data/setup-generated/fastify-api.service`
   - `data/setup-generated/nginx.chat.conf`
   - `data/setup-generated/cloudflared.config.yml`
 
-Quando il setup e' completato, `/setup` si disattiva e la app torna a mostrare la chat normale.
+When setup is complete, `/setup` deactivates and the app returns to showing the normal chat.
 
-Nota pratica:
+Practical note:
 
-- di default `/setup` e' accessibile solo da rete locale
-- se vuoi forzarlo da remoto, puoi esportare `SETUP_ALLOW_REMOTE=1`
+- by default `/setup` is only accessible from the local network
+- to force remote access, export `SETUP_ALLOW_REMOTE=1`
 
-## Configurazione
+## Configuration
 
-### Utenti
+### Users
 
-Il file utenti e' esterno al codice:
+The users file is external to the code:
 
 `config/chat-users.json`
 
-Esempio:
+Example:
 
 ```json
 [
   { "username": "Giovanni", "password": "change-me-giovanni", "role": "admin" },
-  { "username": "Operatore", "password": "change-me-operatore", "role": "superuser" },
+  { "username": "Operator", "password": "change-me-operator", "role": "superuser" },
   { "username": "Cabras", "password": "change-me-cabras", "role": "user" }
 ]
 ```
 
-### Variabili ambiente
+### Environment variables
 
-Le principali sono gia' documentate in [.env.example](/Users/tonga/Documents/GitHub/raspi-chat/.env.example):
+The main ones are documented in `.env.example`:
 
 - `HOST`, `PORT`
 - `CHAT_USERS_FILE`
@@ -167,49 +171,49 @@ Le principali sono gia' documentate in [.env.example](/Users/tonga/Documents/Git
 - `DEFAULT_ROOM_NAME`
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`
 
-## Deploy tipico
+## Typical deploy
 
-Assetto consigliato su Raspberry:
+Recommended setup on Raspberry:
 
-- app Node in ascolto su `127.0.0.1:3000`
-- `systemd` per il processo
-- `nginx` davanti
-- opzionale tunnel Cloudflare o DNS pubblico
+- Node app listening on `127.0.0.1:3000`
+- `systemd` for the process
+- `nginx` in front
+- Optional Cloudflare tunnel or public DNS
 
-Percorso consigliato:
+Recommended path:
 
 `/srv/apps/raspi-chat`
 
 ## Cloudflare
 
-Se vuoi esporre la chat su Internet senza aprire direttamente porte sulla Raspberry, il modo piu' pratico e' usare Cloudflare Tunnel con `cloudflared`.
+If you want to expose the chat on the internet without directly opening ports on the Raspberry, the most practical way is to use Cloudflare Tunnel with `cloudflared`.
 
-Scenario tipico:
+Typical scenario:
 
-- app Node su `127.0.0.1:3000`
-- `cloudflared` sulla Raspberry
-- hostname pubblico tipo `chat.example.com`
-- nessun port forwarding diretto verso casa
+- Node app on `127.0.0.1:3000`
+- `cloudflared` on the Raspberry
+- Public hostname like `chat.example.com`
+- No direct port forwarding from home
 
-### Cosa ti serve prima
+### What you need first
 
-- un account Cloudflare
-- un dominio gestito da Cloudflare
-- il progetto gia' funzionante in locale su `http://127.0.0.1:3000/chat`
+- a Cloudflare account
+- a domain managed by Cloudflare
+- the project already working locally at `http://127.0.0.1:3000/chat`
 
-### Flusso consigliato
+### Recommended flow
 
-1. aggiungi il dominio a Cloudflare se non e' gia' li'
-2. installa `cloudflared` sulla Raspberry seguendo la guida ufficiale
-3. autentica `cloudflared` con il tuo account Cloudflare
-4. crea un tunnel dedicato, per esempio `raspi-chat`
-5. collega un hostname pubblico al tunnel, per esempio `chat.example.com`
-6. configura l'ingress del tunnel verso `http://127.0.0.1:3000`
-7. installa `cloudflared` come servizio systemd
+1. Add the domain to Cloudflare if not already there
+2. Install `cloudflared` on the Raspberry following the official guide
+3. Authenticate `cloudflared` with your Cloudflare account
+4. Create a dedicated tunnel, e.g. `raspi-chat`
+5. Link a public hostname to the tunnel, e.g. `chat.example.com`
+6. Configure the tunnel ingress to `http://127.0.0.1:3000`
+7. Install `cloudflared` as a systemd service
 
-### Comandi tipici
+### Typical commands
 
-Dopo aver installato `cloudflared`:
+After installing `cloudflared`:
 
 ```bash
 cloudflared tunnel login
@@ -217,7 +221,7 @@ cloudflared tunnel create raspi-chat
 cloudflared tunnel route dns raspi-chat chat.example.com
 ```
 
-Config di esempio in `/etc/cloudflared/config.yml`:
+Example config at `/etc/cloudflared/config.yml`:
 
 ```yaml
 tunnel: <TUNNEL_ID>
@@ -229,7 +233,7 @@ ingress:
   - service: http_status:404
 ```
 
-Poi:
+Then:
 
 ```bash
 sudo cloudflared service install
@@ -237,61 +241,61 @@ sudo systemctl enable --now cloudflared
 sudo systemctl status cloudflared
 ```
 
-Se usi il wizard, trovi gia' una base pronta in:
+If you used the wizard, you'll find a ready-made base at:
 
 `data/setup-generated/cloudflared.config.yml`
 
-### Cloudflare e nginx
+### Cloudflare and nginx
 
-Hai due opzioni sensate:
+Two sensible options:
 
-- tunnel diretto verso `http://127.0.0.1:3000`
-- tunnel verso `nginx`, se vuoi usare nginx anche per altre regole locali
+- Direct tunnel to `http://127.0.0.1:3000`
+- Tunnel to `nginx`, if you want to use nginx for other local rules as well
 
-Se usi solo la chat, il tunnel diretto verso Fastify e' spesso la scelta piu' semplice.
+If you only use the chat, the direct tunnel to Fastify is often the simplest choice.
 
-### DNS e hostname
+### DNS and hostname
 
-Con il comando `cloudflared tunnel route dns` Cloudflare crea il record DNS necessario per l'hostname pubblico associato al tunnel.
+With `cloudflared tunnel route dns`, Cloudflare creates the DNS record needed for the public hostname associated with the tunnel.
 
-Esempio:
+Example:
 
-- hostname pubblico: `chat.example.com`
-- servizio locale: `http://127.0.0.1:3000`
+- public hostname: `chat.example.com`
+- local service: `http://127.0.0.1:3000`
 
-### WebSocket e chat realtime
+### WebSocket and realtime chat
 
-La chat usa WebSocket su `/chat/ws`. Con Cloudflare Tunnel non serve una configurazione speciale aggiuntiva lato app: il tunnel inoltra il traffico HTTP/WebSocket verso il servizio locale configurato.
+The chat uses WebSocket on `/chat/ws`. With Cloudflare Tunnel no additional app-side configuration is needed: the tunnel forwards HTTP/WebSocket traffic to the configured local service.
 
-### Verifica finale
+### Final check
 
-Prima controlla in locale:
+First check locally:
 
 ```bash
 curl http://127.0.0.1:3000/health
 ```
 
-Poi verifica dal dominio pubblico:
+Then verify from the public domain:
 
 ```bash
 curl -I https://chat.example.com/chat
 ```
 
-Controlli utili:
+Useful checks:
 
 - `sudo systemctl status fastify-api`
 - `sudo systemctl status cloudflared`
 - `journalctl -u cloudflared -f`
 - `journalctl -u fastify-api -f`
 
-### Note pratiche
+### Practical notes
 
-- se usi PWA e notifiche, il dominio pubblico stabile e' importante
-- se vuoi protezione extra, puoi aggiungere in Cloudflare Access una policy davanti al dominio, ma per una chat pubblica di solito non serve
+- if you use PWA and notifications, a stable public domain is important
+- if you want extra protection, you can add a Cloudflare Access policy in front of the domain, but for a typical private chat it is usually not needed
 
-## Endpoint utili
+## Useful endpoints
 
-Pubblici:
+Public:
 - `GET /chat`
 - `POST /chat/login`
 - `GET /chat/ws`
@@ -300,14 +304,14 @@ Pubblici:
 - `GET /health`
 - `GET /version`
 
-Privati:
+Private:
 - `GET /chat/messages`
 - `POST /chat/upload`
 - `GET /chat/images/:filename`
 - `GET /chat/preview`
 - `GET /chat/console/data`
 
-## Verifica veloce
+## Quick check
 
 ```bash
 curl http://127.0.0.1:3000/health
@@ -324,21 +328,21 @@ curl -X POST \
 npm run check
 ```
 
-## Posizionamento rispetto ad altri progetti
+## Positioning vs other projects
 
-Se vuoi una chat molto strutturata e federata, esistono opzioni piu' grandi come Matrix o Snikket.
+If you want a heavily structured and federated chat, there are larger options like Matrix or Snikket.
 
-Se invece vuoi:
-- poca dipendenza esterna
-- deploy semplice
-- storage locale
-- facilità di modifica
+If instead you want:
+- minimal external dependencies
+- simple deploy
+- local storage
+- ease of modification
 
-allora `raspi-chat` e' una base piu' leggera e piu' adatta a Raspberry/home server.
+then `raspi-chat` is a lighter base better suited to Raspberry/home server use.
 
-## Prossimi passi consigliati
+## Suggested next steps
 
-- creare una modalita' “public room” esplicita
-- aggiungere un setup guidato ancora piu' automatico
-- documentare backup/ripristino di `chat.db`
-- aggiungere test automatici minimi
+- add an explicit "public room" mode
+- improve the guided setup automation further
+- document backup/restore of `chat.db`
+- add minimal automated tests
