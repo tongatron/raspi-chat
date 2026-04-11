@@ -39,6 +39,7 @@ let rampInterval    = null;
 let adminToken    = null;   // saved after first login, used for fetchPiStats
 let adminUsername = null;
 let monitorOnlyInterval = null;  // polling when no test is running
+let rampState = null;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function httpReq(url, opts, body) {
@@ -118,7 +119,7 @@ async function startTest(cfg) {
 
   testRunning = true;
   testWorkers = [];
-  testStats   = { sent: 0, received: 0, errors: 0, latencies: [], startedAt: Date.now(), series: [], cfg };
+  testStats   = { sent: 0, received: 0, errors: 0, latencies: [], startedAt: Date.now(), series: [], cfg: { ...cfg } };
   pushEvent('log', { level: 'info', text: `▶ Avvio test — ${users} utenti, ${ratePerMin} msg/min, ${duration}s` });
 
   // Login utenti
@@ -129,17 +130,19 @@ async function startTest(cfg) {
 
   // Ramp: aggiungi utenti gradualmente
   if (ramp && users > startUsers) {
-    let added = startUsers;
+    rampState = { added: startUsers, targetUsers: users };
     const step = Math.max(1, Math.floor(users / 4));
     rampInterval = setInterval(async () => {
-      if (!testRunning || added >= users) { clearInterval(rampInterval); return; }
-      const toAdd = Math.min(step, users - added);
-      pushEvent('log', { level: 'info', text: `↑ Ramp: aggiungo ${toAdd} utenti (tot ${added+toAdd})` });
-      for (let i = added; i < added + toAdd; i++) {
+      if (!testRunning || !rampState || rampState.added >= rampState.targetUsers) { clearInterval(rampInterval); return; }
+      const toAdd = Math.min(step, rampState.targetUsers - rampState.added);
+      pushEvent('log', { level: 'info', text: `↑ Ramp: aggiungo ${toAdd} utenti (tot ${rampState.added + toAdd})` });
+      for (let i = rampState.added; i < rampState.added + toAdd; i++) {
         await spawnWorker(i, { adminUser, adminPass, testPass, roomId, ratePerMin });
       }
-      added += toAdd;
+      rampState.added += toAdd;
     }, 20000);
+  } else {
+    rampState = null;
   }
 
   let serverDownCount = 0;
@@ -172,6 +175,24 @@ async function startTest(cfg) {
   return { ok: true };
 }
 
+function scheduleWorker(worker, ratePerMin) {
+  clearInterval(worker.timer);
+  const intervalMs = Math.round(60000 / Math.max(1, ratePerMin));
+  worker.ratePerMin = ratePerMin;
+  worker.timer = setInterval(() => {
+    if (!testRunning || worker.ws.readyState !== 1) { clearInterval(worker.timer); return; }
+    const seq = worker.sent + 1;
+    const messageId = `${worker.sessionId}:${seq}`;
+    const text = `[stress:${messageId}] msg #${seq} @ ${new Date().toISOString()}`;
+    const startedAt = Date.now();
+    worker.ws.send(JSON.stringify({ type: 'message', text }));
+    worker.sent++;
+    testStats.sent++;
+    worker.pendingAcks.set(messageId, startedAt);
+    setTimeout(() => worker.pendingAcks.delete(messageId), 5000);
+  }, intervalMs);
+}
+
 async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePerMin }) {
   const username = `stress_${idx}`;
   const password = testPass || 'stress-test-pw';
@@ -186,39 +207,62 @@ async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePe
     return;
   }
 
-  const intervalMs = Math.round(60000 / Math.max(1, ratePerMin));
-  const worker = { username: adminUser || username, token, ws: null, sent: 0, errors: 0, timer: null, pendingAcks: new Map() };
+  const worker = {
+    username: adminUser || username,
+    token,
+    ws: null,
+    sent: 0,
+    errors: 0,
+    timer: null,
+    pendingAcks: new Map(),
+    sessionId: `w${idx}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    ratePerMin,
+  };
 
   worker.ws = openWs(worker.username, token, roomId || 'cabras-giovanni', msg => {
-    if (msg.type === 'message' && msg.username === worker.username) {
-      // Only count echo-back of OUR messages as "received" for drop/latency calc
+    if (msg.type === 'message' && typeof msg.text === 'string') {
+      const match = msg.text.match(/^\[stress:([^\]]+)\]/);
+      if (!match) return;
+      const messageId = match[1];
+      if (!worker.pendingAcks.has(messageId)) return;
       testStats.received++;
-      // Match latency: find oldest pending ack
-      const oldest = worker.pendingAcks.keys().next().value;
-      if (oldest !== undefined) {
-        testStats.latencies.push(Date.now() - oldest);
-        worker.pendingAcks.delete(oldest);
-      }
+      testStats.latencies.push(Date.now() - worker.pendingAcks.get(messageId));
+      worker.pendingAcks.delete(messageId);
     }
   });
 
   // Start sending after WS is open
   worker.ws.on('open', () => {
     pushEvent('log', { level: 'info', text: `✓ Worker ${idx} connesso` });
-    worker.timer = setInterval(() => {
-      if (!testRunning || worker.ws.readyState !== 1) { clearInterval(worker.timer); return; }
-      const t0 = Date.now();
-      const text = `[stress-${idx}] msg #${worker.sent+1} @ ${new Date().toISOString()}`;
-      worker.ws.send(JSON.stringify({ type: 'message', text }));
-      worker.sent++;
-      testStats.sent++;
-      worker.pendingAcks.set(t0, true);
-      // cleanup stale acks after 5s
-      setTimeout(() => worker.pendingAcks.delete(t0), 5000);
-    }, intervalMs);
+    scheduleWorker(worker, ratePerMin);
   });
 
   testWorkers.push(worker);
+}
+
+async function updateTestConfig(nextCfg) {
+  if (!testRunning) return { error: 'Nessun test in corso' };
+  if (rampState) return { error: 'Aggiornamento live non disponibile durante la modalita ramp' };
+
+  const currentUsers = testWorkers.length;
+  if (nextCfg.users < currentUsers) {
+    return { error: 'Ridurre gli utenti durante il test non e supportato' };
+  }
+
+  if (nextCfg.users > currentUsers) {
+    pushEvent('log', { level: 'info', text: `↑ Aggiornamento live: aggiungo ${nextCfg.users - currentUsers} utenti` });
+    for (let i = currentUsers; i < nextCfg.users; i++) {
+      await spawnWorker(i, testStats.cfg);
+    }
+  }
+
+  if (nextCfg.ratePerMin !== testStats.cfg.ratePerMin) {
+    pushEvent('log', { level: 'info', text: `↺ Aggiornamento live: ${nextCfg.ratePerMin} msg/min per utente` });
+    for (const worker of testWorkers) scheduleWorker(worker, nextCfg.ratePerMin);
+  }
+
+  testStats.cfg = { ...testStats.cfg, ...nextCfg, users: Math.max(nextCfg.users, currentUsers) };
+  return { ok: true, users: testWorkers.length, ratePerMin: testStats.cfg.ratePerMin };
 }
 
 function stopTest(reason) {
@@ -228,6 +272,7 @@ function stopTest(reason) {
   adminUsername = null;
   clearInterval(monitorInterval);
   clearInterval(rampInterval);
+  rampState = null;
 
   for (const w of testWorkers) {
     clearInterval(w.timer);
@@ -239,7 +284,8 @@ function stopTest(reason) {
   const maxThroughput = series.length ? Math.max(...series.map(p => p.sent - (series[series.indexOf(p)-1]?.sent ?? 0))) : 0;
   const maxCpu = series.length ? Math.max(...series.map(p => p.cpu ?? 0)) : null;
   const maxLat = series.length ? Math.max(...series.map(p => p.p95 ?? 0)) : null;
-  const drop = testStats.sent > 0 ? ((testStats.sent - testStats.received) / testStats.sent * 100).toFixed(1) : '0.0';
+  const missing = Math.max(0, testStats.sent - testStats.received);
+  const drop = testStats.sent > 0 ? (missing / testStats.sent * 100).toFixed(1) : '0.0';
 
   const report = {
     reason,
@@ -247,6 +293,7 @@ function stopTest(reason) {
     users: testWorkers.length,
     sent: testStats.sent,
     received: testStats.received,
+    missing,
     drop: drop + '%',
     maxThroughputPerSec: maxThroughput,
     maxCpu: maxCpu ? maxCpu + '%' : 'N/A',
@@ -255,7 +302,7 @@ function stopTest(reason) {
   };
 
   pushEvent('report', report);
-  pushEvent('log', { level: 'info', text: `■ Test terminato (${reason}) — inviati ${testStats.sent}, ricevuti ${testStats.received}, drop ${drop}%` });
+  pushEvent('log', { level: 'info', text: `■ Test terminato (${reason}) — inviati ${testStats.sent}, confermati ${testStats.received}, mancanti ${missing}, drop ${drop}%` });
   testWorkers = [];
 }
 
@@ -288,6 +335,17 @@ const server = http.createServer((req, res) => {
     stopTest('manual');
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+  if (req.method === 'POST' && req.url === '/update') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', async () => {
+      const cfg = JSON.parse(body);
+      const r = await updateTestConfig(cfg);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(r));
+    });
     return;
   }
   if (req.method === 'POST' && req.url === '/monitor/start') {
@@ -431,7 +489,7 @@ const HTML = `<!DOCTYPE html>
           </label>
         </div>
         <div class="field">
-          <label>Room ID (default: cabras-giovanni)</label>
+          <label>Room ID</label>
           <input type="text" id="cfg-room" value="cabras-giovanni" />
         </div>
         <div class="field">
@@ -463,6 +521,7 @@ const HTML = `<!DOCTYPE html>
           • Fare backup DB prima di avviare<br>
           • <b style="color:#f87171">⚠ Fermare il test PRIMA di ripristinare il backup</b> — altrimenti i worker continuano a scrivere nel DB appena ripristinato<br>
           • Il test usa le credenziali admin per simulare N sessioni simultanee<br>
+          • Durante il test puoi aumentare utenti e rate; la riduzione utenti viene bloccata<br>
           • <b style="color:var(--warn)">Ramp</b>: parte con ¼ degli utenti, ne aggiunge ogni 20s<br>
           • Il monitor Pi legge <code>/chat/console/data</code> ogni secondo<br>
           • Se la Pi si blocca, ripristinare il backup dall'admin panel
@@ -476,11 +535,11 @@ const HTML = `<!DOCTYPE html>
         <h2>Metriche live</h2>
         <div class="stat-grid">
           <div class="stat" id="stat-sent"><div class="val" id="v-sent">0</div><div class="lbl">Messaggi inviati</div></div>
-          <div class="stat" id="stat-recv"><div class="val" id="v-recv">0</div><div class="lbl">Ricevuti</div></div>
+          <div class="stat" id="stat-recv"><div class="val" id="v-recv">0</div><div class="lbl">Confermati</div></div>
           <div class="stat" id="stat-lat"><div class="val" id="v-lat">—</div><div class="lbl">Latenza p95</div></div>
           <div class="stat" id="stat-cpu"><div class="val" id="v-cpu">—</div><div class="lbl">CPU Pi</div></div>
           <div class="stat"><div class="val" id="v-workers">0</div><div class="lbl">Workers attivi</div></div>
-          <div class="stat"><div class="val" id="v-drop">0%</div><div class="lbl">Drop rate</div></div>
+          <div class="stat"><div class="val" id="v-drop">0%</div><div class="lbl">Mancate conferme</div></div>
           <div class="stat"><div class="val" id="v-ram">—</div><div class="lbl">RAM Pi</div></div>
           <div class="stat"><div class="val" id="v-load">—</div><div class="lbl">Load avg</div></div>
         </div>
@@ -504,6 +563,8 @@ evs.addEventListener('stats',  e => updateStats(JSON.parse(e.data)));
 evs.addEventListener('report', e => showReport(JSON.parse(e.data)));
 evs.addEventListener('log',    e => appendLog(JSON.parse(e.data)));
 
+let runningCfg = null;
+
 // Chart
 const canvas = document.getElementById('chart');
 const ctx = canvas.getContext('2d');
@@ -517,7 +578,8 @@ function updateStats(d) {
   document.getElementById('v-cpu').textContent     = d.cpu != null ? d.cpu + '%' : '—';
   document.getElementById('v-ram').textContent     = d.ram != null ? d.ram + '%' : '—';
   document.getElementById('v-load').textContent    = d.load != null ? d.load : '—';
-  const drop = d.sent > 0 ? ((d.sent - d.received) / d.sent * 100).toFixed(1) + '%' : '0%';
+  const missing = Math.max(0, d.sent - d.received);
+  const drop = d.sent > 0 ? (missing / d.sent * 100).toFixed(1) + '%' : '0%';
   document.getElementById('v-drop').textContent = drop;
 
   // colour CPU stat
@@ -594,22 +656,25 @@ function showReport(r) {
     ['Durata', r.duration ? r.duration + 's' : '∞ (stop manuale)'],
     ['Utenti', r.users],
     ['Messaggi inviati', r.sent],
-    ['Messaggi ricevuti', r.received],
+    ['Messaggi confermati', r.received],
+    ['Conferme mancanti', r.missing],
     ['Drop rate', r.drop],
     ['Throughput max /s', r.maxThroughputPerSec],
     ['CPU Pi max', r.maxCpu],
     ['Latenza p95 max', r.maxLatP95],
   ];
   rows.innerHTML = data.map(([k,v]) => \`<div class="report-row"><span class="k">\${k}</span><span class="v">\${v}</span></div>\`).join('');
-  appendLog({ level: 'info', text: \`Report: sent=\${r.sent} recv=\${r.received} drop=\${r.drop} cpu=\${r.maxCpu} p95=\${r.maxLatP95}\` });
+  appendLog({ level: 'info', text: \`Report: sent=\${r.sent} ack=\${r.received} missing=\${r.missing} drop=\${r.drop} cpu=\${r.maxCpu} p95=\${r.maxLatP95}\` });
+  runningCfg = null;
 }
 
 function startTest() {
+  const roomInput = document.getElementById('cfg-room');
   const cfg = {
     users:      parseInt(document.getElementById('cfg-users').value),
     ratePerMin: parseInt(document.getElementById('cfg-rate').value),
     duration:   document.getElementById('cfg-no-timeout').checked ? 0 : parseInt(document.getElementById('cfg-duration').value),
-    roomId:     document.getElementById('cfg-room').value || 'cabras-giovanni',
+    roomId:     roomInput && roomInput.value ? roomInput.value : 'cabras-giovanni',
     adminUser:  document.getElementById('cfg-user').value,
     adminPass:  document.getElementById('cfg-pass').value,
     ramp:       document.getElementById('cfg-ramp').checked,
@@ -631,13 +696,65 @@ function startTest() {
   Object.assign(series, { throughput: [], cpu: [], lat: [], labels: [], _lastSent: 0 });
   fetch('/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg) })
     .then(r => r.json())
-    .then(d => { if (d.error) { alert(d.error); document.getElementById('btn-start').disabled = false; document.getElementById('status-badge').className = 'badge badge-idle'; document.getElementById('status-badge').textContent = 'Idle'; } });
+    .then(d => {
+      if (d.error) {
+        alert(d.error);
+        document.getElementById('btn-start').disabled = false;
+        document.getElementById('status-badge').className = 'badge badge-idle';
+        document.getElementById('status-badge').textContent = 'Idle';
+        return;
+      }
+      runningCfg = { users: cfg.users, ratePerMin: cfg.ratePerMin };
+    });
 }
 
 function stopTest() {
   fetch('/stop', { method: 'POST' });
   document.getElementById('btn-start').disabled = false;
   document.getElementById('btn-stop').disabled  = true;
+  runningCfg = null;
+}
+
+function updateLiveTestConfig() {
+  if (!runningCfg) return;
+  const nextUsers = parseInt(document.getElementById('cfg-users').value, 10);
+  const nextRate = parseInt(document.getElementById('cfg-rate').value, 10);
+
+  if (Number.isNaN(nextUsers) || Number.isNaN(nextRate)) return;
+
+  if (nextUsers < runningCfg.users) {
+    document.getElementById('cfg-users').value = runningCfg.users;
+    document.getElementById('lbl-users').textContent = runningCfg.users;
+    appendLog({ level: 'warn', text: 'Ridurre gli utenti durante il test non è supportato.' });
+    return;
+  }
+
+  if (nextUsers === runningCfg.users && nextRate === runningCfg.ratePerMin) return;
+
+  fetch('/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ users: nextUsers, ratePerMin: nextRate })
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) {
+        alert(d.error);
+        document.getElementById('cfg-users').value = runningCfg.users;
+        document.getElementById('lbl-users').textContent = runningCfg.users;
+        document.getElementById('cfg-rate').value = runningCfg.ratePerMin;
+        document.getElementById('lbl-rate').textContent = runningCfg.ratePerMin;
+        return;
+      }
+      runningCfg = { users: d.users, ratePerMin: d.ratePerMin };
+      document.getElementById('cfg-users').value = d.users;
+      document.getElementById('lbl-users').textContent = d.users;
+      document.getElementById('cfg-rate').value = d.ratePerMin;
+      document.getElementById('lbl-rate').textContent = d.ratePerMin;
+    })
+    .catch(() => {
+      appendLog({ level: 'warn', text: 'Aggiornamento live non riuscito.' });
+    });
 }
 
 let _monitoring = false;
@@ -667,6 +784,9 @@ function toggleMonitor() {
     btn.classList.remove('active');
   }
 }
+
+document.getElementById('cfg-users').addEventListener('change', updateLiveTestConfig);
+document.getElementById('cfg-rate').addEventListener('change', updateLiveTestConfig);
 </script>
 </body>
 </html>`;
