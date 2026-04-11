@@ -164,7 +164,7 @@ async function startTest(cfg) {
     testStats.series.push(point);
     pushEvent('stats', point);
 
-    if (elapsed >= duration) stopTest('timeout');
+    if (duration > 0 && elapsed >= duration) stopTest('timeout');
   }, 1000);
 
   return { ok: true };
@@ -417,7 +417,16 @@ const HTML = `<!DOCTYPE html>
         </div>
         <div class="field">
           <div class="field-row"><label>Durata (secondi)</label><b id="lbl-dur">60</b></div>
-          <input type="range" id="cfg-duration" min="10" max="300" value="60" step="10" oninput="document.getElementById('lbl-dur').textContent=this.value" />
+          <input type="range" id="cfg-duration" min="10" max="300" value="60" step="10" oninput="document.getElementById('lbl-dur').textContent=this.value" id="cfg-duration-range" />
+          <label class="toggle" style="margin-top:6px">
+            <input type="checkbox" id="cfg-no-timeout" onchange="
+              var r=document.getElementById('cfg-duration');
+              var l=document.getElementById('lbl-dur');
+              r.disabled=this.checked;
+              l.textContent=this.checked?'∞':r.value;
+            " />
+            Nessun timeout (stop manuale)
+          </label>
         </div>
         <div class="field">
           <label>Room ID (default: cabras-giovanni)</label>
@@ -579,7 +588,7 @@ function showReport(r) {
   const rows = document.getElementById('report-rows');
   box.style.display = 'block';
   const data = [
-    ['Durata', r.duration + 's'],
+    ['Durata', r.duration ? r.duration + 's' : '∞ (stop manuale)'],
     ['Utenti', r.users],
     ['Messaggi inviati', r.sent],
     ['Messaggi ricevuti', r.received],
@@ -596,7 +605,7 @@ function startTest() {
   const cfg = {
     users:      parseInt(document.getElementById('cfg-users').value),
     ratePerMin: parseInt(document.getElementById('cfg-rate').value),
-    duration:   parseInt(document.getElementById('cfg-duration').value),
+    duration:   document.getElementById('cfg-no-timeout').checked ? 0 : parseInt(document.getElementById('cfg-duration').value),
     roomId:     document.getElementById('cfg-room').value || 'cabras-giovanni',
     adminUser:  document.getElementById('cfg-user').value,
     adminPass:  document.getElementById('cfg-pass').value,
