@@ -1842,6 +1842,7 @@
     #admin-invite-btn,
     #admin-copy-invite-btn,
     #admin-backup-btn,
+    #admin-broadcast-btn,
     .btn-like {
       border: none;
       border-radius: 4px;
@@ -1855,6 +1856,16 @@
     #admin-backup-btn {
       background: rgba(15,34,59,.06);
       color: var(--ink);
+    }
+    #admin-broadcast-btn {
+      background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+      color: white;
+      box-shadow: 0 14px 24px rgba(31,111,210,.18);
+    }
+    #admin-broadcast-btn:disabled {
+      opacity: .55;
+      cursor: default;
+      box-shadow: none;
     }
     .btn-like {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
@@ -2497,7 +2508,7 @@
         <div class="admin-divider"></div>
         <h3>Messaggio a tutte le stanze</h3>
         <div class="admin-copy">Invia un messaggio a nome tuo in tutte le stanze contemporaneamente.</div>
-        <textarea id="admin-broadcast-text" class="admin-invite-link" rows="3" placeholder="Scrivi il messaggio…" style="resize:vertical; height:72px; font-family:inherit;"></textarea>
+        <textarea id="admin-broadcast-text" class="admin-invite-link" rows="4" placeholder="Scrivi il messaggio…" style="resize:vertical; height:100px; font-family:inherit; padding:10px;"></textarea>
         <div class="admin-invite-actions" style="margin-top:8px;">
           <button id="admin-broadcast-btn" type="button">📢 Invia a tutte le stanze</button>
         </div>
