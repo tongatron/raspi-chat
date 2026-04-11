@@ -287,7 +287,15 @@ const server = http.createServer((req, res) => {
     req.on('data', c => body += c);
     req.on('end', async () => {
       const cfg = JSON.parse(body);
-      if (!adminToken) { adminToken = cfg.token; adminUsername = cfg.username; }
+      // Login server-side (no CORS issues)
+      try {
+        const r = await login(cfg.username, cfg.password);
+        adminToken = r; adminUsername = cfg.username;
+      } catch(e) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Login fallito: ' + e.message }));
+        return;
+      }
       if (monitorOnlyInterval) clearInterval(monitorOnlyInterval);
       monitorOnlyInterval = setInterval(async () => {
         if (testRunning) { clearInterval(monitorOnlyInterval); monitorOnlyInterval = null; return; }
@@ -621,22 +629,19 @@ function toggleMonitor() {
   const pass = document.getElementById('cfg-pass').value;
   if (!_monitoring) {
     if (!pass) { alert('Inserisci la password admin per il monitoraggio'); return; }
-    // login then start monitor
-    fetch('${TARGET}/chat/login', {
+    btn.disabled = true;
+    btn.textContent = '…';
+    fetch('/monitor/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: user, password: pass })
     }).then(r => r.json()).then(d => {
-      if (!d.token) { alert('Login fallito: ' + (d.error || 'errore')); return; }
-      fetch('/monitor/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: user, token: d.token })
-      });
+      btn.disabled = false;
+      if (d.error) { alert(d.error); btn.textContent = '📡 Avvia monitoraggio'; return; }
       _monitoring = true;
       btn.textContent = '⏹ Ferma monitoraggio';
       btn.classList.add('active');
-    }).catch(() => alert('Errore di connessione'));
+    }).catch(() => { btn.disabled = false; btn.textContent = '📡 Avvia monitoraggio'; alert('Errore di connessione'); });
   } else {
     fetch('/monitor/stop', { method: 'POST' });
     _monitoring = false;
