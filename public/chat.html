@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Chat</title>
+  <title>Raspi Chat</title>
   <link rel="manifest" href="/chat/manifest.json" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -15,8 +15,8 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/chat/assets/favicon-16-v2.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="/chat/assets/icon-192-v2.png" />
   <meta name="theme-color" content="#111723" />
-  <meta property="og:title" content="Cabras Chat" />
-  <meta property="og:description" content="Chat self-hosted su Raspberry Pi" />
+  <meta property="og:title" content="Raspi Chat" />
+  <meta property="og:description" content="Self-hosted chat on Raspberry Pi" />
   <meta property="og:image" content="/chat/assets/logo-v4.png" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -2215,25 +2215,25 @@
       <span class="brand-mark tiny" aria-hidden="true">
         <img src="/chat/assets/logo-v4.png" alt="" />
       </span>
-      Chat privata
+      Private chat
     </div>
     <h1>Chat</h1>
-    <p class="login-copy">Una stanza leggera e protetta per continuare la conversazione.</p>
+    <p class="login-copy">A light, private room to keep the conversation going.</p>
     <div id="step-users">
-      <p>Chi sei?</p>
+      <p>Who are you?</p>
       <div class="user-list" id="user-list"></div>
-      <div class="login-users-empty" id="user-list-empty">Carico gli utenti...</div>
+      <div class="login-users-empty" id="user-list-empty">Loading users...</div>
     </div>
     <div id="step-password">
       <div class="selected-user">
         <span id="sel-avatar" class="user-avatar"></span>
         <span id="sel-name"></span>
       </div>
-      <p>Inserisci la password</p>
+      <p>Enter your password</p>
       <input class="pwd-input" type="password" id="pwd-input" placeholder="Password" autocomplete="current-password" />
       <div class="login-error" id="login-error"></div>
-      <button class="login-submit" id="login-submit" onclick="submitLogin()">Entra</button>
-      <button class="back-link" onclick="backToUsers()">Cambia utente</button>
+      <button class="login-submit" id="login-submit" onclick="submitLogin()">Sign in</button>
+      <button class="back-link" onclick="backToUsers()">Change user</button>
     </div>
   </div>
 </div>
@@ -2245,31 +2245,31 @@
         <span class="brand-mark tiny" aria-hidden="true">
           <img src="/chat/assets/logo-v4.png" alt="" />
         </span>
-        Primo accesso
+        First launch
       </div>
-      <h1>Benvenuto in Raspi Chat</h1>
-      <p class="onboarding-copy">Prima di entrare trovi qui i link utili e il modo migliore per installare la chat come web app sul telefono.</p>
+      <h1>Welcome to Raspi Chat</h1>
+      <p class="onboarding-copy">Before you jump in, here are the useful links and the best way to install the chat as a web app on your phone.</p>
     </div>
 
     <div class="onboarding-grid">
       <div class="onboarding-card">
         <h3>Android</h3>
-        <p>Per una PWA più affidabile usa Chrome su Android. Apri la chat, tocca il menu del browser e scegli <strong>Aggiungi a schermata Home</strong> o <strong>Installa app</strong>.</p>
+        <p>For a more reliable PWA, use Chrome on Android. Open the chat, tap the browser menu, then choose <strong>Add to Home screen</strong> or <strong>Install app</strong>.</p>
       </div>
       <div class="onboarding-card">
         <h3>iPhone / iPad</h3>
-        <p>Su iOS apri la chat in Safari, tocca <strong>Condividi</strong> e poi <strong>Aggiungi a Home</strong>. In questo modo la chat si apre come app separata.</p>
+        <p>On iOS, open the chat in Safari, tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>. That way the chat opens like a standalone app.</p>
       </div>
     </div>
 
     <div class="onboarding-links">
-      <h3>Link di accesso</h3>
+      <h3>Access links</h3>
       <code id="onboarding-home-url"></code>
       <code id="onboarding-chat-url"></code>
     </div>
 
     <div class="onboarding-actions">
-      <button class="login-submit onboarding-btn" id="onboarding-enter-btn" type="button">Accedi</button>
+      <button class="login-submit onboarding-btn" id="onboarding-enter-btn" type="button">Continue</button>
     </div>
   </div>
 </div>
@@ -2289,20 +2289,20 @@
     </div>
     <div class="header-actions">
       <div id="user-rooms-wrap" style="position:relative; display:none;">
-        <button id="user-rooms-btn" type="button">Stanze</button>
+        <button id="user-rooms-btn" type="button">Rooms</button>
         <div id="user-rooms-menu" role="menu"></div>
       </div>
       <button id="console-btn" type="button" style="display:none" hidden></button>
       <button id="rooms-btn" type="button" style="display:none" hidden></button>
       <div id="settings-wrap">
-        <button id="settings-btn" class="toolbar-btn" type="button" title="Impostazioni" aria-label="Impostazioni">&#x2699;</button>
+        <button id="settings-btn" class="toolbar-btn" type="button" title="Settings" aria-label="Settings">&#x2699;</button>
         <div id="settings-menu" role="menu">
           <button type="button" data-view="chat" role="menuitem" class="manage-users-only" style="display:none">Chat</button>
-          <button type="button" data-view="admin" role="menuitem" id="admin-menu-btn" class="admin-access-only" style="display:none">Utenti</button>
-          <button type="button" data-view="rooms" role="menuitem" class="manage-users-only" style="display:none">Stanze</button>
+          <button type="button" data-view="admin" role="menuitem" id="admin-menu-btn" class="admin-access-only" style="display:none">Users</button>
+          <button type="button" data-view="rooms" role="menuitem" class="manage-users-only" style="display:none">Rooms</button>
           <button type="button" data-view="console" role="menuitem" class="console-access-only" style="display:none">Console</button>
           <hr class="menu-sep admin-access-only" style="display:none" />
-          <button type="button" id="logout-menu-btn" role="menuitem">Esci</button>
+          <button type="button" id="logout-menu-btn" role="menuitem">Sign out</button>
         </div>
       </div>
     </div>
@@ -2319,19 +2319,19 @@
     <button id="reply-cancel" onclick="cancelReply()">&#x2715;</button>
   </div>
   <div id="input-area">
-    <button class="icon-btn" id="attach-btn" title="Allega immagine">&#x1f4ce;</button>
+    <button class="icon-btn" id="attach-btn" title="Attach image">&#x1f4ce;</button>
     <input type="file" id="file-input" accept="image/*" />
-    <textarea id="msg-input" rows="1" placeholder="Scrivi un messaggio..."></textarea>
-    <button class="icon-btn" id="send-btn" title="Invia">&#x27A4;</button>
+    <textarea id="msg-input" rows="1" placeholder="Write a message..."></textarea>
+    <button class="icon-btn" id="send-btn" title="Send">&#x27A4;</button>
   </div>
   </div>
   <section id="rooms-view">
     <div class="rooms-layout">
       <div class="rooms-list">
         <div class="rooms-list-head">
-          <div class="eyebrow">Navigazione</div>
-          <h3>Stanze</h3>
-          <div class="rooms-copy">Apri una stanza esistente oppure gestiscila dalla colonna a destra.</div>
+          <div class="eyebrow">Browse</div>
+          <h3>Rooms</h3>
+          <div class="rooms-copy">Open an existing room or manage it from the panel on the right.</div>
         </div>
         <div class="rooms-list-body" id="rooms-list-body"></div>
       </div>
@@ -2339,38 +2339,38 @@
         <div class="rooms-stack">
           <section class="rooms-section">
             <div class="rooms-section-header">
-              <div class="eyebrow">Nuova stanza</div>
-              <h3>Crea stanza</h3>
-              <div class="rooms-copy compact">Dai un nome alla stanza e scegli subito chi deve entrarci.</div>
+              <div class="eyebrow">New room</div>
+              <h3>Create room</h3>
+              <div class="rooms-copy compact">Give the room a name and choose right away who should join it.</div>
             </div>
-            <input id="room-name-input" type="text" maxlength="60" placeholder="Nome nuova stanza" />
+            <input id="room-name-input" type="text" maxlength="60" placeholder="New room name" />
             <div class="room-members" id="room-create-members"></div>
-            <button id="room-create-btn" type="button">Crea stanza</button>
+            <button id="room-create-btn" type="button">Create room</button>
           </section>
 
           <section class="rooms-section">
             <div class="rooms-section-header">
-              <div class="eyebrow">Stanza attiva</div>
-              <h3 id="room-panel-title">Stanza attiva</h3>
-              <div class="rooms-copy compact" id="room-panel-copy">Seleziona una stanza per modificarne nome e partecipanti.</div>
+              <div class="eyebrow">Active room</div>
+              <h3 id="room-panel-title">Active room</h3>
+              <div class="rooms-copy compact" id="room-panel-copy">Select a room to edit its name and members.</div>
             </div>
-            <input id="room-active-name-input" type="text" maxlength="60" placeholder="Seleziona una stanza" />
-            <button id="room-rename-btn" type="button" disabled>Rinomina stanza</button>
+            <input id="room-active-name-input" type="text" maxlength="60" placeholder="Select a room" />
+            <button id="room-rename-btn" type="button" disabled>Rename room</button>
             <div class="admin-divider"></div>
-            <h3 id="room-invite-title">Inserisci persone</h3>
-            <div class="rooms-copy compact" id="room-invite-copy">Aggiungi utenti gia registrati alla stanza attiva.</div>
+            <h3 id="room-invite-title">Add people</h3>
+            <div class="rooms-copy compact" id="room-invite-copy">Add already registered users to the active room.</div>
             <div class="room-members" id="room-invite-members"></div>
-            <button id="room-invite-btn" type="button" disabled>Inserisci nella stanza</button>
+            <button id="room-invite-btn" type="button" disabled>Add to room</button>
             <div class="admin-divider"></div>
-            <h3 id="room-remove-title">Rimuovi persone</h3>
-            <div class="rooms-copy compact" id="room-remove-copy">Seleziona chi togliere dalla stanza attiva.</div>
+            <h3 id="room-remove-title">Remove people</h3>
+            <div class="rooms-copy compact" id="room-remove-copy">Choose who to remove from the active room.</div>
             <div class="room-members" id="room-remove-members"></div>
-            <button id="room-remove-btn" type="button" disabled>Rimuovi dalla stanza</button>
+            <button id="room-remove-btn" type="button" disabled>Remove from room</button>
           </section>
           <section>
-            <h3>Elimina stanza</h3>
-            <div class="rooms-copy compact">Elimina definitivamente la stanza attiva e tutti i suoi messaggi.</div>
-            <button id="room-delete-btn" type="button" disabled>Elimina stanza</button>
+            <h3>Delete room</h3>
+            <div class="rooms-copy compact">Permanently delete the active room and all its messages.</div>
+            <button id="room-delete-btn" type="button" disabled>Delete room</button>
           </section>
         </div>
         <div class="rooms-status" id="rooms-status"></div>
@@ -2381,18 +2381,18 @@
     <div class="console-topbar">
       <div>
         <div class="console-eyebrow">Console</div>
-        <h3>Raspberry e Chat</h3>
-        <div class="console-copy">Cruscotto rapido per controllare stato Raspberry, chat e collegamenti.</div>
+        <h3>Raspberry and Chat</h3>
+        <div class="console-copy">Quick dashboard for Raspberry status, chat health, and connections.</div>
       </div>
     </div>
-    <div id="console-status-line">Carico dati...</div>
+    <div id="console-status-line">Loading data...</div>
     <div class="console-grid" id="console-grid" hidden>
       <article class="console-card full">
-        <h3>Trend in tempo reale</h3>
+        <h3>Live trends</h3>
         <div class="console-chart-grid">
           <div class="console-chart-panel">
             <div class="console-chart-head">
-              <div class="console-chart-title">Temperatura</div>
+              <div class="console-chart-title">Temperature</div>
               <div class="console-chart-value" id="chart-temp-value">--</div>
             </div>
             <svg class="console-chart-svg" id="chart-temp" viewBox="0 0 320 110" preserveAspectRatio="none"></svg>
@@ -2404,37 +2404,37 @@
           </div>
           <div class="console-chart-panel">
             <div class="console-chart-head">
-              <div class="console-chart-title">Carico CPU (1 min)</div>
+              <div class="console-chart-title">CPU load (1 min)</div>
               <div class="console-chart-value" id="chart-load-value">--</div>
             </div>
             <svg class="console-chart-svg" id="chart-load" viewBox="0 0 320 110" preserveAspectRatio="none"></svg>
             <div class="console-chart-meta">
               <span id="chart-load-min">--</span>
-              <span>ultimi 5 minuti</span>
+              <span>last 5 minutes</span>
               <span id="chart-load-max">--</span>
             </div>
           </div>
           <div class="console-chart-panel">
             <div class="console-chart-head">
-              <div class="console-chart-title">RAM usata</div>
+              <div class="console-chart-title">RAM used</div>
               <div class="console-chart-value" id="chart-ram-value">--</div>
             </div>
             <svg class="console-chart-svg" id="chart-ram" viewBox="0 0 320 110" preserveAspectRatio="none"></svg>
             <div class="console-chart-meta">
               <span id="chart-ram-min">--</span>
-              <span>ultimi 5 minuti</span>
+              <span>last 5 minutes</span>
               <span id="chart-ram-max">--</span>
             </div>
           </div>
           <div class="console-chart-panel">
             <div class="console-chart-head">
-              <div class="console-chart-title">Utenti online</div>
+              <div class="console-chart-title">Online users</div>
               <div class="console-chart-value" id="chart-online-value">--</div>
             </div>
             <svg class="console-chart-svg" id="chart-online" viewBox="0 0 320 110" preserveAspectRatio="none"></svg>
             <div class="console-chart-meta">
               <span id="chart-online-min">--</span>
-              <span>ultimi 5 minuti</span>
+              <span>last 5 minutes</span>
               <span id="chart-online-max">--</span>
             </div>
           </div>
@@ -2449,11 +2449,11 @@
         <div class="console-stats" id="chat-stats"></div>
       </article>
       <article class="console-card">
-        <h3>Test rapidi</h3>
+        <h3>Quick checks</h3>
         <div class="console-list" id="test-list"></div>
       </article>
       <article class="console-card">
-        <h3>Rete</h3>
+        <h3>Network</h3>
         <div class="console-list" id="network-list"></div>
       </article>
     </div>
@@ -2461,21 +2461,21 @@
   <section id="admin-view">
     <div class="admin-layout">
       <div class="admin-list manage-users-only">
-        <h3>Utenti</h3>
-        <div class="admin-copy">Ruoli disponibili: admin, superuser e user. Solo gli admin gestiscono questa sezione.</div>
+        <h3>Users</h3>
+        <div class="admin-copy">Available roles: admin, superuser, and user. Only admins can manage this section.</div>
         <div class="admin-list-body" id="admin-user-list"></div>
       </div>
       <div class="admin-card">
         <div class="manage-users-only">
-        <h3 id="admin-form-title">Crea o modifica utente</h3>
-        <div class="admin-copy" id="admin-form-copy">Per aggiornare un utente esistente usa lo stesso username. Lascia la password vuota per mantenerla invariata.</div>
+        <h3 id="admin-form-title">Create or edit user</h3>
+        <div class="admin-copy" id="admin-form-copy">To update an existing user, use the same username. Leave the password empty to keep it unchanged.</div>
         <div class="admin-form">
           <div class="admin-field">
             <label for="admin-username">Username</label>
-            <input id="admin-username" type="text" maxlength="30" placeholder="NuovoUtente" />
+            <input id="admin-username" type="text" maxlength="30" placeholder="NewUser" />
           </div>
           <div class="admin-field">
-            <label for="admin-role">Ruolo</label>
+            <label for="admin-role">Role</label>
             <select id="admin-role">
               <option value="user">user</option>
               <option value="superuser">superuser</option>
@@ -2484,49 +2484,49 @@
           </div>
           <div class="admin-field">
             <label for="admin-password">Password</label>
-            <input id="admin-password" type="password" placeholder="Nuova password o lascia vuoto" />
+            <input id="admin-password" type="password" placeholder="New password or leave empty" />
           </div>
           <div class="admin-form-actions">
-            <button id="admin-save-btn" type="button">Salva utente</button>
-            <button id="admin-reset-btn" type="button">Nuovo</button>
-            <button id="admin-delete-btn" type="button" disabled>Elimina</button>
+            <button id="admin-save-btn" type="button">Save user</button>
+            <button id="admin-reset-btn" type="button">New</button>
+            <button id="admin-delete-btn" type="button" disabled>Delete</button>
           </div>
         </div>
         <div class="admin-status" id="admin-status"></div>
         <div class="admin-divider"></div>
         </div>
-        <h3>Invita utente</h3>
-        <div class="admin-copy" id="admin-invite-copy">Crea un link monouso con indirizzo casuale. Chi lo apre puo' registrarsi con nome e password.</div>
+        <h3>Invite user</h3>
+        <div class="admin-copy" id="admin-invite-copy">Create a one-time link with a random address. Whoever opens it can register with a name and password.</div>
         <div class="admin-invite-actions">
-          <button id="admin-invite-btn" type="button">Crea invito</button>
-          <button id="admin-copy-invite-btn" type="button" disabled>Copia link</button>
+          <button id="admin-invite-btn" type="button">Create invite</button>
+          <button id="admin-copy-invite-btn" type="button" disabled>Copy link</button>
         </div>
-        <input id="admin-invite-link" class="admin-invite-link" type="text" readonly placeholder="Il link comparira' qui" />
-        <div class="admin-invite-meta" id="admin-invite-meta">Il link e' pensato per un solo utilizzo.</div>
+        <input id="admin-invite-link" class="admin-invite-link" type="text" readonly placeholder="The link will appear here" />
+        <div class="admin-invite-meta" id="admin-invite-meta">This link is meant for one use only.</div>
         <div class="admin-divider"></div>
-        <h3>Backup &amp; Ripristino</h3>
-        <div class="admin-copy">Scarica una copia del database o ripristina da un backup precedente. Il ripristino sovrascrive tutti i dati attuali e riavvia il server.</div>
+        <h3>Backup &amp; Restore</h3>
+        <div class="admin-copy">Download a copy of the database or restore from an earlier backup. Restore overwrites all current data and restarts the server.</div>
         <div class="admin-invite-actions">
-          <button id="admin-backup-btn" type="button">⬇ Scarica backup</button>
+          <button id="admin-backup-btn" type="button">⬇ Download backup</button>
           <label id="admin-restore-label" style="cursor:pointer;">
             <input id="admin-restore-input" type="file" accept=".db" style="display:none" />
-            <span id="admin-restore-btn" class="btn-like">⬆ Ripristina da file</span>
+            <span id="admin-restore-btn" class="btn-like">⬆ Restore from file</span>
           </label>
         </div>
         <div class="admin-status" id="admin-backup-status"></div>
         <div class="admin-divider"></div>
-        <h3>Pulizia messaggi stress test</h3>
-        <div class="admin-copy">Elimina tutti i messaggi generati dallo stress test (<code>[stress-N]…</code>) da tutte le stanze.</div>
+        <h3>Stress test message cleanup</h3>
+        <div class="admin-copy">Delete all messages generated by the stress test (<code>[stress-N]…</code>) from every room.</div>
         <div class="admin-invite-actions">
-          <button id="admin-purge-stress-btn" type="button">🧹 Elimina messaggi stress test</button>
+          <button id="admin-purge-stress-btn" type="button">🧹 Delete stress test messages</button>
         </div>
         <div class="admin-status" id="admin-purge-stress-status"></div>
         <div class="admin-divider"></div>
-        <h3>Messaggio a tutte le stanze</h3>
-        <div class="admin-copy">Invia un messaggio a nome tuo in tutte le stanze contemporaneamente.</div>
-        <textarea id="admin-broadcast-text" class="admin-invite-link" rows="4" placeholder="Scrivi il messaggio…" style="resize:vertical; height:100px; font-family:inherit; padding:10px;"></textarea>
+        <h3>Message all rooms</h3>
+        <div class="admin-copy">Send a message as yourself to every room at the same time.</div>
+        <textarea id="admin-broadcast-text" class="admin-invite-link" rows="4" placeholder="Write the message…" style="resize:vertical; height:100px; font-family:inherit; padding:10px;"></textarea>
         <div class="admin-invite-actions" style="margin-top:8px;">
-          <button id="admin-broadcast-btn" type="button">📢 Invia a tutte le stanze</button>
+          <button id="admin-broadcast-btn" type="button">📢 Send to all rooms</button>
         </div>
         <div class="admin-status" id="admin-broadcast-status"></div>
       </div>
@@ -2539,18 +2539,18 @@
 
 <div id="new-room-dialog">
   <div id="new-room-panel">
-    <h3 style="margin:0 0 12px">Nuova stanza</h3>
+    <h3 style="margin:0 0 12px">New room</h3>
     <div class="admin-field">
-      <label for="new-room-name">Nome stanza</label>
-      <input id="new-room-name" type="text" placeholder="Es. Progetto, Famiglia..." />
+      <label for="new-room-name">Room name</label>
+      <input id="new-room-name" type="text" placeholder="e.g. Project, Family..." />
     </div>
     <div class="admin-field" style="margin-top:8px">
-      <label>Invita utenti</label>
+      <label>Invite users</label>
       <div id="new-room-users" style="max-height:180px;overflow-y:auto"></div>
     </div>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button id="new-room-create-btn" type="button" onclick="createUserRoom()">Crea stanza</button>
-      <button id="new-room-cancel-btn" type="button" onclick="document.getElementById('new-room-dialog').classList.remove('open')">Annulla</button>
+      <button id="new-room-create-btn" type="button" onclick="createUserRoom()">Create room</button>
+      <button id="new-room-cancel-btn" type="button" onclick="document.getElementById('new-room-dialog').classList.remove('open')">Cancel</button>
     </div>
   </div>
 </div>
@@ -2816,7 +2816,7 @@ function renderUserRoomsMenu() {
   var newBtn = document.createElement('button');
   newBtn.type = 'button';
   newBtn.setAttribute('role', 'menuitem');
-  newBtn.textContent = '+ Nuova stanza...';
+  newBtn.textContent = '+ New room...';
   newBtn.style.color = 'var(--primary)';
   newBtn.onclick = function(e) {
     e.stopPropagation();
@@ -2830,7 +2830,7 @@ async function openNewRoomDialog() {
   var dialog = document.getElementById('new-room-dialog');
   var usersList = document.getElementById('new-room-users');
   document.getElementById('new-room-name').value = '';
-  usersList.innerHTML = '<div style="color:var(--muted);padding:8px">Caricamento...</div>';
+  usersList.innerHTML = '<div style="color:var(--muted);padding:8px">Loading...</div>';
   dialog.classList.add('open');
   try {
     var res = await authFetch('/chat/my-rooms');
@@ -2849,13 +2849,13 @@ async function openNewRoomDialog() {
       usersList.appendChild(label);
     });
   } catch(e) {
-    usersList.innerHTML = '<div style="color:var(--muted)">Errore caricamento utenti</div>';
+    usersList.innerHTML = '<div style="color:var(--muted)">Unable to load users</div>';
   }
 }
 
 async function createUserRoom() {
   var name = document.getElementById('new-room-name').value.trim();
-  if (!name) { alert('Inserisci un nome per la stanza'); return; }
+  if (!name) { alert('Enter a room name'); return; }
   var members = [];
   document.querySelectorAll('.new-room-cb:checked').forEach(function(cb) { members.push(cb.value); });
   try {
@@ -2871,10 +2871,10 @@ async function createUserRoom() {
       document.getElementById('new-room-dialog').classList.remove('open');
       openRoom(data.room.id, false);
     } else {
-      alert(data.error || 'Errore nella creazione');
+      alert(data.error || 'Creation failed');
     }
   } catch(e) {
-    alert('Errore di rete');
+    alert('Network error');
   }
 }
 
@@ -2903,7 +2903,7 @@ function renderLoginUsers(users) {
   list.innerHTML = '';
   if (!users.length) {
     empty.style.display = 'block';
-    empty.textContent = 'Nessun utente disponibile.';
+    empty.textContent = 'No users available.';
     return;
   }
   empty.style.display = 'none';
@@ -2939,8 +2939,8 @@ function renderLoginUsers(users) {
     var role = document.createElement('span');
     role.className = 'user-role-copy';
     role.textContent = user.role === 'admin'
-      ? 'Amministratore'
-      : (user.role === 'superuser' ? 'Superuser' : 'Utente');
+      ? 'Administrator'
+      : (user.role === 'superuser' ? 'Superuser' : 'User');
     copy.appendChild(role);
 
     btn.appendChild(copy);
@@ -2951,12 +2951,12 @@ function renderLoginUsers(users) {
 async function loadLoginUsers() {
   try {
     var res = await fetch('/chat/login-users');
-    if (!res.ok) throw new Error('Errore utenti');
+    if (!res.ok) throw new Error('User list error');
     renderLoginUsers(await res.json());
   } catch (e) {
     renderLoginUsers([
       { username: 'Giovanni', role: 'admin' },
-      { username: 'Operatore', role: 'superuser' },
+      { username: 'Operator', role: 'superuser' },
       { username: 'Cabras', role: 'user' },
       { username: 'Test', role: 'user' }
     ]);
@@ -2981,7 +2981,7 @@ async function authFetch(url, options) {
     clearStoredAuth();
     localStorage.setItem(ONBOARDING_KEY, '1');
     resetSessionUi();
-    throw new Error('Non autorizzato');
+    throw new Error('Unauthorized');
   }
   return res;
 }
@@ -3017,12 +3017,12 @@ async function submitLogin() {
       localStorage.setItem('chat-token', data.token);
       await joinAs(selectedUsername, data.token);
     } else {
-      document.getElementById('login-error').textContent = 'Password errata';
+      document.getElementById('login-error').textContent = 'Wrong password';
       document.getElementById('pwd-input').value = '';
       document.getElementById('pwd-input').focus();
     }
-  } catch(e) { document.getElementById('login-error').textContent = 'Errore di rete'; }
-  btn.disabled = false; btn.textContent = 'Entra';
+  } catch(e) { document.getElementById('login-error').textContent = 'Network error'; }
+  btn.disabled = false; btn.textContent = 'Sign in';
 }
 document.getElementById('pwd-input').onkeydown = function(e) { if (e.key === 'Enter') submitLogin(); };
 
@@ -3063,15 +3063,15 @@ async function enterChatApp() {
     el.style.display = (canManageUsers || canCreateInvites || canUseConsole) ? '' : 'none';
   });
   var adminMenuBtn = document.getElementById('admin-menu-btn');
-  if (adminMenuBtn) adminMenuBtn.textContent = canManageUsers ? 'Utenti' : 'Inviti';
+  if (adminMenuBtn) adminMenuBtn.textContent = canManageUsers ? 'Users' : 'Invites';
   document.querySelectorAll('.manage-users-only').forEach(function(el) {
     el.style.display = canManageUsers ? '' : 'none';
   });
   var adminInviteCopy = document.getElementById('admin-invite-copy');
   if (adminInviteCopy) {
     adminInviteCopy.textContent = canManageUsers
-      ? 'Crea un link monouso con indirizzo casuale. Chi lo apre puo\' registrarsi con nome e password.'
-      : 'Crea un link monouso per invitare un nuovo utente senza accedere alla gestione completa utenti.';
+      ? 'Create a one-time link with a random address. Whoever opens it can register with a name and password.'
+      : 'Create a one-time link to invite a new user without opening full user management.';
   }
   document.getElementById('user-rooms-wrap').style.display = 'inline-block';
   renderUserRoomsMenu();
@@ -3260,7 +3260,7 @@ function buildMessage(msg) {
     (function(rid) { rq.onclick = function() { scrollToMessage(rid); }; })(msg.replyTo.id);
     var rqName = document.createElement('div'); rqName.className = 'rq-name'; rqName.textContent = msg.replyTo.username; rq.appendChild(rqName);
     var rqText = document.createElement('div'); rqText.className = 'rq-text';
-    rqText.textContent = (msg.replyTo.imageUrl && !msg.replyTo.text) ? '📎 Immagine' : (msg.replyTo.text || '');
+    rqText.textContent = (msg.replyTo.imageUrl && !msg.replyTo.text) ? '📎 Image' : (msg.replyTo.text || '');
     rq.appendChild(rqText); bubble.appendChild(rq);
   }
 
@@ -3273,19 +3273,19 @@ function buildMessage(msg) {
   var meta = document.createElement('div'); meta.className = 'msg-meta';
 
   // Reply button
-  var replyBtn = document.createElement('button'); replyBtn.className = 'reply-btn'; replyBtn.textContent = '↩'; replyBtn.title = 'Rispondi';
+  var replyBtn = document.createElement('button'); replyBtn.className = 'reply-btn'; replyBtn.textContent = '↩'; replyBtn.title = 'Reply';
   (function(m) { replyBtn.onclick = function(e) { e.stopPropagation(); startReply(m); }; })(msg);
   meta.appendChild(replyBtn);
 
   var time = document.createElement('span');
-  time.textContent = new Date(msg.timestamp).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  time.textContent = new Date(msg.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   meta.appendChild(time);
 
   var statusEl = null;
   // Delete button (own messages only)
   if (isMe && msg.id) {
-    var delBtn = document.createElement("button"); delBtn.className = "delete-btn"; delBtn.textContent = "🗑"; delBtn.title = "Elimina messaggio";
-    (function(mid) { delBtn.onclick = function(e) { e.stopPropagation(); if (confirm("Eliminare questo messaggio?")) ws.send(JSON.stringify({ type: "delete", id: mid })); }; })(msg.id);
+    var delBtn = document.createElement("button"); delBtn.className = "delete-btn"; delBtn.textContent = "🗑"; delBtn.title = "Delete message";
+    (function(mid) { delBtn.onclick = function(e) { e.stopPropagation(); if (confirm("Delete this message?")) ws.send(JSON.stringify({ type: "delete", id: mid })); }; })(msg.id);
     meta.appendChild(delBtn);
   }
 
@@ -3344,7 +3344,7 @@ async function uploadImage(file, name) {
     var res = await authFetch('/chat/upload', {method:'POST',body:form});
     var txt = await res.text(); var data;
     try { data = JSON.parse(txt); } catch(e) { throw new Error(txt.slice(0,120)); }
-    if (!res.ok || !data.url) throw new Error(data.error || 'Errore');
+    if (!res.ok || !data.url) throw new Error(data.error || 'Error');
     pendingImageUrl = data.url;
     document.getElementById('preview-img').src = data.url;
     document.getElementById('preview-name').textContent = name;
@@ -3379,7 +3379,7 @@ function setView(view) {
   var roomsBtn = document.getElementById('rooms-btn');
   if (roomsBtn) {
     roomsBtn.classList.toggle('active', nextView === 'rooms');
-    roomsBtn.textContent = 'Stanze';
+    roomsBtn.textContent = 'Rooms';
   }
   if (nextView === 'console') startConsoleAutoRefresh();
 }
@@ -3405,7 +3405,7 @@ function renderRoomMemberOptions(targetId, users, selectedNames) {
   if (!options.length) {
     var empty = document.createElement('div');
     empty.className = 'rooms-empty';
-    empty.textContent = 'Nessun altro utente disponibile.';
+    empty.textContent = 'No other users available.';
     target.appendChild(empty);
     return;
   }
@@ -3443,7 +3443,7 @@ function renderRooms(rooms, users) {
   if (!roomsCache.length) {
     var empty = document.createElement('div');
     empty.className = 'rooms-empty';
-    empty.textContent = 'Nessuna stanza disponibile.';
+    empty.textContent = 'No rooms available.';
     list.appendChild(empty);
   } else {
     roomsCache.forEach(function(room) {
@@ -3455,7 +3455,7 @@ function renderRooms(rooms, users) {
       main.onclick = function() { selectRoom(room.id, false); };
       var state = document.createElement('div');
       state.className = 'room-item-state';
-      state.textContent = room.id === currentRoomId ? 'Stanza attiva' : 'Stanza';
+      state.textContent = room.id === currentRoomId ? 'Active room' : 'Room';
       main.appendChild(state);
       var name = document.createElement('div');
       name.className = 'room-item-name';
@@ -3463,14 +3463,14 @@ function renderRooms(rooms, users) {
       main.appendChild(name);
       var meta = document.createElement('div');
       meta.className = 'room-item-meta';
-      meta.textContent = room.members.join(', ') || 'Solo tu';
+      meta.textContent = room.members.join(', ') || 'Only you';
       main.appendChild(meta);
       item.appendChild(main);
 
       var openBtn = document.createElement('button');
       openBtn.className = 'room-open-btn';
       openBtn.type = 'button';
-      openBtn.textContent = room.id === currentRoomId ? 'Attiva' : 'Apri';
+      openBtn.textContent = room.id === currentRoomId ? 'Active' : 'Open';
       openBtn.onclick = function(event) {
         event.stopPropagation();
         openRoom(room.id, false);
@@ -3493,18 +3493,18 @@ function renderRooms(rooms, users) {
   document.getElementById('room-rename-btn').disabled = !activeRoom;
   document.getElementById('room-remove-btn').disabled = !activeRoom || !isAdmin;
   document.getElementById('room-delete-btn').disabled = !activeRoom || !isAdmin;
-  document.getElementById('room-panel-title').textContent = activeRoom ? activeRoom.name : 'Nessuna stanza selezionata';
+  document.getElementById('room-panel-title').textContent = activeRoom ? activeRoom.name : 'No room selected';
   document.getElementById('room-panel-copy').textContent = activeRoom
-    ? 'Puoi rinominare la stanza attiva oppure gestire chi ne fa parte.'
-    : 'Apri una stanza dalla colonna a sinistra per modificarla.';
-  document.getElementById('room-invite-title').textContent = activeRoom ? ('Inserisci in ' + activeRoom.name) : 'Inserisci persone';
+    ? 'You can rename the active room or manage who belongs to it.'
+    : 'Open a room from the left column to edit it.';
+  document.getElementById('room-invite-title').textContent = activeRoom ? ('Add to ' + activeRoom.name) : 'Add people';
   document.getElementById('room-invite-copy').textContent = activeRoom
-    ? 'Aggiungi utenti gia registrati alla stanza attiva.'
-    : 'Seleziona prima una stanza.';
-  document.getElementById('room-remove-title').textContent = activeRoom ? ('Rimuovi da ' + activeRoom.name) : 'Rimuovi persone';
+    ? 'Add already registered users to the active room.'
+    : 'Select a room first.';
+  document.getElementById('room-remove-title').textContent = activeRoom ? ('Remove from ' + activeRoom.name) : 'Remove people';
   document.getElementById('room-remove-copy').textContent = activeRoom
-    ? (isAdmin ? 'Seleziona uno o piu utenti da rimuovere dalla stanza attiva.' : 'Solo l\'admin puo rimuovere persone dalle stanze.')
-    : 'Seleziona prima una stanza.';
+    ? (isAdmin ? 'Select one or more users to remove from the active room.' : 'Only the admin can remove people from rooms.')
+    : 'Select a room first.';
   if (status && !status.textContent) status.textContent = '';
 }
 
@@ -3512,7 +3512,7 @@ async function loadRoomsData() {
   if (!myName || !myToken) return;
   var res = await authFetch('/chat/rooms');
   var data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Errore stanze');
+  if (!res.ok) throw new Error(data.error || 'Room error');
   if (!currentRoomId || !(data.rooms || []).some(function(room) { return room.id === currentRoomId; })) {
     var firstRoom = (data.rooms || [])[0] || null;
     setCurrentRoom(firstRoom ? firstRoom.id : '', firstRoom ? firstRoom.name : 'Chat');
@@ -3527,10 +3527,10 @@ async function createRoom() {
   var name = document.getElementById('room-name-input').value.trim();
   var status = document.getElementById('rooms-status');
   if (!name) {
-    status.textContent = 'Inserisci un nome stanza.';
+    status.textContent = 'Enter a room name.';
     return;
   }
-  status.textContent = 'Creo stanza...';
+  status.textContent = 'Creating room...';
   try {
     var res = await authFetch('/chat/rooms', {
       method: 'POST',
@@ -3538,13 +3538,13 @@ async function createRoom() {
       body: JSON.stringify({ name: name, members: getCheckedUsernames('room-create-members') }),
     });
     var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Creazione non riuscita');
+    if (!res.ok) throw new Error(data.error || 'Creation failed');
     document.getElementById('room-name-input').value = '';
     await loadRoomsData();
     if (data.room) openRoom(data.room.id, true);
-    status.textContent = 'Stanza creata.';
+    status.textContent = 'Room created.';
   } catch (e) {
-    status.textContent = e.message || 'Creazione stanza non riuscita.';
+    status.textContent = e.message || 'Room creation failed.';
   }
 }
 
@@ -3553,18 +3553,18 @@ async function renameRoom() {
   var status = document.getElementById('rooms-status');
   var name = document.getElementById('room-active-name-input').value.trim();
   if (!room) {
-    status.textContent = 'Seleziona prima una stanza.';
+    status.textContent = 'Select a room first.';
     return;
   }
   if (!name) {
-    status.textContent = 'Inserisci un nome stanza.';
+    status.textContent = 'Enter a room name.';
     return;
   }
   if (name === room.name) {
-    status.textContent = 'Il nome stanza e gia aggiornato.';
+    status.textContent = 'The room name is already up to date.';
     return;
   }
-  status.textContent = 'Rinomino stanza...';
+  status.textContent = 'Renaming room...';
   try {
     var res = await authFetch('/chat/rooms/' + encodeURIComponent(room.id), {
       method: 'PATCH',
@@ -3572,15 +3572,15 @@ async function renameRoom() {
       body: JSON.stringify({ name: name }),
     });
     var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Rinomina non riuscita');
+    if (!res.ok) throw new Error(data.error || 'Rename failed');
     await loadRoomsData();
     if (data.room) {
       setCurrentRoom(data.room.id, data.room.name);
       renderRooms(roomsCache, roomUsersCache);
     }
-    status.textContent = 'Stanza rinominata.';
+    status.textContent = 'Room renamed.';
   } catch (e) {
-    status.textContent = e.message || 'Rinomina non riuscita.';
+    status.textContent = e.message || 'Rename failed.';
   }
 }
 
@@ -3588,15 +3588,15 @@ async function inviteUsersToRoom() {
   var room = getCurrentRoom();
   var status = document.getElementById('rooms-status');
   if (!room) {
-    status.textContent = 'Seleziona prima una stanza.';
+    status.textContent = 'Select a room first.';
     return;
   }
   var members = getCheckedUsernames('room-invite-members');
   if (!members.length) {
-    status.textContent = 'Seleziona almeno un utente da invitare.';
+    status.textContent = 'Select at least one user to invite.';
     return;
   }
-  status.textContent = 'Invito utenti...';
+  status.textContent = 'Inviting users...';
   try {
     var res = await authFetch('/chat/rooms/' + encodeURIComponent(room.id) + '/members', {
       method: 'POST',
@@ -3604,11 +3604,11 @@ async function inviteUsersToRoom() {
       body: JSON.stringify({ members: members }),
     });
     var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Invito non riuscito');
+    if (!res.ok) throw new Error(data.error || 'Invite failed');
     await loadRoomsData();
-    status.textContent = 'Inviti inviati.';
+    status.textContent = 'Invites sent.';
   } catch (e) {
-    status.textContent = e.message || 'Invito non riuscito.';
+    status.textContent = e.message || 'Invite failed.';
   }
 }
 
@@ -3616,51 +3616,51 @@ async function removeUsersFromRoom() {
   var room = getCurrentRoom();
   var status = document.getElementById('rooms-status');
   if (!room) {
-    status.textContent = 'Seleziona prima una stanza.';
+    status.textContent = 'Select a room first.';
     return;
   }
   if (!isAdmin) {
-    status.textContent = 'Solo l\'admin puo rimuovere persone dalle stanze.';
+    status.textContent = 'Only the admin can remove people from rooms.';
     return;
   }
   var members = getCheckedUsernames('room-remove-members');
   if (!members.length) {
-    status.textContent = 'Seleziona almeno un utente da rimuovere.';
+    status.textContent = 'Select at least one user to remove.';
     return;
   }
-  status.textContent = 'Rimuovo utenti...';
+  status.textContent = 'Removing users...';
   try {
     for (var i = 0; i < members.length; i++) {
       var res = await authFetch('/chat/rooms/' + encodeURIComponent(room.id) + '/members/' + encodeURIComponent(members[i]), {
         method: 'DELETE'
       });
       var data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Rimozione non riuscita');
+      if (!res.ok) throw new Error(data.error || 'Removal failed');
     }
     await loadRoomsData();
-    status.textContent = 'Utenti rimossi dalla stanza.';
+    status.textContent = 'Users removed from the room.';
   } catch (e) {
-    status.textContent = e.message || 'Rimozione non riuscita.';
+    status.textContent = e.message || 'Removal failed.';
   }
 }
 
 async function deleteRoom() {
   var room = getCurrentRoom();
   if (!room) return;
-  if (!confirm('Eliminare la stanza "' + room.name + '" e tutti i suoi messaggi?')) return;
+  if (!confirm('Delete the room "' + room.name + '" and all its messages?')) return;
   var status = document.getElementById('rooms-status');
   try {
     var res = await authFetch('/chat/rooms/' + encodeURIComponent(room.id), { method: 'DELETE' });
     var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Eliminazione non riuscita');
+    if (!res.ok) throw new Error(data.error || 'Deletion failed');
     roomsCache = data.rooms || [];
     var first = roomsCache[0];
     if (first) { setCurrentRoom(first.id, first.name); } else { setCurrentRoom('', 'Chat'); }
     renderRooms(roomsCache, data.users || roomUsersCache);
     renderUserRoomsMenu();
-    status.textContent = 'Stanza eliminata.';
+    status.textContent = 'Room deleted.';
   } catch (e) {
-    status.textContent = e.message || 'Eliminazione non riuscita.';
+    status.textContent = e.message || 'Deletion failed.';
   }
 }
 
@@ -3669,7 +3669,7 @@ function selectRoom(roomId, fromFreshData) {
   if (!room) return;
   setCurrentRoom(room.id, room.name);
   renderRooms(roomsCache, roomUsersCache);
-  if (!fromFreshData) document.getElementById('rooms-status').textContent = 'Stanza attiva: ' + room.name;
+  if (!fromFreshData) document.getElementById('rooms-status').textContent = 'Active room: ' + room.name;
   oldestTimestamp = null;
   hasMore = true;
   loadingMore = false;
@@ -3695,7 +3695,7 @@ function renderAdminUsers(users, currentUsername) {
   if (!users.length) {
     var empty = document.createElement('div');
     empty.className = 'admin-empty';
-    empty.textContent = 'Nessun utente trovato.';
+    empty.textContent = 'No users found.';
     list.appendChild(empty);
     return;
   }
@@ -3714,7 +3714,7 @@ function renderAdminUsers(users, currentUsername) {
 
     var meta = document.createElement('div');
     meta.className = 'admin-user-meta';
-    meta.textContent = formatRoleLabel(user.role) + (user.username === currentUsername ? ' • tu' : '');
+    meta.textContent = formatRoleLabel(user.role) + (user.username === currentUsername ? ' • you' : '');
     main.appendChild(meta);
     item.appendChild(main);
 
@@ -3727,7 +3727,7 @@ function renderAdminUsers(users, currentUsername) {
     var editBtn = document.createElement('button');
     editBtn.className = 'admin-user-btn';
     editBtn.type = 'button';
-    editBtn.textContent = 'Modifica';
+    editBtn.textContent = 'Edit';
     editBtn.onclick = function() { startAdminEdit(user); };
     actions.appendChild(editBtn);
 
@@ -3735,7 +3735,7 @@ function renderAdminUsers(users, currentUsername) {
       var deleteBtn = document.createElement('button');
       deleteBtn.className = 'admin-user-btn danger';
       deleteBtn.type = 'button';
-      deleteBtn.textContent = 'Elimina';
+      deleteBtn.textContent = 'Delete';
       deleteBtn.onclick = function() { deleteAdminUser(user.username); };
       actions.appendChild(deleteBtn);
     }
@@ -3748,33 +3748,33 @@ function renderAdminUsers(users, currentUsername) {
 }
 
 function formatRoleLabel(role) {
-  if (role === 'admin') return 'amministratore';
+  if (role === 'admin') return 'administrator';
   if (role === 'superuser') return 'superuser';
-  return 'utente';
+  return 'user';
 }
 
 function resetAdminForm() {
   selectedAdminUsername = '';
-  document.getElementById('admin-form-title').textContent = 'Crea o modifica utente';
-  document.getElementById('admin-form-copy').textContent = 'Per aggiornare un utente esistente usa lo stesso username. Lascia la password vuota per mantenerla invariata.';
+  document.getElementById('admin-form-title').textContent = 'Create or edit user';
+  document.getElementById('admin-form-copy').textContent = 'To update an existing user, use the same username. Leave the password empty to keep it unchanged.';
   document.getElementById('admin-username').value = '';
   document.getElementById('admin-username').readOnly = false;
   document.getElementById('admin-role').value = 'user';
   document.getElementById('admin-password').value = '';
-  document.getElementById('admin-save-btn').textContent = 'Salva utente';
+  document.getElementById('admin-save-btn').textContent = 'Save user';
   document.getElementById('admin-delete-btn').disabled = true;
   if (adminUsersCache.length) renderAdminUsers(adminUsersCache, myName);
 }
 
 function startAdminEdit(user) {
   selectedAdminUsername = user.username;
-  document.getElementById('admin-form-title').textContent = 'Modifica utente';
-  document.getElementById('admin-form-copy').textContent = 'Stai modificando un utente esistente. Lo username resta fisso; lascia la password vuota per non cambiarla.';
+  document.getElementById('admin-form-title').textContent = 'Edit user';
+  document.getElementById('admin-form-copy').textContent = 'You are editing an existing user. The username stays fixed; leave the password empty to keep it unchanged.';
   document.getElementById('admin-username').value = user.username;
   document.getElementById('admin-username').readOnly = true;
   document.getElementById('admin-role').value = user.role;
   document.getElementById('admin-password').value = '';
-  document.getElementById('admin-save-btn').textContent = 'Salva modifiche';
+  document.getElementById('admin-save-btn').textContent = 'Save changes';
   document.getElementById('admin-delete-btn').disabled = user.username === myName;
   renderAdminUsers(adminUsersCache, myName);
 }
@@ -3785,7 +3785,7 @@ async function loadAdminUsers() {
   var status = document.getElementById('admin-status');
   try {
     var res = await authFetch('/chat/admin/users');
-    if (!res.ok) throw new Error('Errore admin');
+    if (!res.ok) throw new Error('Admin error');
     var data = await res.json();
     adminUsersCache = data.users || [];
     renderAdminUsers(adminUsersCache, data.currentUser);
@@ -3795,7 +3795,7 @@ async function loadAdminUsers() {
     }
     status.textContent = '';
   } catch (e) {
-    status.textContent = 'Non riesco a caricare gli utenti.';
+    status.textContent = 'Unable to load users.';
   }
   adminUsersLoading = false;
 }
@@ -3808,11 +3808,11 @@ async function saveAdminUser() {
   var status = document.getElementById('admin-status');
   var button = document.getElementById('admin-save-btn');
   if (!username) {
-    status.textContent = 'Inserisci uno username.';
+    status.textContent = 'Enter a username.';
     return;
   }
   button.disabled = true;
-  status.textContent = 'Salvo utente...';
+  status.textContent = 'Saving user...';
   try {
     var res = await authFetch('/chat/admin/users', {
       method: 'POST',
@@ -3820,14 +3820,14 @@ async function saveAdminUser() {
       body: JSON.stringify({ username: username, role: role, password: password }),
     });
     var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Errore salvataggio');
+    if (!res.ok) throw new Error(data.error || 'Save error');
     adminUsersCache = data.users || [];
     renderAdminUsers(adminUsersCache, myName);
     resetAdminForm();
-    status.textContent = 'Utente salvato.';
+    status.textContent = 'User saved.';
     loadLoginUsers();
   } catch (e) {
-    status.textContent = e.message || 'Salvataggio non riuscito.';
+    status.textContent = e.message || 'Save failed.';
   } finally {
     button.disabled = false;
   }
@@ -3836,21 +3836,21 @@ async function saveAdminUser() {
 async function deleteAdminUser(username) {
   if (!canManageUsers || !username) return;
   var status = document.getElementById('admin-status');
-  if (!confirm('Eliminare l\'utente ' + username + '?')) return;
-  status.textContent = 'Elimino utente...';
+  if (!confirm('Delete user ' + username + '?')) return;
+  status.textContent = 'Deleting user...';
   try {
     var res = await authFetch('/chat/admin/users/' + encodeURIComponent(username), {
       method: 'DELETE'
     });
     var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Errore eliminazione');
+    if (!res.ok) throw new Error(data.error || 'Delete error');
     adminUsersCache = data.users || [];
     renderAdminUsers(adminUsersCache, myName);
     if (selectedAdminUsername === username) resetAdminForm();
-    status.textContent = 'Utente eliminato.';
+    status.textContent = 'User deleted.';
     loadLoginUsers();
   } catch (e) {
-    status.textContent = e.message || 'Eliminazione non riuscita.';
+    status.textContent = e.message || 'Deletion failed.';
   }
 }
 
@@ -3959,8 +3959,8 @@ function renderConsoleChart(key, color) {
     '<circle class="dot" cx="' + getX(points.length - 1).toFixed(1) + '" cy="' + getY(latest.v).toFixed(1) + '" r="4" stroke="' + color + '"></circle>';
 
   if (currentEl) currentEl.textContent = formatChartValue(key, latest.v);
-  if (minEl) minEl.textContent = isFlatSeries ? ('stabile ' + formatChartValue(key, latest.v)) : ('min ' + formatChartValue(key, min));
-  if (maxEl) maxEl.textContent = isFlatSeries ? 'ultimo valore' : ('max ' + formatChartValue(key, max));
+  if (minEl) minEl.textContent = isFlatSeries ? ('steady ' + formatChartValue(key, latest.v)) : ('min ' + formatChartValue(key, min));
+  if (maxEl) maxEl.textContent = isFlatSeries ? 'latest value' : ('max ' + formatChartValue(key, max));
 }
 
 function updateConsoleCharts(data) {
@@ -3998,15 +3998,15 @@ async function loadConsoleData() {
   consoleLoading = true;
   var status = document.getElementById('console-status-line');
   var grid = document.getElementById('console-grid');
-  status.textContent = 'Aggiorno dati...';
+  status.textContent = 'Refreshing data...';
   try {
     var res = await authFetch('/chat/console/data');
     if (res.status === 403) {
-      status.textContent = 'Accesso console non consentito.';
+      status.textContent = 'Console access denied.';
       grid.hidden = true;
       return;
     }
-    if (!res.ok) throw new Error('Console non disponibile');
+    if (!res.ok) throw new Error('Console unavailable');
     var data = await res.json();
     window.consoleCpuCount = Number(data.raspberry.cpuCount || 0);
 
@@ -4019,34 +4019,34 @@ async function loadConsoleData() {
     tests.innerHTML = '';
     network.innerHTML = '';
 
-    addConsoleStat(raspberry, 'Hostname', data.raspberry.hostname || 'n/d');
-    addConsoleStat(raspberry, 'Uptime', data.raspberry.uptimeHuman || 'n/d');
-    addConsoleStat(raspberry, 'Temperatura', data.raspberry.temperatureC != null ? (data.raspberry.temperatureC.toFixed(1) + ' °C') : 'n/d');
+    addConsoleStat(raspberry, 'Hostname', data.raspberry.hostname || 'n/a');
+    addConsoleStat(raspberry, 'Uptime', data.raspberry.uptimeHuman || 'n/a');
+    addConsoleStat(raspberry, 'Temperature', data.raspberry.temperatureC != null ? (data.raspberry.temperatureC.toFixed(1) + ' °C') : 'n/a');
     addConsoleStat(raspberry, 'Load avg', formatLoadAvg(data.raspberry.loadAvg));
-    addConsoleStat(raspberry, 'RAM usata', formatBytes(data.raspberry.memory.used) + ' / ' + formatBytes(data.raspberry.memory.total));
-    addConsoleStat(raspberry, 'Disco usato', data.raspberry.disk ? (formatBytes(data.raspberry.disk.used) + ' / ' + formatBytes(data.raspberry.disk.total)) : 'n/d');
+    addConsoleStat(raspberry, 'RAM used', formatBytes(data.raspberry.memory.used) + ' / ' + formatBytes(data.raspberry.memory.total));
+    addConsoleStat(raspberry, 'Disk used', data.raspberry.disk ? (formatBytes(data.raspberry.disk.used) + ' / ' + formatBytes(data.raspberry.disk.total)) : 'n/a');
 
-    addConsoleStat(chat, 'Utenti online', String(data.chat.onlineCount));
-    addConsoleStat(chat, 'Messaggi chat', String(data.chat.messageCount));
+    addConsoleStat(chat, 'Online users', String(data.chat.onlineCount));
+    addConsoleStat(chat, 'Chat messages', String(data.chat.messageCount));
     addConsoleStat(chat, 'Web push', String(data.chat.pushSubscriptions));
-    addConsoleStat(chat, 'Node', data.raspberry.node || 'n/d');
+    addConsoleStat(chat, 'Node', data.raspberry.node || 'n/a');
 
-    addConsoleRow(tests, 'Cookie auth', data.tests.authCookiePresent ? 'OK' : 'Assente', data.tests.authCookiePresent ? 'console-ok' : 'console-warn');
-    addConsoleRow(tests, 'SQLite', data.tests.sqliteOk ? 'OK' : 'Errore', data.tests.sqliteOk ? 'console-ok' : 'console-warn');
-    addConsoleRow(tests, 'Accesso locale', data.tests.localAccess ? 'Si' : 'No', data.tests.localAccess ? 'console-ok' : 'console-warn');
-    addConsoleRow(tests, 'Push VAPID', data.chat.vapidConfigured ? 'Configurato' : 'Assente', data.chat.vapidConfigured ? 'console-ok' : 'console-warn');
+    addConsoleRow(tests, 'Auth cookie', data.tests.authCookiePresent ? 'OK' : 'Missing', data.tests.authCookiePresent ? 'console-ok' : 'console-warn');
+    addConsoleRow(tests, 'SQLite', data.tests.sqliteOk ? 'OK' : 'Error', data.tests.sqliteOk ? 'console-ok' : 'console-warn');
+    addConsoleRow(tests, 'Local access', data.tests.localAccess ? 'Yes' : 'No', data.tests.localAccess ? 'console-ok' : 'console-warn');
+    addConsoleRow(tests, 'Push VAPID', data.chat.vapidConfigured ? 'Configured' : 'Missing', data.chat.vapidConfigured ? 'console-ok' : 'console-warn');
 
-    addConsoleRow(network, 'IP locali', (data.raspberry.localIps || []).join(', ') || 'n/d');
-    addConsoleRow(network, 'CPU', (data.raspberry.cpuModel || 'n/d') + ' • ' + data.raspberry.cpuCount + ' core');
-    addConsoleRow(network, 'Piattaforma', data.raspberry.platform || 'n/d');
-    addConsoleRow(network, 'Online in chat', (data.chat.usersOnline || []).join(', ') || 'Nessuno');
+    addConsoleRow(network, 'Local IPs', (data.raspberry.localIps || []).join(', ') || 'n/a');
+    addConsoleRow(network, 'CPU', (data.raspberry.cpuModel || 'n/a') + ' • ' + data.raspberry.cpuCount + ' core');
+    addConsoleRow(network, 'Platform', data.raspberry.platform || 'n/a');
+    addConsoleRow(network, 'Currently in chat', (data.chat.usersOnline || []).join(', ') || 'Nobody');
 
     updateConsoleCharts(data);
-    status.textContent = 'Ultimo aggiornamento: ' + new Date(data.generatedAt).toLocaleString('it-IT');
+    status.textContent = 'Last update: ' + new Date(data.generatedAt).toLocaleString('en-GB');
     grid.hidden = false;
   } catch (e) {
     grid.hidden = true;
-    status.textContent = 'Non riesco a caricare la console.';
+    status.textContent = 'Unable to load the console.';
   } finally {
     consoleLoading = false;
   }
@@ -4057,8 +4057,8 @@ function renderInvite(invite) {
   document.getElementById('admin-invite-link').value = latestInviteUrl;
   document.getElementById('admin-copy-invite-btn').disabled = !latestInviteUrl;
   document.getElementById('admin-invite-meta').textContent = latestInviteUrl
-    ? 'Invito monouso creato ora. Condividilo solo con la persona giusta.'
-    : 'Il link e\' pensato per un solo utilizzo.';
+    ? 'One-time invite created just now. Share it only with the right person.'
+    : 'This link is meant for one use only.';
 }
 
 async function createInvite() {
@@ -4068,7 +4068,7 @@ async function createInvite() {
   var meta = document.getElementById('admin-invite-meta');
   button.disabled = true;
   copyBtn.disabled = true;
-  meta.textContent = 'Creo il link privato...';
+  meta.textContent = 'Creating private link...';
   try {
     var res = await authFetch('/chat/admin/invites', {
       method: 'POST',
@@ -4076,10 +4076,10 @@ async function createInvite() {
       body: JSON.stringify({ role: 'user' }),
     });
     var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Errore creazione invito');
+    if (!res.ok) throw new Error(data.error || 'Invite creation error');
     renderInvite(data.invite || null);
   } catch (e) {
-    meta.textContent = e.message || 'Creazione invito non riuscita.';
+    meta.textContent = e.message || 'Invite creation failed.';
   } finally {
     button.disabled = false;
   }
@@ -4097,9 +4097,9 @@ async function copyInviteLink() {
       input.select();
       document.execCommand('copy');
     }
-    meta.textContent = 'Link copiato.';
+    meta.textContent = 'Link copied.';
   } catch (e) {
-    meta.textContent = 'Non riesco a copiare il link da qui.';
+    meta.textContent = 'Unable to copy the link from here.';
   }
 }
 
@@ -4156,11 +4156,11 @@ document.getElementById('admin-restore-input').onchange = async function() {
   var file = this.files[0];
   if (!file) return;
   var status = document.getElementById('admin-backup-status');
-  if (!confirm('Sei sicuro? Questa operazione sovrascrive tutti i dati attuali e riavvia il server.')) {
+  if (!confirm('Are you sure? This operation overwrites all current data and restarts the server.')) {
     this.value = '';
     return;
   }
-  status.textContent = 'Caricamento in corso...';
+  status.textContent = 'Uploading...';
   status.style.color = 'var(--muted)';
   try {
     var buf = await file.arrayBuffer();
@@ -4174,40 +4174,40 @@ document.getElementById('admin-restore-input').onchange = async function() {
       status.style.color = 'var(--success)';
       var secs = 6;
       function tick() {
-        status.textContent = '✓ Database ripristinato. Ricarico tra ' + secs + 's…';
+        status.textContent = '✓ Database restored. Reloading in ' + secs + 's...';
         if (secs <= 0) { location.reload(); return; }
         secs--;
         setTimeout(tick, 1000);
       }
       tick();
     } else {
-      status.textContent = '✗ ' + (data.error || 'Errore');
+      status.textContent = '✗ ' + (data.error || 'Error');
       status.style.color = '#e53e3e';
     }
   } catch(e) {
-    status.textContent = '✗ Errore durante il caricamento';
+    status.textContent = '✗ Upload error';
     status.style.color = '#e53e3e';
   }
   this.value = '';
 };
 document.getElementById('admin-purge-stress-btn').onclick = async function() {
   var status = document.getElementById('admin-purge-stress-status');
-  if (!confirm('Eliminare tutti i messaggi [stress-N] da tutte le stanze?')) return;
+  if (!confirm('Delete all [stress-N] messages from every room?')) return;
   this.disabled = true;
-  status.textContent = 'Eliminazione in corso…';
+  status.textContent = 'Deleting...';
   status.style.color = 'var(--muted)';
   try {
     var res = await authFetch('/chat/admin/purge-stress', { method: 'POST' });
     var data = await res.json();
     if (res.ok) {
-      status.textContent = '✓ Eliminati ' + data.deleted + ' messagg' + (data.deleted === 1 ? 'io' : 'i') + '.';
+      status.textContent = '✓ Deleted ' + data.deleted + ' message' + (data.deleted === 1 ? '' : 's') + '.';
       status.style.color = 'var(--success)';
     } else {
-      status.textContent = '✗ ' + (data.error || 'Errore');
+      status.textContent = '✗ ' + (data.error || 'Error');
       status.style.color = '#e53e3e';
     }
   } catch(e) {
-    status.textContent = '✗ Errore di rete';
+    status.textContent = '✗ Network error';
     status.style.color = '#e53e3e';
   }
   this.disabled = false;
@@ -4217,12 +4217,12 @@ document.getElementById('admin-broadcast-btn').onclick = async function() {
   var text = document.getElementById('admin-broadcast-text').value.trim();
   var status = document.getElementById('admin-broadcast-status');
   if (!text) {
-    status.textContent = 'Scrivi un messaggio prima di inviare.';
+    status.textContent = 'Write a message before sending.';
     status.style.color = '#e53e3e';
     return;
   }
   this.disabled = true;
-  status.textContent = 'Invio in corso…';
+  status.textContent = 'Sending...';
   status.style.color = 'var(--muted)';
   try {
     var res = await authFetch('/chat/admin/broadcast', {
@@ -4232,15 +4232,15 @@ document.getElementById('admin-broadcast-btn').onclick = async function() {
     });
     var data = await res.json();
     if (res.ok) {
-      status.textContent = '✓ Messaggio inviato a ' + data.rooms + ' stanz' + (data.rooms === 1 ? 'a' : 'e') + '.';
+      status.textContent = '✓ Message sent to ' + data.rooms + ' room' + (data.rooms === 1 ? '' : 's') + '.';
       status.style.color = 'var(--success)';
       document.getElementById('admin-broadcast-text').value = '';
     } else {
-      status.textContent = '✗ ' + (data.error || 'Errore');
+      status.textContent = '✗ ' + (data.error || 'Error');
       status.style.color = '#e53e3e';
     }
   } catch(e) {
-    status.textContent = '✗ Errore di rete';
+    status.textContent = '✗ Network error';
     status.style.color = '#e53e3e';
   }
   this.disabled = false;

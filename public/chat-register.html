@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Raspi Chat — Registrati</title>
+  <title>Raspi Chat — Register</title>
   <meta name="robots" content="noindex,nofollow" />
-  <meta property="og:title" content="Raspi Chat — Registrazione" />
+  <meta property="og:title" content="Raspi Chat — Registration" />
   <meta property="og:image" content="/chat/assets/logo-v2.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="/chat/assets/logo-v2.png" />
@@ -150,27 +150,27 @@
 </head>
 <body>
   <main class="card">
-    <div class="eyebrow">Invito privato</div>
-    <h1>Registrati</h1>
-    <p class="copy">Completa la registrazione con un nome e una password. Il link e' monouso.</p>
-    <div class="invite-meta" id="invite-meta">Controllo il link...</div>
+    <div class="eyebrow">Private invite</div>
+    <h1>Register</h1>
+    <p class="copy">Complete your registration with a username and password. This link can be used only once.</p>
+    <div class="invite-meta" id="invite-meta">Checking the link...</div>
     <div class="status" id="status"></div>
     <form class="form" id="register-form">
       <label>
-        Nome
-        <input id="username" type="text" maxlength="30" autocomplete="username" placeholder="Il tuo nome" />
+        Name
+        <input id="username" type="text" maxlength="30" autocomplete="username" placeholder="Your name" />
       </label>
       <label>
         Password
-        <input id="password" type="password" autocomplete="new-password" placeholder="Scegli una password" />
+        <input id="password" type="password" autocomplete="new-password" placeholder="Choose a password" />
       </label>
       <label>
-        Ripeti password
-        <input id="password-repeat" type="password" autocomplete="new-password" placeholder="Ripeti la password" />
+        Repeat password
+        <input id="password-repeat" type="password" autocomplete="new-password" placeholder="Repeat your password" />
       </label>
       <div class="actions">
-        <button id="submit-btn" type="submit">Registrati</button>
-        <a id="login-link" class="button-link" href="/chat">Apri chat</a>
+        <button id="submit-btn" type="submit">Register</button>
+        <a id="login-link" class="button-link" href="/chat">Open chat</a>
       </div>
     </form>
   </main>
@@ -192,14 +192,14 @@
       try {
         var res = await fetch('/chat/invite/' + encodeURIComponent(token) + '/data', { cache: 'no-store' });
         var data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Invito non disponibile');
+        if (!res.ok) throw new Error(data.error || 'Invite unavailable');
         inviteOk = true;
-        inviteMetaEl.textContent = 'Invito pronto. Il nuovo account verra\' creato come ' + (data.invite && data.invite.role === 'admin' ? 'admin' : 'user') + '.';
+        inviteMetaEl.textContent = 'Invite ready. The new account will be created as ' + (data.invite && data.invite.role === 'admin' ? 'admin' : 'user') + '.';
         setStatus('');
       } catch (e) {
         inviteOk = false;
-        inviteMetaEl.textContent = 'Questo link non e\' disponibile.';
-        setStatus(e.message || 'Invito non valido', 'error');
+        inviteMetaEl.textContent = 'This link is not available.';
+        setStatus(e.message || 'Invalid invite', 'error');
         submitBtn.disabled = true;
       }
     }
@@ -210,12 +210,12 @@
       var username = document.getElementById('username').value.trim();
       var password = document.getElementById('password').value;
       var repeat = document.getElementById('password-repeat').value;
-      if (!username) return setStatus('Inserisci un nome.', 'error');
-      if (password.length < 4) return setStatus('La password deve avere almeno 4 caratteri.', 'error');
-      if (password !== repeat) return setStatus('Le password non coincidono.', 'error');
+      if (!username) return setStatus('Enter a name.', 'error');
+      if (password.length < 4) return setStatus('Password must be at least 4 characters long.', 'error');
+      if (password !== repeat) return setStatus('Passwords do not match.', 'error');
 
       submitBtn.disabled = true;
-      setStatus('Creo il tuo account...');
+      setStatus('Creating your account...');
       try {
         var res = await fetch('/chat/invite/' + encodeURIComponent(token) + '/register', {
           method: 'POST',
@@ -223,17 +223,17 @@
           body: JSON.stringify({ username: username, password: password }),
         });
         var data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Registrazione non riuscita');
+        if (!res.ok) throw new Error(data.error || 'Registration failed');
         localStorage.setItem('chat-user', data.username);
         localStorage.setItem('chat-token', data.token);
         if (data.firstRoomId) localStorage.setItem('chat-room-id', data.firstRoomId);
-        setStatus('Account creato. Accesso in corso...', 'ok');
-        inviteMetaEl.textContent = 'Registrazione completata. Ti porto in chat.';
+        setStatus('Account created. Signing you in...', 'ok');
+        inviteMetaEl.textContent = 'Registration completed. Taking you to chat.';
         setTimeout(function() {
           location.href = '/chat';
         }, 300);
       } catch (e) {
-        setStatus(e.message || 'Registrazione non riuscita', 'error');
+        setStatus(e.message || 'Registration failed', 'error');
         submitBtn.disabled = false;
       }
     };

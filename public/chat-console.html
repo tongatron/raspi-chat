@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Console Chat</title>
   <meta name="theme-color" content="#0d1420" />
-  <meta property="og:title" content="Cabras Chat — Console" />
-  <meta property="og:description" content="Console di amministrazione" />
+  <meta property="og:title" content="Raspi Chat — Console" />
+  <meta property="og:description" content="Administration console" />
   <meta property="og:image" content="/chat/assets/logo-v2.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="/chat/assets/logo-v2.png" />
@@ -179,16 +179,16 @@
     <section class="topbar">
       <div>
         <div class="eyebrow">Console</div>
-        <h1>Raspberry e Chat</h1>
-        <p class="copy">Cruscotto rapido per controllare lo stato della Raspberry, della chat e dei servizi collegati.</p>
+        <h1>Raspberry and Chat</h1>
+        <p class="copy">Quick dashboard to check Raspberry status, chat health, and connected services.</p>
       </div>
       <div class="actions">
-        <a class="btn ghost" href="/chat">Torna alla chat</a>
-        <button class="btn primary" id="refresh-btn" type="button">Aggiorna</button>
+        <a class="btn ghost" href="/chat">Back to chat</a>
+        <button class="btn primary" id="refresh-btn" type="button">Refresh</button>
       </div>
     </section>
 
-    <div id="status-line">Carico dati...</div>
+    <div id="status-line">Loading data...</div>
 
     <section class="grid" id="console-grid" hidden>
       <article class="card">
@@ -202,12 +202,12 @@
       </article>
 
       <article class="card">
-        <h2>Test rapidi</h2>
+        <h2>Quick checks</h2>
         <div class="list" id="test-list"></div>
       </article>
 
       <article class="card">
-        <h2>Rete</h2>
+        <h2>Network</h2>
         <div class="list" id="network-list"></div>
       </article>
 
@@ -220,7 +220,7 @@
 
   <script>
     function formatBytes(bytes) {
-      if (!bytes && bytes !== 0) return 'n/d';
+      if (!bytes && bytes !== 0) return 'n/a';
       var units = ['B', 'KB', 'MB', 'GB'];
       var value = bytes;
       var idx = 0;
@@ -269,15 +269,15 @@
     async function loadConsole() {
       var status = document.getElementById('status-line');
       var grid = document.getElementById('console-grid');
-      status.textContent = 'Aggiorno dati...';
+      status.textContent = 'Refreshing data...';
       try {
         var res = await fetch('/chat/console/data', { headers: authHeaders() });
         if (res.status === 401 || res.status === 403) {
-          status.textContent = 'Sessione non valida o accesso non consentito. Torna alla chat e rientra come Giovanni.';
+          status.textContent = 'Invalid session or access denied. Go back to chat and sign in again as Giovanni.';
           grid.hidden = true;
           return;
         }
-        if (!res.ok) throw new Error('Console non disponibile');
+        if (!res.ok) throw new Error('Console unavailable');
         var data = await res.json();
 
         var raspberry = document.getElementById('raspberry-stats');
@@ -289,37 +289,37 @@
         tests.innerHTML = '';
         network.innerHTML = '';
 
-        addStat(raspberry, 'Hostname', data.raspberry.hostname || 'n/d');
-        addStat(raspberry, 'Uptime', data.raspberry.uptimeHuman || 'n/d');
-        addStat(raspberry, 'Temperatura', data.raspberry.temperatureC != null ? (data.raspberry.temperatureC.toFixed(1) + ' °C') : 'n/d');
+        addStat(raspberry, 'Hostname', data.raspberry.hostname || 'n/a');
+        addStat(raspberry, 'Uptime', data.raspberry.uptimeHuman || 'n/a');
+        addStat(raspberry, 'Temperature', data.raspberry.temperatureC != null ? (data.raspberry.temperatureC.toFixed(1) + ' °C') : 'n/a');
         addStat(raspberry, 'Load avg', formatLoadAvg(data.raspberry.loadAvg));
-        addStat(raspberry, 'RAM usata', formatBytes(data.raspberry.memory.used) + ' / ' + formatBytes(data.raspberry.memory.total));
-        addStat(raspberry, 'Disco usato', data.raspberry.disk ? (formatBytes(data.raspberry.disk.used) + ' / ' + formatBytes(data.raspberry.disk.total)) : 'n/d');
+        addStat(raspberry, 'RAM used', formatBytes(data.raspberry.memory.used) + ' / ' + formatBytes(data.raspberry.memory.total));
+        addStat(raspberry, 'Disk used', data.raspberry.disk ? (formatBytes(data.raspberry.disk.used) + ' / ' + formatBytes(data.raspberry.disk.total)) : 'n/a');
 
-        addStat(chat, 'Utenti online', String(data.chat.onlineCount));
-        addStat(chat, 'Messaggi chat', String(data.chat.messageCount));
-        addStat(chat, 'Elementi archivio', String(data.chat.privateTransferCount));
+        addStat(chat, 'Online users', String(data.chat.onlineCount));
+        addStat(chat, 'Chat messages', String(data.chat.messageCount));
+        addStat(chat, 'Archive items', String(data.chat.privateTransferCount));
         addStat(chat, 'Web push', String(data.chat.pushSubscriptions));
-        addStat(chat, 'Node', data.raspberry.node || 'n/d');
+        addStat(chat, 'Node', data.raspberry.node || 'n/a');
 
-        addRow(tests, 'Cookie auth', data.tests.authCookiePresent ? 'OK' : 'Assente', data.tests.authCookiePresent ? 'ok' : 'warn');
-        addRow(tests, 'SQLite', data.tests.sqliteOk ? 'OK' : 'Errore', data.tests.sqliteOk ? 'ok' : 'warn');
-        addRow(tests, 'Accesso locale', data.tests.localAccess ? 'Si' : 'No', data.tests.localAccess ? 'ok' : 'warn');
-        addRow(tests, 'Limite upload remoto', data.tests.uploadRemoteLimitMb + ' MB');
-        addRow(tests, 'Limite upload locale', data.tests.uploadLocalLimitMb + ' MB');
-        addRow(tests, 'Push VAPID', data.chat.vapidConfigured ? 'Configurato' : 'Assente', data.chat.vapidConfigured ? 'ok' : 'warn');
+        addRow(tests, 'Auth cookie', data.tests.authCookiePresent ? 'OK' : 'Missing', data.tests.authCookiePresent ? 'ok' : 'warn');
+        addRow(tests, 'SQLite', data.tests.sqliteOk ? 'OK' : 'Error', data.tests.sqliteOk ? 'ok' : 'warn');
+        addRow(tests, 'Local access', data.tests.localAccess ? 'Yes' : 'No', data.tests.localAccess ? 'ok' : 'warn');
+        addRow(tests, 'Remote upload limit', data.tests.uploadRemoteLimitMb + ' MB');
+        addRow(tests, 'Local upload limit', data.tests.uploadLocalLimitMb + ' MB');
+        addRow(tests, 'Push VAPID', data.chat.vapidConfigured ? 'Configured' : 'Missing', data.chat.vapidConfigured ? 'ok' : 'warn');
 
-        addRow(network, 'IP locali', (data.raspberry.localIps || []).join(', ') || 'n/d');
-        addRow(network, 'CPU', (data.raspberry.cpuModel || 'n/d') + ' • ' + data.raspberry.cpuCount + ' core');
-        addRow(network, 'Piattaforma', data.raspberry.platform || 'n/d');
-        addRow(network, 'Online in chat', (data.chat.usersOnline || []).join(', ') || 'Nessuno');
+        addRow(network, 'Local IPs', (data.raspberry.localIps || []).join(', ') || 'n/a');
+        addRow(network, 'CPU', (data.raspberry.cpuModel || 'n/a') + ' • ' + data.raspberry.cpuCount + ' core');
+        addRow(network, 'Platform', data.raspberry.platform || 'n/a');
+        addRow(network, 'Currently in chat', (data.chat.usersOnline || []).join(', ') || 'Nobody');
 
         document.getElementById('details').textContent = JSON.stringify(data, null, 2);
-        status.textContent = 'Ultimo aggiornamento: ' + new Date(data.generatedAt).toLocaleString('it-IT');
+        status.textContent = 'Last update: ' + new Date(data.generatedAt).toLocaleString('en-GB');
         grid.hidden = false;
       } catch (err) {
         grid.hidden = true;
-        status.textContent = 'Non riesco a caricare la console.';
+        status.textContent = 'Unable to load the console.';
       }
     }
 

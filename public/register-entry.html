@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Raspi Chat — Registrati</title>
-  <meta name="description" content="Pagina di accesso alla registrazione per Raspi Chat." />
+  <title>Raspi Chat — Register</title>
+  <meta name="description" content="Direct registration page for Raspi Chat." />
   <meta name="theme-color" content="#050505" />
   <meta name="robots" content="noindex,nofollow" />
-  <meta property="og:title" content="Raspi Chat — Registrati" />
+  <meta property="og:title" content="Raspi Chat — Register" />
   <meta property="og:image" content="/chat/assets/logo-v2.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="/chat/assets/logo-v2.png" />
@@ -218,30 +218,30 @@
         <img src="/chat/assets/logo-v2.png" alt="Tongatron" />
         <span>tongatron.github.io</span>
       </a>
-      <a class="pill" href="/">Torna alla home</a>
+      <a class="pill" href="/">Back to home</a>
     </div>
 
     <main class="card">
-      <div class="eyebrow">Registrati</div>
-      <h1>Entra in Raspi Chat</h1>
-      <p class="lead">Registrati direttamente con nome e password. Dopo il primo accesso entri subito nella tua stanza iniziale con l'admin.</p>
+      <div class="eyebrow">Register</div>
+      <h1>Join Raspi Chat</h1>
+      <p class="lead">Create your account with a username and password. After your first login you will land straight in your initial room with the admin.</p>
 
-      <label for="username-input">Nome utente</label>
-      <input id="username-input" type="text" autocomplete="username" maxlength="30" placeholder="Il tuo nome" />
+      <label for="username-input">Username</label>
+      <input id="username-input" type="text" autocomplete="username" maxlength="30" placeholder="Your name" />
 
       <label for="password-input" style="margin-top:14px;">Password</label>
-      <input id="password-input" type="password" autocomplete="new-password" placeholder="Scegli una password" />
+      <input id="password-input" type="password" autocomplete="new-password" placeholder="Choose a password" />
 
-      <label for="password-repeat-input" style="margin-top:14px;">Ripeti password</label>
-      <input id="password-repeat-input" type="password" autocomplete="new-password" placeholder="Ripeti la password" />
+      <label for="password-repeat-input" style="margin-top:14px;">Repeat password</label>
+      <input id="password-repeat-input" type="password" autocomplete="new-password" placeholder="Repeat your password" />
 
       <div class="actions">
-        <button class="btn primary" id="open-invite-btn" type="button">Registrati</button>
-        <a class="btn ghost" href="/chat">Accedi</a>
+        <button class="btn primary" id="open-invite-btn" type="button">Register</button>
+        <a class="btn ghost" href="/chat">Sign in</a>
       </div>
 
       <div class="status" id="status"></div>
-      <div class="micro">La tua stanza iniziale verra' creata automaticamente con l'admin.</div>
+      <div class="micro">Your initial room will be created automatically with the admin.</div>
     </main>
   </div>
 
@@ -262,19 +262,19 @@
       var password = passwordInput.value;
       var repeat = repeatInput.value;
       if (!username) {
-        setStatus('Inserisci un nome utente.', 'error');
+        setStatus('Enter a username.', 'error');
         return;
       }
       if (password.length < 4) {
-        setStatus('La password deve avere almeno 4 caratteri.', 'error');
+        setStatus('Password must be at least 4 characters long.', 'error');
         return;
       }
       if (password !== repeat) {
-        setStatus('Le password non coincidono.', 'error');
+        setStatus('Passwords do not match.', 'error');
         return;
       }
       openBtn.disabled = true;
-      setStatus('Creo il tuo account...');
+      setStatus('Creating your account...');
       try {
         var res = await fetch('/register', {
           method: 'POST',
@@ -282,16 +282,16 @@
           body: JSON.stringify({ username: username, password: password })
         });
         var data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Registrazione non riuscita');
+        if (!res.ok) throw new Error(data.error || 'Registration failed');
         localStorage.setItem('chat-user', data.username);
         localStorage.setItem('chat-token', data.token);
         if (data.firstRoomId) localStorage.setItem('chat-room-id', data.firstRoomId);
-        setStatus('Account creato. Accesso in corso...');
+        setStatus('Account created. Signing you in...');
         setTimeout(function() {
           location.href = '/chat';
         }, 300);
       } catch (e) {
-        setStatus(e.message || 'Registrazione non riuscita', 'error');
+        setStatus(e.message || 'Registration failed', 'error');
         openBtn.disabled = false;
       }
     }

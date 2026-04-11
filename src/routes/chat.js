@@ -306,12 +306,12 @@ function requireRoomMember(request, reply, roomId, user) {
   if (!authenticatedUser) return null;
   const room = stmts.getRoomById.get(roomId);
   if (!room) {
-    reply.code(404).send({ error: 'Stanza non trovata' });
+    reply.code(404).send({ error: 'Room not found' });
     return null;
   }
   const membership = stmts.getRoomMember.get(roomId, authenticatedUser.username);
   if (!membership) {
-    reply.code(403).send({ error: 'Accesso stanza non consentito' });
+    reply.code(403).send({ error: 'Room access denied' });
     return null;
   }
   return {
@@ -611,7 +611,7 @@ function createInitialRoomForUser(username, createdBy, now) {
     crypto.randomUUID(),
     roomId,
     'Raspi Chat',
-    `${username} ha completato la registrazione ed e' entrato nella stanza.`,
+    `${username} completed registration and joined the room.`,
     null,
     now,
     null
@@ -625,16 +625,16 @@ function createInitialRoomForUser(username, createdBy, now) {
 
 const registerUserFromInvite = db.transaction(({ token, username, password, now }) => {
   const invite = stmts.getInvite.get(token);
-  if (!invite) return { error: 'Invito non trovato', status: 404 };
-  if (invite.usedAt) return { error: 'Invito gia usato', status: 410 };
-  if (stmts.getUser.get(username)) return { error: 'Nome gia usato', status: 409 };
+  if (!invite) return { error: 'Invite not found', status: 404 };
+  if (invite.usedAt) return { error: 'Invite already used', status: 410 };
+  if (stmts.getUser.get(username)) return { error: 'Name already taken', status: 409 };
 
   const role = normalizeRole(invite.role);
   const createdBy = normalizeUsername(invite.createdBy) || DEFAULT_ADMIN_USERNAME;
 
   stmts.syncUser.run(username, hashPassword(password), role);
   const result = stmts.markInviteUsed.run(now, username, token);
-  if (!result.changes) return { error: 'Invito non piu disponibile', status: 409 };
+  if (!result.changes) return { error: 'Invite no longer available', status: 409 };
   const roomInfo = createInitialRoomForUser(username, createdBy, now);
 
   return {
@@ -647,7 +647,7 @@ const registerUserFromInvite = db.transaction(({ token, username, password, now 
 });
 
 const registerUserDirect = db.transaction(({ username, password, now }) => {
-  if (stmts.getUser.get(username)) return { error: 'Nome gia usato', status: 409 };
+  if (stmts.getUser.get(username)) return { error: 'Name already taken', status: 409 };
   stmts.syncUser.run(username, hashPassword(password), 'user');
   const roomInfo = createInitialRoomForUser(username, DEFAULT_ADMIN_USERNAME, now);
   return {
@@ -932,7 +932,7 @@ async function chatRoutes(app) {
     reply.type('application/manifest+json')
       .header('Cache-Control', 'no-store')
       .send({
-      name: 'Chat Tongatron', short_name: 'Chat', description: 'Chat privata in tempo reale',
+      name: 'Raspi Chat', short_name: 'Chat', description: 'Private real-time chat',
       start_url: '/chat', scope: '/', display: 'standalone', orientation: 'portrait',
       background_color: '#f0f0f0', theme_color: '#3b82f6',
       icons: [
@@ -984,13 +984,13 @@ async function chatRoutes(app) {
   app.post('/chat/login', async (request, reply) => {
     const username = normalizeUsername(request.body?.username);
     const password = String(request.body?.password || '');
-    if (!username || !password) return reply.code(400).send({ error: 'Dati mancanti' });
+    if (!username || !password) return reply.code(400).send({ error: 'Missing credentials' });
     const user = stmts.getUser.get(username);
-    if (!user) return reply.code(401).send({ error: 'Credenziali non valide' });
+    if (!user) return reply.code(401).send({ error: 'Invalid credentials' });
     const [saltHex, hashHex] = user.hash.split(':');
     const inputHash  = crypto.scryptSync(password, Buffer.from(saltHex, 'hex'), 64);
     const storedHash = Buffer.from(hashHex, 'hex');
-    if (!crypto.timingSafeEqual(inputHash, storedHash)) return reply.code(401).send({ error: 'Credenziali non valide' });
+    if (!crypto.timingSafeEqual(inputHash, storedHash)) return reply.code(401).send({ error: 'Invalid credentials' });
     const token = generateToken(username);
     setSessionCookie(reply, username, token);
     const normalizedRole = normalizeRole(user.role);
@@ -1040,14 +1040,14 @@ async function chatRoutes(app) {
     if (!user) return;
 
     const name = normalizeRoomName(request.body?.name);
-    if (!name) return reply.code(400).send({ error: 'Nome stanza mancante' });
+    if (!name) return reply.code(400).send({ error: 'Missing room name' });
 
     const requestedMembers = Array.isArray(request.body?.members) ? request.body.members : [];
     const memberSet = new Set([user.username]);
     for (const entry of requestedMembers) {
       const username = normalizeUsername(entry);
       if (!username) continue;
-      if (!stmts.getAuthUser.get(username)) return reply.code(400).send({ error: `Utente non trovato: ${username}` });
+      if (!stmts.getAuthUser.get(username)) return reply.code(400).send({ error: `User not found: ${username}` });
       memberSet.add(username);
     }
 
@@ -1082,14 +1082,14 @@ async function chatRoutes(app) {
     if (!user) return;
 
     const name = normalizeRoomName(request.body?.name);
-    if (!name) return reply.code(400).send({ error: 'Nome stanza mancante' });
+    if (!name) return reply.code(400).send({ error: 'Missing room name' });
 
     const requestedMembers = Array.isArray(request.body?.members) ? request.body.members : [];
     const memberSet = new Set([user.username]);
     for (const entry of requestedMembers) {
       const username = normalizeUsername(entry);
       if (!username) continue;
-      if (!stmts.getAuthUser.get(username)) return reply.code(400).send({ error: `Utente non trovato: ${username}` });
+      if (!stmts.getAuthUser.get(username)) return reply.code(400).send({ error: `User not found: ${username}` });
       memberSet.add(username);
     }
 
@@ -1119,7 +1119,7 @@ async function chatRoutes(app) {
     if (!access) return;
 
     const name = normalizeRoomName(request.body?.name);
-    if (!name) return reply.code(400).send({ error: 'Nome stanza mancante' });
+    if (!name) return reply.code(400).send({ error: 'Missing room name' });
 
     stmts.renameRoom.run(name, roomId);
 
@@ -1135,7 +1135,7 @@ async function chatRoutes(app) {
     if (!user) return;
 
     const roomId = String(request.params.roomId || '').trim();
-    if (!roomId) return reply.code(400).send({ error: 'ID stanza mancante' });
+    if (!roomId) return reply.code(400).send({ error: 'Missing room ID' });
 
     const deleteAll = db.transaction(() => {
       stmts.deleteRoomMessages.run(roomId);
@@ -1164,7 +1164,7 @@ async function chatRoutes(app) {
     for (const entry of requestedMembers) {
       const username = normalizeUsername(entry);
       if (!username || username === user.username) continue;
-      if (!stmts.getAuthUser.get(username)) return reply.code(400).send({ error: `Utente non trovato: ${username}` });
+      if (!stmts.getAuthUser.get(username)) return reply.code(400).send({ error: `User not found: ${username}` });
       normalized.push(username);
     }
 
@@ -1184,20 +1184,20 @@ async function chatRoutes(app) {
     const user = requireAuthUser(request, reply);
     if (!user) return;
     if (user.role !== 'admin') {
-      return reply.code(403).send({ error: 'Solo un admin puo rimuovere utenti dalle stanze' });
+      return reply.code(403).send({ error: 'Only an admin can remove users from rooms' });
     }
 
     const roomId = String(request.params.roomId || '').trim();
     const targetUsername = normalizeUsername(request.params.username);
     const access = requireRoomMember(request, reply, roomId, user);
     if (!access) return;
-    if (!targetUsername) return reply.code(400).send({ error: 'Utente mancante' });
+    if (!targetUsername) return reply.code(400).send({ error: 'Missing user' });
     if (targetUsername === access.room.createdBy) {
-      return reply.code(400).send({ error: 'Non puoi rimuovere il creatore della stanza' });
+      return reply.code(400).send({ error: 'You cannot remove the room creator' });
     }
 
     const membership = stmts.getRoomMember.get(roomId, targetUsername);
-    if (!membership) return reply.code(404).send({ error: 'Utente non presente nella stanza' });
+    if (!membership) return reply.code(404).send({ error: 'User is not in the room' });
 
     stmts.deleteRoomMember.run(roomId, targetUsername);
 
@@ -1233,14 +1233,14 @@ async function chatRoutes(app) {
     const password = String(request.body?.password || '');
     const role = normalizeRole(request.body?.role);
 
-    if (!username) return reply.code(400).send({ error: 'Username mancante' });
-    if (!['admin', 'superuser', 'user'].includes(role)) return reply.code(400).send({ error: 'Ruolo non valido' });
+    if (!username) return reply.code(400).send({ error: 'Missing username' });
+    if (!['admin', 'superuser', 'user'].includes(role)) return reply.code(400).send({ error: 'Invalid role' });
 
     const existing = stmts.getUser.get(username);
-    if (!existing && !password) return reply.code(400).send({ error: 'Password richiesta per il nuovo utente' });
+    if (!existing && !password) return reply.code(400).send({ error: 'Password is required for a new user' });
 
     if (existing && existing.role === 'admin' && role !== 'admin' && stmts.countAdmins.get().count <= 1) {
-      return reply.code(400).send({ error: 'Deve esistere almeno un admin' });
+      return reply.code(400).send({ error: 'At least one admin must remain' });
     }
 
     const hash = password ? hashPassword(password) : existing?.hash || null;
@@ -1257,14 +1257,14 @@ async function chatRoutes(app) {
     if (!adminUser) return;
 
     const username = normalizeUsername(request.params.username);
-    if (!username) return reply.code(400).send({ error: 'Username mancante' });
+    if (!username) return reply.code(400).send({ error: 'Missing username' });
     if (username === adminUser.username) {
-      return reply.code(400).send({ error: 'Non puoi eliminare il tuo utente mentre sei collegato' });
+      return reply.code(400).send({ error: 'You cannot delete your own user while signed in' });
     }
     const existing = stmts.getUser.get(username);
-    if (!existing) return reply.code(404).send({ error: 'Utente non trovato' });
+    if (!existing) return reply.code(404).send({ error: 'User not found' });
     if (normalizeRole(existing.role) === 'admin' && stmts.countAdmins.get().count <= 1) {
-      return reply.code(400).send({ error: 'Deve esistere almeno un admin' });
+      return reply.code(400).send({ error: 'At least one admin must remain' });
     }
 
     stmts.deleteRoomMembershipsByUser.run(username);
@@ -1292,12 +1292,12 @@ async function chatRoutes(app) {
 
   app.get('/chat/invite/:token/data', async (request, reply) => {
     const token = String(request.params.token || '').trim();
-    if (!token) return reply.code(404).send({ error: 'Invito non trovato' });
+    if (!token) return reply.code(404).send({ error: 'Invite not found' });
     const invite = stmts.getInvite.get(token);
-    if (!invite) return reply.code(404).send({ error: 'Invito non trovato' });
+    if (!invite) return reply.code(404).send({ error: 'Invite not found' });
     if (invite.usedAt) {
       return reply.code(410).send({
-        error: 'Invito gia usato',
+        error: 'Invite already used',
         invite: formatInvite(invite, request),
       });
     }
@@ -1311,23 +1311,23 @@ async function chatRoutes(app) {
   app.post('/chat/invite/:token/register', async (request, reply) => {
     const token = String(request.params.token || '').trim();
     const invite = stmts.getInvite.get(token);
-    if (!invite) return reply.code(404).send({ error: 'Invito non trovato' });
-    if (invite.usedAt) return reply.code(410).send({ error: 'Invito gia usato' });
+    if (!invite) return reply.code(404).send({ error: 'Invite not found' });
+    if (invite.usedAt) return reply.code(410).send({ error: 'Invite already used' });
 
     const username = normalizeUsername(request.body?.username);
     const password = String(request.body?.password || '');
-    if (!username) return reply.code(400).send({ error: 'Nome mancante' });
-    if (password.length < 4) return reply.code(400).send({ error: 'Password troppo corta' });
+    if (!username) return reply.code(400).send({ error: 'Missing name' });
+    if (password.length < 4) return reply.code(400).send({ error: 'Password is too short' });
     const result = registerUserFromInvite({ token, username, password, now: new Date().toISOString() });
-    if (!result.ok) return reply.code(result.status || 400).send({ error: result.error || 'Registrazione non riuscita' });
+    if (!result.ok) return reply.code(result.status || 400).send({ error: result.error || 'Registration failed' });
 
     const tokenValue = generateToken(username);
     setSessionCookie(reply, username, tokenValue);
     if (result.firstRoomId && result.invitedBy && result.invitedBy !== username) {
-      notifyUnread(result.firstRoomId, result.firstRoomName || 'Nuova stanza', 'Raspi Chat');
+      notifyUnread(result.firstRoomId, result.firstRoomName || 'New room', 'Raspi Chat');
       await sendWebPushToUser(result.invitedBy, {
         title: 'Raspi Chat',
-        body: `${username} si e' registrato ed e' entrato nella tua stanza.`,
+        body: `${username} registered and joined your room.`,
         url: '/chat',
       });
     }
@@ -1346,18 +1346,18 @@ async function chatRoutes(app) {
   app.post('/register', async (request, reply) => {
     const username = normalizeUsername(request.body?.username);
     const password = String(request.body?.password || '');
-    if (!username) return reply.code(400).send({ error: 'Nome mancante' });
-    if (password.length < 4) return reply.code(400).send({ error: 'Password troppo corta' });
+    if (!username) return reply.code(400).send({ error: 'Missing name' });
+    if (password.length < 4) return reply.code(400).send({ error: 'Password is too short' });
     const result = registerUserDirect({ username, password, now: new Date().toISOString() });
-    if (!result.ok) return reply.code(result.status || 400).send({ error: result.error || 'Registrazione non riuscita' });
+    if (!result.ok) return reply.code(result.status || 400).send({ error: result.error || 'Registration failed' });
 
     const tokenValue = generateToken(username);
     setSessionCookie(reply, username, tokenValue);
     if (result.firstRoomId && result.invitedBy && result.invitedBy !== username) {
-      notifyUnread(result.firstRoomId, result.firstRoomName || 'Nuova stanza', 'Raspi Chat');
+      notifyUnread(result.firstRoomId, result.firstRoomName || 'New room', 'Raspi Chat');
       await sendWebPushToUser(result.invitedBy, {
         title: 'Raspi Chat',
-        body: `${username} si e' registrato ed e' entrato nella tua stanza.`,
+        body: `${username} registered and joined your room.`,
         url: '/chat',
       });
     }
@@ -1391,7 +1391,7 @@ async function chatRoutes(app) {
     const username = requireAuth(request, reply);
     if (!username) return;
     const { subscription } = request.body || {};
-    if (!subscription) return reply.code(400).send({ error: 'Dati mancanti' });
+    if (!subscription) return reply.code(400).send({ error: 'Missing data' });
     pushSubs.set(username, subscription);
     stmts.upsertPushSub.run(username, JSON.stringify(subscription), new Date().toISOString());
     return { ok: true };
@@ -1421,7 +1421,7 @@ async function chatRoutes(app) {
       try {
         await webpush.sendNotification(
           pushSubs.get(to),
-          JSON.stringify({ title: 'Test', body: 'Notifica Web Push di test!', url: '/chat' })
+          JSON.stringify({ title: 'Test', body: 'Test Web Push notification!', url: '/chat' })
         );
         info.webPushTestResult = 'sent';
       } catch (e) {
@@ -1449,14 +1449,14 @@ async function chatRoutes(app) {
     const user = requireAuthUser(request, reply);
     if (!user || user.role !== 'admin') return reply.code(403).send({ error: 'Forbidden' });
     const data = request.body;   // Buffer, parsed by addContentTypeParser above
-    if (!data || data.length < 1024) return reply.code(400).send({ error: 'File non valido' });
+    if (!data || data.length < 1024) return reply.code(400).send({ error: 'Invalid file' });
     // Check SQLite magic bytes
     const magic = data.slice(0, 16).toString('utf8');
-    if (!magic.startsWith('SQLite format 3')) return reply.code(400).send({ error: 'Non è un database SQLite valido' });
+    if (!magic.startsWith('SQLite format 3')) return reply.code(400).send({ error: 'Not a valid SQLite database' });
     const backupPath = DB_PATH + '.bak';
     fs.copyFileSync(DB_PATH, backupPath);
     fs.writeFileSync(DB_PATH, data);
-    reply.send({ ok: true, message: 'Database ripristinato. Riavvio in corso...' });
+    reply.send({ ok: true, message: 'Database restored. Restarting...' });
     setTimeout(() => process.exit(0), 500);
   });
 
@@ -1473,7 +1473,7 @@ async function chatRoutes(app) {
     const user = requireAuthUser(request, reply);
     if (!user || user.role !== 'admin') return reply.code(403).send({ error: 'Forbidden' });
     const { text } = request.body || {};
-    if (!text || !text.trim()) return reply.code(400).send({ error: 'Testo vuoto' });
+    if (!text || !text.trim()) return reply.code(400).send({ error: 'Empty text' });
     const allRooms = db.prepare('SELECT id FROM rooms').all();
     const now = new Date().toISOString();
     let count = 0;
@@ -1527,9 +1527,9 @@ async function chatRoutes(app) {
     const username = requireAuth(request, reply);
     if (!username) return;
     const data = await request.file({ limits: { fileSize: 20 * 1024 * 1024 } });
-    if (!data) return reply.code(400).send({ error: 'Nessun file' });
+    if (!data) return reply.code(400).send({ error: 'No file provided' });
     const ext = path.extname(data.filename).toLowerCase();
-    if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) return reply.code(400).send({ error: 'Formato non supportato' });
+    if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) return reply.code(400).send({ error: 'Unsupported format' });
     const filename = Date.now() + '-bg' + ext;
     const filePath = path.join(BACKGROUNDS_DIR, filename);
     const { pipeline: pl } = require('node:stream/promises');
@@ -1541,7 +1541,7 @@ async function chatRoutes(app) {
     const username = requireAuth(request, reply);
     if (!username) return;
     const { url } = request.query;
-    if (!url || !/^https?:\/\/.+/i.test(url)) return reply.code(400).send({ error: 'URL non valido' });
+    if (!url || !/^https?:\/\/.+/i.test(url)) return reply.code(400).send({ error: 'Invalid URL' });
     try {
       const youtubePreview = await buildYoutubePreview(url);
       if (youtubePreview) return reply.send(youtubePreview);
@@ -1557,7 +1557,7 @@ async function chatRoutes(app) {
 
   app.get('/chat/invite/:token', async (request, reply) => {
     const token = String(request.params.token || '').trim();
-    if (!token) return reply.code(404).send({ error: 'Invito non trovato' });
+    if (!token) return reply.code(404).send({ error: 'Invite not found' });
     return reply
       .type('text/html')
       .header('X-Robots-Tag', 'noindex, nofollow')
@@ -1638,9 +1638,9 @@ async function chatRoutes(app) {
     const username = requireAuth(request, reply);
     if (!username) return;
     const data = await request.file({ limits: { fileSize: 10 * 1024 * 1024 } });
-    if (!data) return reply.code(400).send({ error: 'Nessun file' });
+    if (!data) return reply.code(400).send({ error: 'No file provided' });
     const ext = path.extname(data.filename).toLowerCase();
-    if (!['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) return reply.code(400).send({ error: 'Formato non supportato' });
+    if (!['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) return reply.code(400).send({ error: 'Unsupported format' });
     const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`;
     await pipeline(data.file, fs.createWriteStream(path.join(UPLOADS_DIR, filename)));
     return { url: `/chat/images/${filename}` };

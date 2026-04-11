@@ -182,7 +182,7 @@ function setupDefaults(request) {
   const requestHost = String(request.headers['x-forwarded-host'] || request.headers.host || '').split(',')[0].trim();
 
   return {
-    chatName: normalizeRoomName(envValues.DEFAULT_ROOM_NAME || 'Cabras Chat') || 'Cabras Chat',
+    chatName: normalizeRoomName(envValues.DEFAULT_ROOM_NAME || 'Raspi Chat') || 'Raspi Chat',
     hostname: normalizeHostname(envValues.PUBLIC_HOSTNAME || requestHost),
     host: normalizeHost(envValues.HOST || '127.0.0.1'),
     port: toPort(envValues.PORT || 3000),
@@ -299,7 +299,7 @@ function ensureSetupAllowed(request, reply) {
     return false;
   }
   if (!isTruthy(process.env.SETUP_ALLOW_REMOTE) && !isLocalAccess(request)) {
-    reply.code(403).send({ error: 'Setup disponibile solo da rete locale' });
+    reply.code(403).send({ error: 'Setup is available only from the local network' });
     return false;
   }
   return true;
@@ -350,7 +350,7 @@ async function setupRoutes(app) {
     if (!ensureSetupAllowed(request, reply)) return;
 
     const body = request.body || {};
-    const chatName = normalizeRoomName(body.chatName || 'Cabras Chat') || 'Cabras Chat';
+    const chatName = normalizeRoomName(body.chatName || 'Raspi Chat') || 'Raspi Chat';
     const networkMode = ['lan', 'nginx', 'cloudflare'].includes(body.networkMode) ? body.networkMode : 'lan';
     const host = normalizeHost(body.host || '127.0.0.1');
     const port = toPort(body.port || 3000);
@@ -360,14 +360,14 @@ async function setupRoutes(app) {
     const vapidEmail = normalizeVapidEmail(body.vapidEmail || 'admin@example.com');
     const enableWebPush = body.enableWebPush !== false;
 
-    if (!adminUsername) return reply.code(400).send({ error: 'Username admin mancante' });
-    if (adminPassword.length < 8) return reply.code(400).send({ error: 'Password admin troppo corta (minimo 8 caratteri)' });
+    if (!adminUsername) return reply.code(400).send({ error: 'Missing admin username' });
+    if (adminPassword.length < 8) return reply.code(400).send({ error: 'Admin password is too short (minimum 8 characters)' });
     if ((networkMode === 'nginx' || networkMode === 'cloudflare') && !hostname) {
-      return reply.code(400).send({ error: 'Hostname pubblico richiesto per nginx o Cloudflare' });
+      return reply.code(400).send({ error: 'A public hostname is required for nginx or Cloudflare' });
     }
 
     const users = buildUserList(adminUsername, adminPassword, body.users);
-    if (!users.length) return reply.code(400).send({ error: 'Serve almeno un utente admin' });
+    if (!users.length) return reply.code(400).send({ error: 'At least one admin user is required' });
 
     const existingEnv = parseEnvFile(ENV_FILE);
     const vapidKeys = enableWebPush
@@ -448,9 +448,9 @@ async function setupRoutes(app) {
         : `http://${host}:${port}/chat`,
       nextCommands,
       notes: [
-        'Riavvia o abilita il servizio systemd con il file generato.',
-        'Per Cloudflare Tunnel usa il file cloudflared.config.yml come base e completa il tunnel ID.',
-        'Dopo il primo riavvio, la pagina /setup verra nascosta e l accesso passera alla chat.',
+        'Restart or enable the systemd service using the generated file.',
+        'For Cloudflare Tunnel, use cloudflared.config.yml as the base and fill in the tunnel ID.',
+        'After the first restart, the /setup page will be hidden and access will switch to the chat.',
       ],
     };
   });

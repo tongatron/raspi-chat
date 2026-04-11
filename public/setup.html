@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cabras Chat Setup</title>
+  <title>Raspi Chat Setup</title>
   <style>
     :root {
       color-scheme: dark;
@@ -245,12 +245,12 @@
   <div class="shell">
     <section class="hero">
       <div class="eyebrow">Setup Wizard</div>
-      <h1>Installa Cabras Chat senza impazzire.</h1>
-      <p>Questo wizard prepara la configurazione iniziale, crea l'admin, genera le chiavi Web Push e lascia pronti anche i file per <code>systemd</code>, <code>nginx</code> e Cloudflare Tunnel.</p>
+      <h1>Install Raspi Chat without the headache.</h1>
+      <p>This wizard prepares the initial configuration, creates the admin account, generates Web Push keys, and leaves ready-to-use files for <code>systemd</code>, <code>nginx</code>, and Cloudflare Tunnel.</p>
       <div>
-        <span class="pill">Solo primo avvio</span>
-        <span class="pill">Pensato per Raspberry</span>
-        <span class="pill">Nessun file da editare a mano</span>
+        <span class="pill">First run only</span>
+        <span class="pill">Built for Raspberry</span>
+        <span class="pill">No manual file editing</span>
       </div>
     </section>
 
@@ -260,25 +260,25 @@
         <div class="error" id="error-box"></div>
         <section class="section active" data-step="0">
           <div>
-            <h2>1. Controlli rapidi</h2>
-            <p class="muted">Prima di scrivere file o creare utenti, controlliamo se la macchina e la cartella sono pronte.</p>
+            <h2>1. Quick checks</h2>
+            <p class="muted">Before writing files or creating users, let's make sure the machine and project folder are ready.</p>
           </div>
           <div class="cards" id="checks-grid"></div>
         </section>
 
         <section class="section" data-step="1">
           <div>
-            <h2>2. Configurazione base</h2>
-            <p class="muted">Queste impostazioni definiscono il nome della chat e come la esporrai.</p>
+            <h2>2. Base configuration</h2>
+            <p class="muted">These settings define the chat name and how you want to expose it.</p>
           </div>
           <div class="cols">
-            <label>Nome chat
-              <input id="chat-name" placeholder="Cabras Chat" />
+            <label>Chat name
+              <input id="chat-name" placeholder="Raspi Chat" />
             </label>
-            <label>Modalita' rete
+            <label>Network mode
               <select id="network-mode">
-                <option value="lan">Solo LAN / locale</option>
-                <option value="nginx">Dominio pubblico con nginx</option>
+                <option value="lan">LAN only / local</option>
+                <option value="nginx">Public domain with nginx</option>
                 <option value="cloudflare">Cloudflare Tunnel</option>
               </select>
             </label>
@@ -287,33 +287,33 @@
             <label>Host Fastify
               <input id="app-host" placeholder="127.0.0.1" />
             </label>
-            <label>Porta Fastify
+            <label>Fastify port
               <input id="app-port" type="number" min="1" max="65535" placeholder="3000" />
             </label>
           </div>
-          <label>Hostname pubblico
+          <label>Public hostname
             <input id="public-hostname" placeholder="chat.example.com" />
-            <span class="hint">Lascialo vuoto se vuoi usare la chat solo in locale.</span>
+            <span class="hint">Leave it empty if you want to use the chat locally only.</span>
           </label>
         </section>
 
         <section class="section" data-step="2">
           <div>
-            <h2>3. Admin e utenti iniziali</h2>
-            <p class="muted">Qui crei l'utente admin principale e, se vuoi, un paio di utenti gia' pronti.</p>
+            <h2>3. Admin and initial users</h2>
+            <p class="muted">Create the main admin account here and, if you want, a few extra users to start with.</p>
           </div>
           <div class="cols">
-            <label>Username admin
+            <label>Admin username
               <input id="admin-username" placeholder="Giovanni" />
             </label>
-            <label>Password admin
-              <input id="admin-password" type="password" placeholder="Minimo 8 caratteri" />
+            <label>Admin password
+              <input id="admin-password" type="password" placeholder="At least 8 characters" />
             </label>
           </div>
           <div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-              <h3>Altri utenti</h3>
-              <button class="secondary" id="add-user-btn" type="button">Aggiungi utente</button>
+              <h3>Other users</h3>
+              <button class="secondary" id="add-user-btn" type="button">Add user</button>
             </div>
             <div id="users-list"></div>
           </div>
@@ -321,12 +321,12 @@
 
         <section class="section" data-step="3">
           <div>
-            <h2>4. Notifiche</h2>
-            <p class="muted">Qui decidi se generare subito le chiavi Web Push per la PWA.</p>
+            <h2>4. Notifications</h2>
+            <p class="muted">Choose here whether to generate Web Push keys for the PWA right away.</p>
           </div>
           <label class="toggle">
             <input id="enable-push" type="checkbox" checked />
-            <span>Genera e abilita subito le Web Push</span>
+            <span>Generate and enable Web Push now</span>
           </label>
           <label>VAPID email
             <input id="vapid-email" placeholder="admin@example.com" />
@@ -335,18 +335,18 @@
 
         <section class="section" data-step="4">
           <div>
-            <h2>5. Riepilogo e installazione</h2>
-            <p class="muted">Se tutto ti torna, il wizard scrivera' i file reali e preparera' i template di deploy.</p>
+            <h2>5. Summary and install</h2>
+            <p class="muted">If everything looks right, the wizard will write the real files and prepare the deployment templates.</p>
           </div>
           <div class="summary" id="summary-box"></div>
-          <button id="apply-btn" type="button">Installa ora</button>
+          <button id="apply-btn" type="button">Install now</button>
           <div class="result" id="result-box"></div>
         </section>
 
         <div class="actions">
-          <button class="ghost" id="prev-btn" type="button">Indietro</button>
-          <div class="hint">Dopo l'installazione, <code>/setup</code> verra' nascosta.</div>
-          <button id="next-btn" type="button">Avanti</button>
+          <button class="ghost" id="prev-btn" type="button">Back</button>
+          <div class="hint">After installation, <code>/setup</code> will be hidden.</div>
+          <button id="next-btn" type="button">Next</button>
         </div>
       </main>
     </div>
@@ -358,11 +358,11 @@
     var state = null;
     var currentStep = 0;
     var stepLabels = [
-      ['Controlli', 'Verifica cartella, permessi e prerequisiti'],
-      ['Base', 'Nome chat, host, porta e rete'],
-      ['Utenti', 'Admin e primi utenti'],
-      ['Push', 'Notifiche Web Push'],
-      ['Installa', 'Riepilogo e scrittura finale']
+      ['Checks', 'Verify folder, permissions, and prerequisites'],
+      ['Base', 'Chat name, host, port, and network'],
+      ['Users', 'Admin and first users'],
+      ['Push', 'Web Push notifications'],
+      ['Install', 'Summary and final write']
     ];
 
     function qs(id) { return document.getElementById(id); }
@@ -419,13 +419,13 @@
       var checks = state.checks;
       qs('checks-grid').innerHTML = [
         checkCard('Node', checks.nodeVersion, true),
-        checkCard('Piattaforma', checks.platform, true),
-        checkCard('Cartella progetto', checks.cwd, true),
-        checkCard('Scrittura root progetto', checks.rootWritable ? 'OK' : 'Non scrivibile', checks.rootWritable),
-        checkCard('File .env', checks.envFileExists ? 'Gia presente' : 'Verrà creato', true),
-        checkCard('File utenti', checks.usersFileExists ? 'Gia presente' : 'Verrà creato', true),
-        checkCard('Cloudflared', checks.cloudflaredDetected ? 'Rilevato' : 'Non rilevato', checks.cloudflaredDetected),
-        checkCard('Modalita setup', state.setupMode ? 'Attiva' : 'Gia completata', state.setupMode)
+        checkCard('Platform', checks.platform, true),
+        checkCard('Project folder', checks.cwd, true),
+        checkCard('Project root writable', checks.rootWritable ? 'OK' : 'Not writable', checks.rootWritable),
+        checkCard('.env file', checks.envFileExists ? 'Already present' : 'Will be created', true),
+        checkCard('Users file', checks.usersFileExists ? 'Already present' : 'Will be created', true),
+        checkCard('Cloudflared', checks.cloudflaredDetected ? 'Detected' : 'Not detected', checks.cloudflaredDetected),
+        checkCard('Setup mode', state.setupMode ? 'Active' : 'Already completed', state.setupMode)
       ].join('');
     }
 
@@ -434,10 +434,10 @@
       wrap.className = 'user-row';
       wrap.innerHTML =
         '<div class="cols-3">' +
-          '<label>Username<input class="user-name" placeholder="Cabras" value="' + escapeHtml(user && user.username || '') + '" /></label>' +
+          '<label>Username<input class="user-name" placeholder="User" value="' + escapeHtml(user && user.username || '') + '" /></label>' +
           '<label>Password<input class="user-pass" type="password" placeholder="password" /></label>' +
-          '<label>Ruolo<select class="user-role"><option value="user">user</option><option value="admin">admin</option></select></label>' +
-          '<button class="danger remove-user" type="button">Rimuovi</button>' +
+          '<label>Role<select class="user-role"><option value="user">user</option><option value="admin">admin</option></select></label>' +
+          '<button class="danger remove-user" type="button">Remove</button>' +
         '</div>';
       wrap.querySelector('.user-role').value = user && user.role === 'admin' ? 'admin' : 'user';
       wrap.querySelector('.remove-user').onclick = function() { wrap.remove(); renderSummary(); };
@@ -473,12 +473,12 @@
     function validateCurrentStep() {
       var data = formData();
       if (currentStep === 1) {
-        if (!data.chatName) return 'Serve un nome per la chat.';
-        if ((data.networkMode === 'nginx' || data.networkMode === 'cloudflare') && !data.hostname) return 'Per nginx o Cloudflare serve un hostname pubblico.';
+        if (!data.chatName) return 'A chat name is required.';
+        if ((data.networkMode === 'nginx' || data.networkMode === 'cloudflare') && !data.hostname) return 'A public hostname is required for nginx or Cloudflare.';
       }
       if (currentStep === 2) {
-        if (!data.adminUsername) return 'Serve uno username admin.';
-        if (!data.adminPassword || data.adminPassword.length < 8) return 'La password admin deve avere almeno 8 caratteri.';
+        if (!data.adminUsername) return 'An admin username is required.';
+        if (!data.adminPassword || data.adminPassword.length < 8) return 'Admin password must be at least 8 characters long.';
       }
       return '';
     }
@@ -487,11 +487,11 @@
       var data = formData();
       qs('summary-box').innerHTML = [
         '<div><strong>Chat</strong><div class="muted">' + escapeHtml(data.chatName || '-') + '</div></div>',
-        '<div><strong>Rete</strong><div class="muted">' + escapeHtml(data.networkMode) + (data.hostname ? ' · ' + escapeHtml(data.hostname) : ' · solo locale') + '</div></div>',
+        '<div><strong>Network</strong><div class="muted">' + escapeHtml(data.networkMode) + (data.hostname ? ' · ' + escapeHtml(data.hostname) : ' · local only') + '</div></div>',
         '<div><strong>Fastify</strong><div class="muted">' + escapeHtml((data.host || '127.0.0.1') + ':' + (data.port || 3000)) + '</div></div>',
         '<div><strong>Admin</strong><div class="muted">' + escapeHtml(data.adminUsername || '-') + '</div></div>',
-        '<div><strong>Push</strong><div class="muted">' + (data.enableWebPush ? 'Web Push attive' : 'Disattivate') + '</div></div>',
-        '<div><strong>Utenti extra</strong><div class="muted">' + escapeHtml(String(data.users.filter(function(user) { return user.username; }).length)) + '</div></div>'
+        '<div><strong>Push</strong><div class="muted">' + (data.enableWebPush ? 'Web Push enabled' : 'Disabled') + '</div></div>',
+        '<div><strong>Extra users</strong><div class="muted">' + escapeHtml(String(data.users.filter(function(user) { return user.username; }).length)) + '</div></div>'
       ].join('');
     }
 
@@ -527,22 +527,22 @@
         body: JSON.stringify(data)
       });
       var payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || 'Setup fallito');
+      if (!response.ok) throw new Error(payload.error || 'Setup failed');
       var result = qs('result-box');
       result.classList.add('visible');
       result.innerHTML = [
-        '<strong>Installazione completata.</strong>',
-        '<div class="muted">File generati:</div>',
+        '<strong>Installation completed.</strong>',
+        '<div class="muted">Generated files:</div>',
         '<pre>' + escapeHtml(
           'ENV: ' + payload.generated.envFile + '\n' +
-          'Utenti: ' + payload.generated.usersFile + '\n' +
+          'Users: ' + payload.generated.usersFile + '\n' +
           'Service: ' + payload.generated.serviceFile + '\n' +
           'Nginx: ' + payload.generated.nginxFile + '\n' +
           'Cloudflare: ' + payload.generated.cloudflareFile
         ) + '</pre>',
-        '<div class="muted">Comandi successivi:</div>',
+        '<div class="muted">Next commands:</div>',
         '<pre>' + escapeHtml(payload.nextCommands.map(function(command) { return 'sudo ' + command; }).join('\n')) + '</pre>',
-        '<div class="muted">URL previsto:</div>',
+        '<div class="muted">Expected URL:</div>',
         '<pre>' + escapeHtml(payload.publicUrl) + '</pre>'
       ].join('');
       qs('apply-btn').disabled = true;

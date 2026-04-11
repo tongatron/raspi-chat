@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
  * Raspi Chat — Stress Test UI
- * Avvia un server locale e apre una dashboard nel browser.
+ * Starts a local server and opens a dashboard in the browser.
  *
- * Uso:
+ * Usage:
  *   node ops/stress-test-ui.js
  *   node ops/stress-test-ui.js --port 4000
  *   node ops/stress-test-ui.js --target http://raspberrypi.local:3000
@@ -109,18 +109,18 @@ async function fetchPiStats() {
 
 // ── Start test ───────────────────────────────────────────────────────────────
 async function startTest(cfg) {
-  if (testRunning) return { error: 'Test già in corso' };
+  if (testRunning) return { error: 'A test is already running' };
   const { users, ratePerMin, duration, roomId, ramp, adminUser, adminPass, testPass } = cfg;
 
   // check ws module
   try { require.resolve('ws'); } catch(_) {
-    return { error: 'Modulo "ws" non installato. Esegui: npm install ws' };
+    return { error: 'The "ws" module is not installed. Run: npm install ws' };
   }
 
   testRunning = true;
   testWorkers = [];
   testStats   = { sent: 0, received: 0, errors: 0, latencies: [], startedAt: Date.now(), series: [], cfg: { ...cfg } };
-  pushEvent('log', { level: 'info', text: `▶ Avvio test — ${users} utenti, ${ratePerMin} msg/min, ${duration}s` });
+  pushEvent('log', { level: 'info', text: `▶ Starting test — ${users} users, ${ratePerMin} msg/min, ${duration}s` });
 
   // Login utenti
   const startUsers = ramp ? Math.max(1, Math.floor(users / 4)) : users;
@@ -128,14 +128,14 @@ async function startTest(cfg) {
     await spawnWorker(i, { adminUser, adminPass, testPass, roomId, ratePerMin });
   }
 
-  // Ramp: aggiungi utenti gradualmente
+  // Ramp: add users gradually
   if (ramp && users > startUsers) {
     rampState = { added: startUsers, targetUsers: users };
     const step = Math.max(1, Math.floor(users / 4));
     rampInterval = setInterval(async () => {
       if (!testRunning || !rampState || rampState.added >= rampState.targetUsers) { clearInterval(rampInterval); return; }
       const toAdd = Math.min(step, rampState.targetUsers - rampState.added);
-      pushEvent('log', { level: 'info', text: `↑ Ramp: aggiungo ${toAdd} utenti (tot ${rampState.added + toAdd})` });
+      pushEvent('log', { level: 'info', text: `↑ Ramp: adding ${toAdd} users (total ${rampState.added + toAdd})` });
       for (let i = rampState.added; i < rampState.added + toAdd; i++) {
         await spawnWorker(i, { adminUser, adminPass, testPass, roomId, ratePerMin });
       }
@@ -154,7 +154,7 @@ async function startTest(cfg) {
     const avgLat = recentLat.length ? Math.round(recentLat.reduce((a,b) => a+b, 0) / recentLat.length) : 0;
     const p95 = recentLat.length ? recentLat.sort((a,b)=>a-b)[Math.floor(recentLat.length * 0.95)] : 0;
     const piStats = await fetchPiStats();
-    if (!piStats) { serverDownCount++; if (serverDownCount >= 3) { pushEvent('log', { level: 'warn', text: '⚠ Server non raggiungibile — test interrotto automaticamente' }); stopTest('server-down'); return; } } else { serverDownCount = 0; }
+    if (!piStats) { serverDownCount++; if (serverDownCount >= 3) { pushEvent('log', { level: 'warn', text: '⚠ Server unreachable — test stopped automatically' }); stopTest('server-down'); return; } } else { serverDownCount = 0; }
     const point = {
       t: elapsed,
       sent: testStats.sent,
@@ -202,7 +202,7 @@ async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePe
     token = await login(adminUser || username, adminPass || password);
     if (!adminToken) { adminToken = token; adminUsername = adminUser || username; } // save for fetchPiStats
   } catch(e) {
-    pushEvent('log', { level: 'warn', text: `Login fallito per ${username}: ${e.message}` });
+    pushEvent('log', { level: 'warn', text: `Login failed for ${username}: ${e.message}` });
     testStats.errors++;
     return;
   }
@@ -241,23 +241,23 @@ async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePe
 }
 
 async function updateTestConfig(nextCfg) {
-  if (!testRunning) return { error: 'Nessun test in corso' };
-  if (rampState) return { error: 'Aggiornamento live non disponibile durante la modalita ramp' };
+  if (!testRunning) return { error: 'No test is running' };
+  if (rampState) return { error: 'Live updates are not available during ramp mode' };
 
   const currentUsers = testWorkers.length;
   if (nextCfg.users < currentUsers) {
-    return { error: 'Ridurre gli utenti durante il test non e supportato' };
+    return { error: 'Reducing users during a running test is not supported' };
   }
 
   if (nextCfg.users > currentUsers) {
-    pushEvent('log', { level: 'info', text: `↑ Aggiornamento live: aggiungo ${nextCfg.users - currentUsers} utenti` });
+    pushEvent('log', { level: 'info', text: `↑ Live update: adding ${nextCfg.users - currentUsers} users` });
     for (let i = currentUsers; i < nextCfg.users; i++) {
       await spawnWorker(i, testStats.cfg);
     }
   }
 
   if (nextCfg.ratePerMin !== testStats.cfg.ratePerMin) {
-    pushEvent('log', { level: 'info', text: `↺ Aggiornamento live: ${nextCfg.ratePerMin} msg/min per utente` });
+    pushEvent('log', { level: 'info', text: `↺ Live update: ${nextCfg.ratePerMin} msg/min per user` });
     for (const worker of testWorkers) scheduleWorker(worker, nextCfg.ratePerMin);
   }
 
@@ -302,7 +302,7 @@ function stopTest(reason) {
   };
 
   pushEvent('report', report);
-  pushEvent('log', { level: 'info', text: `■ Test terminato (${reason}) — inviati ${testStats.sent}, confermati ${testStats.received}, mancanti ${missing}, drop ${drop}%` });
+  pushEvent('log', { level: 'info', text: `■ Test finished (${reason}) — sent ${testStats.sent}, acknowledged ${testStats.received}, missing ${missing}, drop ${drop}%` });
   testWorkers = [];
 }
 
@@ -359,7 +359,7 @@ const server = http.createServer((req, res) => {
         adminToken = r; adminUsername = cfg.username;
       } catch(e) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Login fallito: ' + e.message }));
+        res.end(JSON.stringify({ error: 'Login failed: ' + e.message }));
         return;
       }
       if (monitorOnlyInterval) clearInterval(monitorOnlyInterval);
@@ -393,7 +393,7 @@ server.listen(PORT, '127.0.0.1', () => {
 
 // ── HTML dashboard ───────────────────────────────────────────────────────────
 const HTML = `<!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -466,17 +466,17 @@ const HTML = `<!DOCTYPE html>
     <!-- Config -->
     <div>
       <div class="card">
-        <h2>Configurazione</h2>
+        <h2>Configuration</h2>
         <div class="field">
-          <div class="field-row"><label>Utenti connessi</label><b id="lbl-users">10</b></div>
+          <div class="field-row"><label>Connected users</label><b id="lbl-users">10</b></div>
           <input type="range" id="cfg-users" min="1" max="100" value="10" oninput="document.getElementById('lbl-users').textContent=this.value" />
         </div>
         <div class="field">
-          <div class="field-row"><label>Messaggi / minuto per utente</label><b id="lbl-rate">10</b></div>
+          <div class="field-row"><label>Messages / minute per user</label><b id="lbl-rate">10</b></div>
           <input type="range" id="cfg-rate" min="1" max="120" value="10" oninput="document.getElementById('lbl-rate').textContent=this.value" />
         </div>
         <div class="field">
-          <div class="field-row"><label>Durata (secondi)</label><b id="lbl-dur">60</b></div>
+          <div class="field-row"><label>Duration (seconds)</label><b id="lbl-dur">60</b></div>
           <input type="range" id="cfg-duration" min="10" max="300" value="60" step="10" oninput="document.getElementById('lbl-dur').textContent=this.value" id="cfg-duration-range" />
           <label class="toggle" style="margin-top:6px">
             <input type="checkbox" id="cfg-no-timeout" onchange="
@@ -485,7 +485,7 @@ const HTML = `<!DOCTYPE html>
               r.disabled=this.checked;
               l.textContent=this.checked?'∞':r.value;
             " />
-            Nessun timeout (stop manuale)
+            No timeout (manual stop)
           </label>
         </div>
         <div class="field">
@@ -493,38 +493,38 @@ const HTML = `<!DOCTYPE html>
           <input type="text" id="cfg-room" value="cabras-giovanni" />
         </div>
         <div class="field">
-          <label>Username admin (per login)</label>
+          <label>Admin username (for login)</label>
           <input type="text" id="cfg-user" value="giovanni" />
         </div>
         <div class="field">
-          <label>Password admin</label>
+          <label>Admin password</label>
           <input type="password" id="cfg-pass" placeholder="••••••••" />
         </div>
         <div class="field">
           <label class="toggle">
             <input type="checkbox" id="cfg-ramp" />
-            Modalità ramp (aumenta gradualmente)
+            Ramp mode (add users gradually)
           </label>
         </div>
         <div class="actions">
-          <button class="btn btn-primary" id="btn-start" onclick="startTest()">▶ Avvia test</button>
+          <button class="btn btn-primary" id="btn-start" onclick="startTest()">▶ Start test</button>
           <button class="btn btn-danger" id="btn-stop" onclick="stopTest()" disabled>■ Stop</button>
         </div>
         <div class="actions" style="margin-top:8px">
-          <button class="btn btn-monitor" id="btn-monitor" onclick="toggleMonitor()">📡 Avvia monitoraggio</button>
+          <button class="btn btn-monitor" id="btn-monitor" onclick="toggleMonitor()">📡 Start monitoring</button>
         </div>
       </div>
 
       <div class="card" style="margin-top:12px">
-        <h2>Note</h2>
+        <h2>Notes</h2>
         <div style="font-size:.76rem;color:var(--muted);line-height:1.8">
-          • Fare backup DB prima di avviare<br>
-          • <b style="color:#f87171">⚠ Fermare il test PRIMA di ripristinare il backup</b> — altrimenti i worker continuano a scrivere nel DB appena ripristinato<br>
-          • Il test usa le credenziali admin per simulare N sessioni simultanee<br>
-          • Durante il test puoi aumentare utenti e rate; la riduzione utenti viene bloccata<br>
-          • <b style="color:var(--warn)">Ramp</b>: parte con ¼ degli utenti, ne aggiunge ogni 20s<br>
-          • Il monitor Pi legge <code>/chat/console/data</code> ogni secondo<br>
-          • Se la Pi si blocca, ripristinare il backup dall'admin panel
+          • Back up the DB before starting<br>
+          • <b style="color:#f87171">⚠ Stop the test BEFORE restoring a backup</b> — otherwise workers will keep writing to the freshly restored DB<br>
+          • The test uses admin credentials to simulate N simultaneous sessions<br>
+          • During the test you can increase users and rate; decreasing users is blocked<br>
+          • <b style="color:var(--warn)">Ramp</b>: starts with 1/4 of the users, then adds more every 20s<br>
+          • Pi monitoring reads <code>/chat/console/data</code> once per second<br>
+          • If the Pi hangs, restore the backup from the admin panel
         </div>
       </div>
     </div>
@@ -532,21 +532,21 @@ const HTML = `<!DOCTYPE html>
     <!-- Dashboard -->
     <div>
       <div class="card">
-        <h2>Metriche live</h2>
+        <h2>Live metrics</h2>
         <div class="stat-grid">
-          <div class="stat" id="stat-sent"><div class="val" id="v-sent">0</div><div class="lbl">Messaggi inviati</div></div>
-          <div class="stat" id="stat-recv"><div class="val" id="v-recv">0</div><div class="lbl">Confermati</div></div>
-          <div class="stat" id="stat-lat"><div class="val" id="v-lat">—</div><div class="lbl">Latenza p95</div></div>
+          <div class="stat" id="stat-sent"><div class="val" id="v-sent">0</div><div class="lbl">Messages sent</div></div>
+          <div class="stat" id="stat-recv"><div class="val" id="v-recv">0</div><div class="lbl">Acknowledged</div></div>
+          <div class="stat" id="stat-lat"><div class="val" id="v-lat">—</div><div class="lbl">p95 latency</div></div>
           <div class="stat" id="stat-cpu"><div class="val" id="v-cpu">—</div><div class="lbl">CPU Pi</div></div>
-          <div class="stat"><div class="val" id="v-workers">0</div><div class="lbl">Workers attivi</div></div>
-          <div class="stat"><div class="val" id="v-drop">0%</div><div class="lbl">Mancate conferme</div></div>
+          <div class="stat"><div class="val" id="v-workers">0</div><div class="lbl">Active workers</div></div>
+          <div class="stat"><div class="val" id="v-drop">0%</div><div class="lbl">Missing acknowledgements</div></div>
           <div class="stat"><div class="val" id="v-ram">—</div><div class="lbl">RAM Pi</div></div>
           <div class="stat"><div class="val" id="v-load">—</div><div class="lbl">Load avg</div></div>
         </div>
         <canvas id="chart" height="160"></canvas>
         <div class="log-box" id="log-box"></div>
         <div class="report-box" id="report-box">
-          <h3>📊 Report finale</h3>
+          <h3>📊 Final report</h3>
           <div id="report-rows"></div>
         </div>
       </div>
@@ -647,21 +647,21 @@ function showReport(r) {
   document.getElementById('btn-start').disabled = false;
   document.getElementById('btn-stop').disabled = true;
   document.getElementById('status-badge').className = 'badge badge-done';
-  document.getElementById('status-badge').textContent = 'Completato';
+  document.getElementById('status-badge').textContent = 'Completed';
 
   const box = document.getElementById('report-box');
   const rows = document.getElementById('report-rows');
   box.style.display = 'block';
   const data = [
-    ['Durata', r.duration ? r.duration + 's' : '∞ (stop manuale)'],
-    ['Utenti', r.users],
-    ['Messaggi inviati', r.sent],
-    ['Messaggi confermati', r.received],
-    ['Conferme mancanti', r.missing],
+    ['Duration', r.duration ? r.duration + 's' : '∞ (manual stop)'],
+    ['Users', r.users],
+    ['Messages sent', r.sent],
+    ['Messages acknowledged', r.received],
+    ['Missing acknowledgements', r.missing],
     ['Drop rate', r.drop],
     ['Throughput max /s', r.maxThroughputPerSec],
-    ['CPU Pi max', r.maxCpu],
-    ['Latenza p95 max', r.maxLatP95],
+    ['Pi CPU max', r.maxCpu],
+    ['Max p95 latency', r.maxLatP95],
   ];
   rows.innerHTML = data.map(([k,v]) => \`<div class="report-row"><span class="k">\${k}</span><span class="v">\${v}</span></div>\`).join('');
   appendLog({ level: 'info', text: \`Report: sent=\${r.sent} ack=\${r.received} missing=\${r.missing} drop=\${r.drop} cpu=\${r.maxCpu} p95=\${r.maxLatP95}\` });
@@ -679,13 +679,13 @@ function startTest() {
     adminPass:  document.getElementById('cfg-pass').value,
     ramp:       document.getElementById('cfg-ramp').checked,
   };
-  if (!cfg.adminPass) { alert('Inserisci la password admin'); return; }
+  if (!cfg.adminPass) { alert('Enter the admin password'); return; }
   // stop standalone monitor if running
   if (_monitoring) {
     fetch('/monitor/stop', { method: 'POST' });
     _monitoring = false;
     const mb = document.getElementById('btn-monitor');
-    mb.textContent = '📡 Avvia monitoraggio'; mb.classList.remove('active');
+    mb.textContent = '📡 Start monitoring'; mb.classList.remove('active');
   }
   document.getElementById('btn-start').disabled = true;
   document.getElementById('btn-stop').disabled  = false;
@@ -725,7 +725,7 @@ function updateLiveTestConfig() {
   if (nextUsers < runningCfg.users) {
     document.getElementById('cfg-users').value = runningCfg.users;
     document.getElementById('lbl-users').textContent = runningCfg.users;
-    appendLog({ level: 'warn', text: 'Ridurre gli utenti durante il test non è supportato.' });
+    appendLog({ level: 'warn', text: 'Reducing users during a running test is not supported.' });
     return;
   }
 
@@ -753,7 +753,7 @@ function updateLiveTestConfig() {
       document.getElementById('lbl-rate').textContent = d.ratePerMin;
     })
     .catch(() => {
-      appendLog({ level: 'warn', text: 'Aggiornamento live non riuscito.' });
+      appendLog({ level: 'warn', text: 'Live update failed.' });
     });
 }
 
@@ -763,7 +763,7 @@ function toggleMonitor() {
   const user = document.getElementById('cfg-user').value;
   const pass = document.getElementById('cfg-pass').value;
   if (!_monitoring) {
-    if (!pass) { alert('Inserisci la password admin per il monitoraggio'); return; }
+    if (!pass) { alert('Enter the admin password for monitoring'); return; }
     btn.disabled = true;
     btn.textContent = '…';
     fetch('/monitor/start', {
@@ -772,15 +772,15 @@ function toggleMonitor() {
       body: JSON.stringify({ username: user, password: pass })
     }).then(r => r.json()).then(d => {
       btn.disabled = false;
-      if (d.error) { alert(d.error); btn.textContent = '📡 Avvia monitoraggio'; return; }
+      if (d.error) { alert(d.error); btn.textContent = '📡 Start monitoring'; return; }
       _monitoring = true;
-      btn.textContent = '⏹ Ferma monitoraggio';
+      btn.textContent = '⏹ Stop monitoring';
       btn.classList.add('active');
-    }).catch(() => { btn.disabled = false; btn.textContent = '📡 Avvia monitoraggio'; alert('Errore di connessione'); });
+    }).catch(() => { btn.disabled = false; btn.textContent = '📡 Start monitoring'; alert('Connection error'); });
   } else {
     fetch('/monitor/stop', { method: 'POST' });
     _monitoring = false;
-    btn.textContent = '📡 Avvia monitoraggio';
+    btn.textContent = '📡 Start monitoring';
     btn.classList.remove('active');
   }
 }
