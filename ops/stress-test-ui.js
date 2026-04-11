@@ -38,6 +38,7 @@ let monitorInterval = null;
 let rampInterval    = null;
 let adminToken    = null;   // saved after first login, used for fetchPiStats
 let adminUsername = null;
+let monitorOnlyInterval = null;  // polling when no test is running
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function httpReq(url, opts, body) {
@@ -281,6 +282,30 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ ok: true }));
     return;
   }
+  if (req.method === 'POST' && req.url === '/monitor/start') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', async () => {
+      const cfg = JSON.parse(body);
+      if (!adminToken) { adminToken = cfg.token; adminUsername = cfg.username; }
+      if (monitorOnlyInterval) clearInterval(monitorOnlyInterval);
+      monitorOnlyInterval = setInterval(async () => {
+        if (testRunning) { clearInterval(monitorOnlyInterval); monitorOnlyInterval = null; return; }
+        const pi = await fetchPiStats();
+        if (pi) pushEvent('stats', { sent: 0, received: 0, workers: 0, p95: null, cpu: pi.cpu, ram: pi.ramUsed, load: pi.loadAvg, t: 0, monitorOnly: true });
+      }, 1000);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+    });
+    return;
+  }
+  if (req.method === 'POST' && req.url === '/monitor/stop') {
+    if (monitorOnlyInterval) { clearInterval(monitorOnlyInterval); monitorOnlyInterval = null; }
+    adminToken = null; adminUsername = null;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
   res.writeHead(404); res.end();
 });
 
@@ -329,6 +354,8 @@ const HTML = `<!DOCTYPE html>
   .btn-primary { background: var(--primary); color: #000; }
   .btn-danger  { background: var(--danger); color: #fff; }
   .btn-ghost   { background: rgba(255,255,255,.06); color: var(--ink); border: 1px solid var(--border); }
+  .btn-monitor { background: rgba(255,255,255,.07); color: var(--ink); border: 1px solid var(--border); width: 100%; }
+  .btn-monitor.active { background: rgba(52,211,153,.15); color: #34d399; border-color: rgba(52,211,153,.4); }
   .actions { display: flex; gap: 10px; margin-top: 16px; }
   .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 14px; }
   @media (max-width: 600px) { .stat-grid { grid-template-columns: repeat(2,1fr); } }
@@ -399,6 +426,9 @@ const HTML = `<!DOCTYPE html>
         <div class="actions">
           <button class="btn btn-primary" id="btn-start" onclick="startTest()">▶ Avvia test</button>
           <button class="btn btn-danger" id="btn-stop" onclick="stopTest()" disabled>■ Stop</button>
+        </div>
+        <div class="actions" style="margin-top:8px">
+          <button class="btn btn-monitor" id="btn-monitor" onclick="toggleMonitor()">📡 Avvia monitoraggio</button>
         </div>
       </div>
 
@@ -559,6 +589,13 @@ function startTest() {
     ramp:       document.getElementById('cfg-ramp').checked,
   };
   if (!cfg.adminPass) { alert('Inserisci la password admin'); return; }
+  // stop standalone monitor if running
+  if (_monitoring) {
+    fetch('/monitor/stop', { method: 'POST' });
+    _monitoring = false;
+    const mb = document.getElementById('btn-monitor');
+    mb.textContent = '📡 Avvia monitoraggio'; mb.classList.remove('active');
+  }
   document.getElementById('btn-start').disabled = true;
   document.getElementById('btn-stop').disabled  = false;
   document.getElementById('status-badge').className = 'badge badge-running';
@@ -575,6 +612,37 @@ function stopTest() {
   fetch('/stop', { method: 'POST' });
   document.getElementById('btn-start').disabled = false;
   document.getElementById('btn-stop').disabled  = true;
+}
+
+let _monitoring = false;
+function toggleMonitor() {
+  const btn = document.getElementById('btn-monitor');
+  const user = document.getElementById('cfg-user').value;
+  const pass = document.getElementById('cfg-pass').value;
+  if (!_monitoring) {
+    if (!pass) { alert('Inserisci la password admin per il monitoraggio'); return; }
+    // login then start monitor
+    fetch('${TARGET}/chat/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user, password: pass })
+    }).then(r => r.json()).then(d => {
+      if (!d.token) { alert('Login fallito: ' + (d.error || 'errore')); return; }
+      fetch('/monitor/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user, token: d.token })
+      });
+      _monitoring = true;
+      btn.textContent = '⏹ Ferma monitoraggio';
+      btn.classList.add('active');
+    }).catch(() => alert('Errore di connessione'));
+  } else {
+    fetch('/monitor/stop', { method: 'POST' });
+    _monitoring = false;
+    btn.textContent = '📡 Avvia monitoraggio';
+    btn.classList.remove('active');
+  }
 }
 </script>
 </body>
