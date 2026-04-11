@@ -2333,7 +2333,7 @@
           </div>
           <div class="console-chart-panel">
             <div class="console-chart-head">
-              <div class="console-chart-title">Load medio</div>
+              <div class="console-chart-title">Carico CPU (1 min)</div>
               <div class="console-chart-value" id="chart-load-value">--</div>
             </div>
             <svg class="console-chart-svg" id="chart-load" viewBox="0 0 320 110" preserveAspectRatio="none"></svg>
@@ -3767,7 +3767,10 @@ function pushConsolePoint(series, value) {
 function formatChartValue(key, value) {
   if (value == null || Number.isNaN(value)) return '--';
   if (key === 'temp') return value.toFixed(1) + ' °C';
-  if (key === 'load') return value.toFixed(2);
+  if (key === 'load') {
+    var cores = window.consoleCpuCount || 0;
+    return value.toFixed(2) + (cores ? (' / ' + cores + ' core') : '');
+  }
   if (key === 'ram') return value.toFixed(0) + '%';
   if (key === 'online') return String(Math.round(value));
   return String(value);
@@ -3795,9 +3798,23 @@ function renderConsoleChart(key, color) {
   var values = points.map(function(point) { return point.v; });
   var min = Math.min.apply(null, values);
   var max = Math.max.apply(null, values);
+  var isFlatSeries = min === max;
   if (min === max) {
-    min -= 1;
-    max += 1;
+    var flatValue = min;
+    if (key === 'load') {
+      min = 0;
+      max = Math.max(1, flatValue * 1.25);
+    } else if (key === 'online') {
+      min = 0;
+      max = Math.max(1, flatValue);
+    } else if (key === 'ram') {
+      min = Math.max(0, flatValue - 5);
+      max = Math.min(100, flatValue + 5);
+      if (min === max) max = Math.min(100, min + 1);
+    } else {
+      min = flatValue - 1;
+      max = flatValue + 1;
+    }
   }
 
   function getX(index) {
@@ -3824,8 +3841,8 @@ function renderConsoleChart(key, color) {
     '<circle class="dot" cx="' + getX(points.length - 1).toFixed(1) + '" cy="' + getY(latest.v).toFixed(1) + '" r="4" stroke="' + color + '"></circle>';
 
   if (currentEl) currentEl.textContent = formatChartValue(key, latest.v);
-  if (minEl) minEl.textContent = 'min ' + formatChartValue(key, min);
-  if (maxEl) maxEl.textContent = 'max ' + formatChartValue(key, max);
+  if (minEl) minEl.textContent = isFlatSeries ? ('stabile ' + formatChartValue(key, latest.v)) : ('min ' + formatChartValue(key, min));
+  if (maxEl) maxEl.textContent = isFlatSeries ? 'ultimo valore' : ('max ' + formatChartValue(key, max));
 }
 
 function updateConsoleCharts(data) {
@@ -3873,6 +3890,7 @@ async function loadConsoleData() {
     }
     if (!res.ok) throw new Error('Console non disponibile');
     var data = await res.json();
+    window.consoleCpuCount = Number(data.raspberry.cpuCount || 0);
 
     var raspberry = document.getElementById('raspberry-stats');
     var chat = document.getElementById('chat-stats');
