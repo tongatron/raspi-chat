@@ -786,7 +786,10 @@ function broadcastToRoom(roomId, msg) {
     if (client.ws.readyState === 1) client.ws.send(raw);
   }
 }
-function broadcastOnline(roomId) { broadcastToRoom(roomId, { type: 'online', users: onlineUsers(roomId), roomId }); }
+function broadcastOnline(roomId) {
+  const members = stmts.listRoomMembers.all(roomId).map(r => r.username);
+  broadcastToRoom(roomId, { type: 'online', users: onlineUsers(roomId), members, roomId });
+}
 function notifyUnread(roomId, roomName, senderUsername) {
   const members = stmts.listRoomMembers.all(roomId).map(r => r.username);
   const note = JSON.stringify({ type: 'unread', roomId, roomName, from: senderUsername });

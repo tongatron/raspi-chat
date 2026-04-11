@@ -587,7 +587,7 @@
     }
     .header-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
     header h2 { font-size: 1.16rem; letter-spacing: -.03em; }
-    .header-presence { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .header-presence { display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap; }
     .presence-dot {
       width: 10px;
       height: 10px;
@@ -597,15 +597,29 @@
       animation: pulseDot 2.4s ease infinite;
       flex-shrink: 0;
     }
-    #online-list {
-      font-size: .82rem;
-      color: var(--muted);
+    .member-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .78rem;
       font-weight: 700;
+      color: var(--muted);
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
-    #online-list:empty::before { content: "Connessione in corso"; }
+    .member-chip.online { color: var(--ink); }
+    .member-chip-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: rgba(255,255,255,.2);
+    }
+    .member-chip.online .member-chip-dot {
+      background: var(--success);
+      box-shadow: 0 0 0 3px rgba(38,162,105,.18);
+      animation: pulseDot 2.4s ease infinite;
+    }
+    #online-list:empty::before { content: "Connessione in corso"; font-size:.78rem; color:var(--muted); }
     .header-actions {
       display: flex;
       align-items: center;
@@ -761,19 +775,20 @@
       flex-shrink: 0;
     }
     #settings-btn {
-      width: 54px;
-      height: 54px;
-      border-radius: 6px;
-      font-size: 1.85rem;
-      font-weight: 700;
-      background: rgba(31,111,210,.14);
-      color: var(--primary-strong);
-      box-shadow: 0 10px 22px rgba(31,111,210,.14);
+      width: 42px;
+      height: 42px;
+      border-radius: 4px;
+      font-size: 1.4rem;
+      background: transparent;
+      color: rgba(255,255,255,.75);
+      box-shadow: none;
+      border: none;
     }
     #settings-btn:hover {
-      background: rgba(31,111,210,.22);
-      color: var(--primary-strong);
-      box-shadow: 0 14px 28px rgba(31,111,210,.20);
+      background: rgba(255,255,255,.08);
+      color: #ffffff;
+      box-shadow: none;
+      transform: rotate(22deg);
     }
     /* Messages */
     #chat-main-view { display: contents; }
@@ -2236,10 +2251,7 @@
       </div>
       <div class="header-copy">
         <h2>Chat</h2>
-        <div class="header-presence">
-          <span class="presence-dot"></span>
-          <span id="online-list"></span>
-        </div>
+        <div class="header-presence" id="online-list"></div>
       </div>
     </div>
     <div class="header-actions">
@@ -2666,7 +2678,7 @@ function resetSessionUi() {
   document.getElementById('pwd-input').value = '';
   document.getElementById('login-error').textContent = '';
   document.querySelector('header h2').textContent = 'Chat';
-  document.getElementById('online-list').textContent = '';
+  document.getElementById('online-list').innerHTML = '';
   renderLoginUsers([]);
   loadLoginUsers();
 }
@@ -3111,7 +3123,7 @@ function handleMsg(msg) {
     scrollBottom();
     if (unreadIds.length && ws.readyState === 1) ws.send(JSON.stringify({ type: 'read', ids: unreadIds }));
   }
-  else if (msg.type === 'online') { updateOnline(msg.users); }
+  else if (msg.type === 'online') { updateOnline(msg.users, msg.members); }
   else if (msg.type === 'message') {
     if (msg.id && msgElements[msg.id]) return;
     document.getElementById('messages').appendChild(buildMessage(msg));
@@ -3226,7 +3238,18 @@ function buildMessage(msg) {
   return wrap;
 }
 
-function updateOnline(users) { document.getElementById('online-list').textContent = users.length ? users.join(', ') : ''; }
+function updateOnline(users, members) {
+  var el = document.getElementById('online-list');
+  if (!el) return;
+  var onlineSet = new Set(users);
+  var all = members && members.length ? members : users;
+  if (!all.length) { el.innerHTML = ''; return; }
+  el.innerHTML = all.map(function(u) {
+    var isOnline = onlineSet.has(u);
+    return '<span class="member-chip' + (isOnline ? ' online' : '') + '">' +
+      '<span class="member-chip-dot"></span>' + u + '</span>';
+  }).join('');
+}
 
 function scrollBottom() { var m = document.getElementById('messages'); m.scrollTop = m.scrollHeight; }
 
