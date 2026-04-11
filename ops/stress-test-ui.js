@@ -36,7 +36,8 @@ let testWorkers = [];   // { username, token, ws, sent, errors, latencies }
 let testStats   = { sent: 0, received: 0, errors: 0, latencies: [], startedAt: null, series: [] };
 let monitorInterval = null;
 let rampInterval    = null;
-let adminToken  = null;   // saved after first login, used for fetchPiStats
+let adminToken    = null;   // saved after first login, used for fetchPiStats
+let adminUsername = null;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function httpReq(url, opts, body) {
@@ -78,11 +79,14 @@ function openWs(token, roomId, onMsg) {
 }
 
 async function fetchPiStats() {
-  if (!adminToken) return null;
+  if (!adminToken || !adminUsername) return null;
   try {
     const r = await httpReq(`${TARGET}/chat/console/data`, {
       method: 'GET',
-      headers: { Authorization: `Bearer ${adminToken}` }
+      headers: {
+        'x-chat-username': adminUsername,
+        'x-chat-token':    adminToken,
+      }
     });
     if (r.status === 200) {
       const d = r.body;
@@ -172,7 +176,7 @@ async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePe
   try {
     // Try login directly first
     token = await login(adminUser || username, adminPass || password);
-    if (!adminToken) adminToken = token;   // save for fetchPiStats
+    if (!adminToken) { adminToken = token; adminUsername = adminUser || username; } // save for fetchPiStats
   } catch(e) {
     pushEvent('log', { level: 'warn', text: `Login fallito per ${username}: ${e.message}` });
     testStats.errors++;
@@ -212,6 +216,7 @@ function stopTest(reason) {
   if (!testRunning) return;
   testRunning = false;
   adminToken = null;
+  adminUsername = null;
   clearInterval(monitorInterval);
   clearInterval(rampInterval);
 
