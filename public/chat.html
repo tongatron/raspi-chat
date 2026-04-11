@@ -2457,7 +2457,7 @@
 
 <script>
 var WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/chat/ws';
-var ws, myName, myToken, pendingImageUrl = null, swReg = null;
+var ws, myName, myToken, pendingImageUrl = null, swReg = null, reconnectTimer = null;
 var msgElements = {}; // id -> { wrap, statusEl }
 
 // Reply state
@@ -2616,6 +2616,10 @@ function resetSessionUi() {
   if (ws) {
     try { ws.onclose = null; ws.close(); } catch (e) {}
     ws = null;
+  }
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
   }
   document.getElementById('chat').style.display = 'none';
   document.getElementById('onboarding').style.display = 'none';
@@ -2984,10 +2988,22 @@ async function initPush() {
 
 // WebSocket
 function connect() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
   ws = new WebSocket(WS_URL);
   ws.onopen = function() { ws.send(JSON.stringify({ type: 'join', username: myName, token: myToken, roomId: currentRoomId })); };
   ws.onmessage = function(e) { handleMsg(JSON.parse(e.data)); };
-  ws.onclose = function() { setTimeout(connect, 2000); };
+  ws.onclose = function() {
+    ws = null;
+    if (!myName || !myToken) return;
+    reconnectTimer = setTimeout(function() {
+      reconnectTimer = null;
+      connect();
+    }, 2000);
+  };
 }
 
 function handleMsg(msg) {
@@ -3028,6 +3044,7 @@ function handleMsg(msg) {
   }
   else if (msg.type === 'online') { updateOnline(msg.users); }
   else if (msg.type === 'message') {
+    if (msg.id && msgElements[msg.id]) return;
     document.getElementById('messages').appendChild(buildMessage(msg));
     trackTimestamp(msg.timestamp);
     scrollBottom();
@@ -3504,7 +3521,9 @@ function selectRoom(roomId, fromFreshData) {
   document.getElementById('messages').innerHTML = '<div id="typing-indicator"></div>';
   msgElements = {};
   if (ws && ws.readyState <= 1) {
-    try { ws.close(); } catch (e) {}
+    try { ws.onclose = null; ws.close(); } catch (e) {}
+    ws = null;
+    connect();
   } else {
     connect();
   }
