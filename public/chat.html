@@ -670,6 +670,32 @@
       background: var(--primary-soft);
       color: var(--primary-strong);
     }
+    #user-rooms-btn { position: relative; gap: 6px; }
+    #rooms-unread-dot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: #e53e3e;
+      color: #fff;
+      font-size: .72rem;
+      font-weight: 800;
+      line-height: 1;
+      animation: pulseDot 2.4s ease infinite;
+    }
+    .room-unread-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #e53e3e;
+      flex-shrink: 0;
+      display: inline-block;
+      margin-left: auto;
+      box-shadow: 0 0 0 3px rgba(229,62,62,.18);
+    }
     #settings-menu, #user-rooms-menu {
       display: none;
       position: absolute;
@@ -2696,7 +2722,16 @@ function renderUserRoomsMenu() {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.setAttribute('role', 'menuitem');
-    btn.textContent = room.id === currentRoomId ? (room.name + ' \u2022 Attiva') : room.name;
+    btn.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;';
+    var label = document.createElement('span');
+    label.textContent = room.id === currentRoomId ? (room.name + ' \u2022') : room.name;
+    if (room.id === currentRoomId) label.style.color = 'var(--primary)';
+    btn.appendChild(label);
+    if (unreadRooms[room.id]) {
+      var dot = document.createElement('span');
+      dot.className = 'room-unread-dot';
+      btn.appendChild(dot);
+    }
     btn.onclick = function(e) {
       e.stopPropagation();
       menu.classList.remove('open');
@@ -3097,6 +3132,7 @@ function handleMsg(msg) {
   else if (msg.type === 'unread') {
     unreadRooms[msg.roomId] = true;
     updateUnreadBadge();
+    renderUserRoomsMenu();
   }
   else if (msg.type === 'deleted') {
     var entry = msgElements[msg.id];
