@@ -122,7 +122,7 @@ async function startTest(cfg) {
   testStats   = { sent: 0, received: 0, errors: 0, latencies: [], startedAt: Date.now(), series: [], cfg: { ...cfg } };
   pushEvent('log', { level: 'info', text: `▶ Starting test — ${users} users, ${ratePerMin} msg/min, ${duration}s` });
 
-  // Login utenti
+  // User login
   const startUsers = ramp ? Math.max(1, Math.floor(users / 4)) : users;
   for (let i = 0; i < startUsers; i++) {
     await spawnWorker(i, { adminUser, adminPass, testPass, roomId, ratePerMin });
@@ -146,7 +146,7 @@ async function startTest(cfg) {
   }
 
   let serverDownCount = 0;
-  // Monitor stats ogni secondo
+  // Monitor stats every second
   monitorInterval = setInterval(async () => {
     const now = Date.now();
     const elapsed = Math.round((now - testStats.startedAt) / 1000);
@@ -233,7 +233,7 @@ async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePe
 
   // Start sending after WS is open
   worker.ws.on('open', () => {
-    pushEvent('log', { level: 'info', text: `✓ Worker ${idx} connesso` });
+    pushEvent('log', { level: 'info', text: `✓ Worker ${idx} connected` });
     scheduleWorker(worker, ratePerMin);
   });
 

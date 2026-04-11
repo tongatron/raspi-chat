@@ -2398,7 +2398,7 @@
             <svg class="console-chart-svg" id="chart-temp" viewBox="0 0 320 110" preserveAspectRatio="none"></svg>
             <div class="console-chart-meta">
               <span id="chart-temp-min">--</span>
-              <span>ultimi 5 minuti</span>
+              <span>last 5 minutes</span>
               <span id="chart-temp-max">--</span>
             </div>
           </div>
@@ -2627,7 +2627,7 @@ window.addEventListener('focus', clearUnread);
 function startReply(msg) {
   replyTo = msg;
   document.getElementById('reply-bar-name').textContent = msg.username;
-  document.getElementById('reply-bar-text').textContent = (msg.imageUrl && !msg.text) ? '📎 Immagine' : (msg.text || '');
+  document.getElementById('reply-bar-text').textContent = (msg.imageUrl && !msg.text) ? '📎 Image' : (msg.text || '');
   document.getElementById('reply-bar').style.display = 'flex';
   document.getElementById('msg-input').focus();
 }

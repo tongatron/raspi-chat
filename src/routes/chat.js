@@ -737,7 +737,7 @@ async function buildYoutubePreview(url) {
   const fallback = {
     url,
     siteName: 'YouTube',
-    title: 'Video YouTube',
+    title: 'YouTube video',
     description: null,
     image: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
     favicon: 'https://www.youtube.com/s/desktop/fe6f5d8b/img/logos/favicon_32x32.png',
@@ -755,7 +755,7 @@ async function buildYoutubePreview(url) {
       url,
       siteName: 'YouTube',
       title: String(data.title || fallback.title).trim() || fallback.title,
-      description: data.author_name ? `Canale: ${String(data.author_name).trim()}` : null,
+      description: data.author_name ? `Channel: ${String(data.author_name).trim()}` : null,
       image: data.thumbnail_url || fallback.image,
       favicon: fallback.favicon,
     };
@@ -817,13 +817,13 @@ async function sendWebPush(msg, senderUsername, roomId) {
   const roomName = roomRow ? roomRow.name : 'Chat';
   const payload = JSON.stringify({
     title: `${msg.username} · ${roomName}`,
-    body: msg.text ? msg.text.slice(0, 100) : '📎 Immagine',
+    body: msg.text ? msg.text.slice(0, 100) : '📎 Image',
     url: '/chat'
   });
   for (const [username, sub] of pushSubs) {
     if (username === senderUsername) continue;       // non mandare al mittente
-    if (!members.has(username)) continue;            // solo membri della stanza
-    if (activeInRoom.has(username)) continue;        // già connesso in questa stanza
+    if (!members.has(username)) continue;            // room members only
+    if (activeInRoom.has(username)) continue;        // already connected in this room
     try {
       await webpush.sendNotification(sub, payload);
       console.log(`[Push] WebPush sent to ${username} for room ${roomId}`);
@@ -1381,7 +1381,7 @@ async function chatRoutes(app) {
     const access = requireRoomMember(request, reply, roomId, user);
     if (!access) return;
     const { before } = request.query;
-    if (!before) return reply.code(400).send({ error: 'before richiesto' });
+    if (!before) return reply.code(400).send({ error: 'before is required' });
     const limit = Math.min(parseInt(request.query.limit) || 50, 100);
     const rows = stmts.getPage.all(roomId, before, limit);
     return rows.reverse().map(formatRow);

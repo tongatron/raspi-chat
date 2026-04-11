@@ -497,7 +497,7 @@
 
     async function loadState() {
       var response = await fetch('/setup/state', { cache: 'no-store' });
-      if (!response.ok) throw new Error('Impossibile leggere lo stato setup');
+      if (!response.ok) throw new Error('Unable to read setup state');
       state = await response.json();
       if (!state.setupMode) {
         location.href = '/chat';
@@ -505,7 +505,7 @@
       }
       renderChecks();
       var defaults = state.defaults;
-      qs('chat-name').value = defaults.chatName || 'Cabras Chat';
+      qs('chat-name').value = defaults.chatName || 'Raspi Chat';
       qs('network-mode').value = defaults.networkMode || 'lan';
       qs('app-host').value = defaults.host || '127.0.0.1';
       qs('app-port').value = defaults.port || 3000;

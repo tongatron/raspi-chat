@@ -1,5 +1,5 @@
 [Unit]
-Description=Cabras Chat
+Description=Raspi Chat
 After=network.target
 
 [Service]
