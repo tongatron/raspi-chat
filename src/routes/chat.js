@@ -1431,6 +1431,32 @@ async function chatRoutes(app) {
   });
 
 
+  // ── Backup / Restore ─────────────────────────────────────────────────────
+  app.get('/chat/admin/backup', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user || user.role !== 'admin') return reply.code(403).send({ error: 'Forbidden' });
+    const date = new Date().toISOString().slice(0, 10);
+    reply.header('Content-Disposition', `attachment; filename="chat-backup-${date}.db"`);
+    reply.header('Content-Type', 'application/octet-stream');
+    reply.header('Cache-Control', 'no-store');
+    return reply.send(fs.createReadStream(DB_PATH));
+  });
+
+  app.post('/chat/admin/restore', { config: { rawBody: true } }, async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user || user.role !== 'admin') return reply.code(403).send({ error: 'Forbidden' });
+    const data = request.rawBody;
+    if (!data || data.length < 1024) return reply.code(400).send({ error: 'File non valido' });
+    // Check SQLite magic bytes
+    const magic = data.slice(0, 16).toString('utf8');
+    if (!magic.startsWith('SQLite format 3')) return reply.code(400).send({ error: 'Non è un database SQLite valido' });
+    const backupPath = DB_PATH + '.bak';
+    fs.copyFileSync(DB_PATH, backupPath);
+    fs.writeFileSync(DB_PATH, data);
+    reply.send({ ok: true, message: 'Database ripristinato. Riavvio in corso...' });
+    setTimeout(() => process.exit(0), 500);
+  });
+
   const BACKGROUNDS_DIR = path.join(process.cwd(), 'public', 'backgrounds');
   fs.mkdirSync(BACKGROUNDS_DIR, { recursive: true });
 

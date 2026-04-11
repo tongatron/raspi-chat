@@ -1840,13 +1840,26 @@
       flex-wrap: wrap;
     }
     #admin-invite-btn,
-    #admin-copy-invite-btn {
+    #admin-copy-invite-btn,
+    #admin-backup-btn,
+    .btn-like {
       border: none;
       border-radius: 4px;
       padding: 10px 14px;
       font: inherit;
+      font-size: .88rem;
       font-weight: 700;
       cursor: pointer;
+      display: inline-block;
+    }
+    #admin-backup-btn {
+      background: rgba(15,34,59,.06);
+      color: var(--ink);
+    }
+    .btn-like {
+      background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+      color: white;
+      box-shadow: 0 14px 24px rgba(31,111,210,.18);
     }
     #admin-invite-btn {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
@@ -2470,6 +2483,17 @@
         </div>
         <input id="admin-invite-link" class="admin-invite-link" type="text" readonly placeholder="Il link comparira' qui" />
         <div class="admin-invite-meta" id="admin-invite-meta">Il link e' pensato per un solo utilizzo.</div>
+        <div class="admin-divider"></div>
+        <h3>Backup &amp; Ripristino</h3>
+        <div class="admin-copy">Scarica una copia del database o ripristina da un backup precedente. Il ripristino sovrascrive tutti i dati attuali e riavvia il server.</div>
+        <div class="admin-invite-actions">
+          <button id="admin-backup-btn" type="button">⬇ Scarica backup</button>
+          <label id="admin-restore-label" style="cursor:pointer;">
+            <input id="admin-restore-input" type="file" accept=".db" style="display:none" />
+            <span id="admin-restore-btn" class="btn-like">⬆ Ripristina da file</span>
+          </label>
+        </div>
+        <div class="admin-status" id="admin-backup-status"></div>
       </div>
     </div>
   </section>
@@ -4083,6 +4107,47 @@ document.getElementById('admin-delete-btn').onclick = function() {
 };
 document.getElementById('admin-invite-btn').onclick = createInvite;
 document.getElementById('admin-copy-invite-btn').onclick = copyInviteLink;
+
+document.getElementById('admin-backup-btn').onclick = function() {
+  var a = document.createElement('a');
+  a.href = '/chat/admin/backup';
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
+document.getElementById('admin-restore-input').onchange = async function() {
+  var file = this.files[0];
+  if (!file) return;
+  var status = document.getElementById('admin-backup-status');
+  if (!confirm('Sei sicuro? Questa operazione sovrascrive tutti i dati attuali e riavvia il server.')) {
+    this.value = '';
+    return;
+  }
+  status.textContent = 'Caricamento in corso...';
+  status.style.color = 'var(--muted)';
+  try {
+    var buf = await file.arrayBuffer();
+    var res = await authFetch('/chat/admin/restore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: buf
+    });
+    var data = await res.json();
+    if (res.ok) {
+      status.textContent = '✓ ' + data.message;
+      status.style.color = 'var(--success)';
+    } else {
+      status.textContent = '✗ ' + (data.error || 'Errore');
+      status.style.color = '#e53e3e';
+    }
+  } catch(e) {
+    status.textContent = '✗ Errore durante il caricamento';
+    status.style.color = '#e53e3e';
+  }
+  this.value = '';
+};
 document.getElementById('room-create-btn').onclick = createRoom;
 document.getElementById('room-rename-btn').onclick = renameRoom;
 document.getElementById('room-invite-btn').onclick = inviteUsersToRoom;
