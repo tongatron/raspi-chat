@@ -2494,6 +2494,14 @@
           </label>
         </div>
         <div class="admin-status" id="admin-backup-status"></div>
+        <div class="admin-divider"></div>
+        <h3>Messaggio a tutte le stanze</h3>
+        <div class="admin-copy">Invia un messaggio a nome tuo in tutte le stanze contemporaneamente.</div>
+        <textarea id="admin-broadcast-text" class="admin-invite-link" rows="3" placeholder="Scrivi il messaggio…" style="resize:vertical; height:72px; font-family:inherit;"></textarea>
+        <div class="admin-invite-actions" style="margin-top:8px;">
+          <button id="admin-broadcast-btn" type="button">📢 Invia a tutte le stanze</button>
+        </div>
+        <div class="admin-status" id="admin-broadcast-status"></div>
       </div>
     </div>
   </section>
@@ -4148,6 +4156,39 @@ document.getElementById('admin-restore-input').onchange = async function() {
   }
   this.value = '';
 };
+document.getElementById('admin-broadcast-btn').onclick = async function() {
+  var text = document.getElementById('admin-broadcast-text').value.trim();
+  var status = document.getElementById('admin-broadcast-status');
+  if (!text) {
+    status.textContent = 'Scrivi un messaggio prima di inviare.';
+    status.style.color = '#e53e3e';
+    return;
+  }
+  this.disabled = true;
+  status.textContent = 'Invio in corso…';
+  status.style.color = 'var(--muted)';
+  try {
+    var res = await authFetch('/chat/admin/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    var data = await res.json();
+    if (res.ok) {
+      status.textContent = '✓ Messaggio inviato a ' + data.rooms + ' stanz' + (data.rooms === 1 ? 'a' : 'e') + '.';
+      status.style.color = 'var(--success)';
+      document.getElementById('admin-broadcast-text').value = '';
+    } else {
+      status.textContent = '✗ ' + (data.error || 'Errore');
+      status.style.color = '#e53e3e';
+    }
+  } catch(e) {
+    status.textContent = '✗ Errore di rete';
+    status.style.color = '#e53e3e';
+  }
+  this.disabled = false;
+};
+
 document.getElementById('room-create-btn').onclick = createRoom;
 document.getElementById('room-rename-btn').onclick = renameRoom;
 document.getElementById('room-invite-btn').onclick = inviteUsersToRoom;

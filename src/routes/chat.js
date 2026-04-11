@@ -1457,6 +1457,35 @@ async function chatRoutes(app) {
     setTimeout(() => process.exit(0), 500);
   });
 
+  // ── Broadcast to all rooms ────────────────────────────────────────────────
+  app.post('/chat/admin/broadcast', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user || user.role !== 'admin') return reply.code(403).send({ error: 'Forbidden' });
+    const { text } = request.body || {};
+    if (!text || !text.trim()) return reply.code(400).send({ error: 'Testo vuoto' });
+    const allRooms = db.prepare('SELECT id FROM rooms').all();
+    const now = new Date().toISOString();
+    let count = 0;
+    for (const room of allRooms) {
+      const out = {
+        type: 'message',
+        id: crypto.randomUUID(),
+        roomId: room.id,
+        username: user.username,
+        text: text.trim(),
+        imageUrl: null,
+        timestamp: now,
+        readBy: [],
+        replyTo: null,
+        broadcast: true,
+      };
+      stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, null);
+      broadcastToRoom(room.id, out);
+      count++;
+    }
+    return { ok: true, rooms: count };
+  });
+
   const BACKGROUNDS_DIR = path.join(process.cwd(), 'public', 'backgrounds');
   fs.mkdirSync(BACKGROUNDS_DIR, { recursive: true });
 
