@@ -142,6 +142,7 @@ async function startTest(cfg) {
     }, 20000);
   }
 
+  let serverDownCount = 0;
   // Monitor stats ogni secondo
   monitorInterval = setInterval(async () => {
     const now = Date.now();
@@ -150,6 +151,7 @@ async function startTest(cfg) {
     const avgLat = recentLat.length ? Math.round(recentLat.reduce((a,b) => a+b, 0) / recentLat.length) : 0;
     const p95 = recentLat.length ? recentLat.sort((a,b)=>a-b)[Math.floor(recentLat.length * 0.95)] : 0;
     const piStats = await fetchPiStats();
+    if (!piStats) { serverDownCount++; if (serverDownCount >= 3) { pushEvent('log', { level: 'warn', text: '⚠ Server non raggiungibile — test interrotto automaticamente' }); stopTest('server-down'); return; } } else { serverDownCount = 0; }
     const point = {
       t: elapsed,
       sent: testStats.sent,
@@ -459,6 +461,7 @@ const HTML = `<!DOCTYPE html>
         <h2>Note</h2>
         <div style="font-size:.76rem;color:var(--muted);line-height:1.8">
           • Fare backup DB prima di avviare<br>
+          • <b style="color:#f87171">⚠ Fermare il test PRIMA di ripristinare il backup</b> — altrimenti i worker continuano a scrivere nel DB appena ripristinato<br>
           • Il test usa le credenziali admin per simulare N sessioni simultanee<br>
           • <b style="color:var(--warn)">Ramp</b>: parte con ¼ degli utenti, ne aggiunge ogni 20s<br>
           • Il monitor Pi legge <code>/chat/console/data</code> ogni secondo<br>
