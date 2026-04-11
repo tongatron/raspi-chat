@@ -937,6 +937,7 @@ async function chatRoutes(app) {
       ['logo-v3.png', 'image/png'],
       ['logo-v4.png', 'image/png'],
       ['raspinew.png', 'image/png'],
+      ['raspinew-home.png', 'image/png'],
       ['icon.png', 'image/png'],
       ['icon-v2.png', 'image/png'],
       ['icon-192.png', 'image/png'],
