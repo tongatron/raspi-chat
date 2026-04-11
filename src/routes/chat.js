@@ -139,7 +139,22 @@ function normalizeUsername(value) {
 }
 
 function normalizeRole(value) {
-  return String(value || '').trim().toLowerCase() === 'admin' ? 'admin' : 'user';
+  const role = String(value || '').trim().toLowerCase();
+  if (role === 'admin') return 'admin';
+  if (role === 'superuser') return 'superuser';
+  return 'user';
+}
+
+function canManageUsers(user) {
+  return !!user && user.role === 'admin';
+}
+
+function canCreateInvites(user) {
+  return !!user && (user.role === 'admin' || user.role === 'superuser');
+}
+
+function canUseConsole(user) {
+  return !!user && (user.role === 'admin' || user.role === 'superuser');
 }
 
 function normalizeRoomName(value) {
@@ -253,7 +268,33 @@ function requireAdmin(request, reply) {
     reply.code(401).send({ error: 'Non autorizzato' });
     return null;
   }
-  if (user.role !== 'admin') {
+  if (!canManageUsers(user)) {
+    reply.code(403).send({ error: 'Permessi insufficienti' });
+    return null;
+  }
+  return user;
+}
+
+function requireInviteAccess(request, reply) {
+  const user = getAuthenticatedUser(request);
+  if (!user) {
+    reply.code(401).send({ error: 'Non autorizzato' });
+    return null;
+  }
+  if (!canCreateInvites(user)) {
+    reply.code(403).send({ error: 'Permessi insufficienti' });
+    return null;
+  }
+  return user;
+}
+
+function requireConsoleAccess(request, reply) {
+  const user = getAuthenticatedUser(request);
+  if (!user) {
+    reply.code(401).send({ error: 'Non autorizzato' });
+    return null;
+  }
+  if (!canUseConsole(user)) {
     reply.code(403).send({ error: 'Permessi insufficienti' });
     return null;
   }
@@ -359,7 +400,7 @@ const stmts = {
   listUsers:     db.prepare(`
     SELECT username, role
     FROM users
-    ORDER BY CASE role WHEN 'admin' THEN 0 ELSE 1 END, username COLLATE NOCASE ASC
+    ORDER BY CASE role WHEN 'admin' THEN 0 WHEN 'superuser' THEN 1 ELSE 2 END, username COLLATE NOCASE ASC
   `),
   createRoom: db.prepare(`
     INSERT INTO rooms (id, name, created_by, created_at)
@@ -930,7 +971,16 @@ async function chatRoutes(app) {
     if (!crypto.timingSafeEqual(inputHash, storedHash)) return reply.code(401).send({ error: 'Credenziali non valide' });
     const token = generateToken(username);
     setSessionCookie(reply, username, token);
-    return { token, username, role: normalizeRole(user.role), isAdmin: normalizeRole(user.role) === 'admin' };
+    const normalizedRole = normalizeRole(user.role);
+    return {
+      token,
+      username,
+      role: normalizedRole,
+      isAdmin: normalizedRole === 'admin',
+      canManageUsers: normalizedRole === 'admin',
+      canCreateInvites: normalizedRole === 'admin' || normalizedRole === 'superuser',
+      canUseConsole: normalizedRole === 'admin' || normalizedRole === 'superuser',
+    };
   });
 
   app.post('/chat/logout', async (request, reply) => {
@@ -945,8 +995,10 @@ async function chatRoutes(app) {
     return {
       username: user.username,
       role: user.role,
-      isAdmin: user.role === 'admin',
-      canUseConsole: user.role === 'admin',
+      isAdmin: canManageUsers(user),
+      canManageUsers: canManageUsers(user),
+      canCreateInvites: canCreateInvites(user),
+      canUseConsole: canUseConsole(user),
       rooms,
       defaultRoomId: rooms[0]?.id || DEFAULT_ROOM_ID,
     };
@@ -1160,7 +1212,7 @@ async function chatRoutes(app) {
     const role = normalizeRole(request.body?.role);
 
     if (!username) return reply.code(400).send({ error: 'Username mancante' });
-    if (!['admin', 'user'].includes(role)) return reply.code(400).send({ error: 'Ruolo non valido' });
+    if (!['admin', 'superuser', 'user'].includes(role)) return reply.code(400).send({ error: 'Ruolo non valido' });
 
     const existing = stmts.getUser.get(username);
     if (!existing && !password) return reply.code(400).send({ error: 'Password richiesta per il nuovo utente' });
@@ -1202,13 +1254,13 @@ async function chatRoutes(app) {
   });
 
   app.post('/chat/admin/invites', async (request, reply) => {
-    const adminUser = requireAdmin(request, reply);
-    if (!adminUser) return;
+    const user = requireInviteAccess(request, reply);
+    if (!user) return;
 
     const role = normalizeRole(request.body?.role || 'user');
     const token = crypto.randomBytes(24).toString('hex');
     const createdAt = new Date().toISOString();
-    stmts.createInvite.run(token, adminUser.username, role, createdAt);
+    stmts.createInvite.run(token, user.username, role, createdAt);
 
     return {
       ok: true,
@@ -1429,7 +1481,7 @@ async function chatRoutes(app) {
   });
 
   app.get('/chat/console/data', async (request, reply) => {
-    const user = requireAdmin(request, reply);
+    const user = requireConsoleAccess(request, reply);
     if (!user) return;
 
     const memTotal = os.totalmem();

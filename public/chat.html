@@ -2226,11 +2226,11 @@
       <div id="settings-wrap">
         <button id="settings-btn" class="toolbar-btn" type="button" title="Impostazioni" aria-label="Impostazioni">&#x2699;</button>
         <div id="settings-menu" role="menu">
-          <button type="button" data-view="chat" role="menuitem" class="admin-only" style="display:none">Chat</button>
-          <button type="button" data-view="admin" role="menuitem" class="admin-only" style="display:none">Utenti</button>
-          <button type="button" data-view="rooms" role="menuitem" class="admin-only" style="display:none">Stanze</button>
-          <button type="button" data-view="console" role="menuitem" class="admin-only" style="display:none">Console</button>
-          <hr class="menu-sep admin-only" style="display:none" />
+          <button type="button" data-view="chat" role="menuitem" class="manage-users-only" style="display:none">Chat</button>
+          <button type="button" data-view="admin" role="menuitem" id="admin-menu-btn" class="admin-access-only" style="display:none">Utenti</button>
+          <button type="button" data-view="rooms" role="menuitem" class="manage-users-only" style="display:none">Stanze</button>
+          <button type="button" data-view="console" role="menuitem" class="console-access-only" style="display:none">Console</button>
+          <hr class="menu-sep admin-access-only" style="display:none" />
           <button type="button" id="logout-menu-btn" role="menuitem">Esci</button>
         </div>
       </div>
@@ -2389,12 +2389,13 @@
   </section>
   <section id="admin-view">
     <div class="admin-layout">
-      <div class="admin-list">
+      <div class="admin-list manage-users-only">
         <h3>Utenti</h3>
-        <div class="admin-copy">Ruoli disponibili: admin e user. Solo gli admin vedono questa sezione.</div>
+        <div class="admin-copy">Ruoli disponibili: admin, superuser e user. Solo gli admin gestiscono questa sezione.</div>
         <div class="admin-list-body" id="admin-user-list"></div>
       </div>
       <div class="admin-card">
+        <div class="manage-users-only">
         <h3 id="admin-form-title">Crea o modifica utente</h3>
         <div class="admin-copy" id="admin-form-copy">Per aggiornare un utente esistente usa lo stesso username. Lascia la password vuota per mantenerla invariata.</div>
         <div class="admin-form">
@@ -2406,6 +2407,7 @@
             <label for="admin-role">Ruolo</label>
             <select id="admin-role">
               <option value="user">user</option>
+              <option value="superuser">superuser</option>
               <option value="admin">admin</option>
             </select>
           </div>
@@ -2421,8 +2423,9 @@
         </div>
         <div class="admin-status" id="admin-status"></div>
         <div class="admin-divider"></div>
+        </div>
         <h3>Invita utente</h3>
-        <div class="admin-copy">Crea un link monouso con indirizzo casuale. Chi lo apre puo' registrarsi con nome e password.</div>
+        <div class="admin-copy" id="admin-invite-copy">Crea un link monouso con indirizzo casuale. Chi lo apre puo' registrarsi con nome e password.</div>
         <div class="admin-invite-actions">
           <button id="admin-invite-btn" type="button">Crea invito</button>
           <button id="admin-copy-invite-btn" type="button" disabled>Copia link</button>
@@ -2473,6 +2476,9 @@ var unreadCount = 0;
 var currentView = 'chat';
 var myRole = 'user';
 var isAdmin = false;
+var canManageUsers = false;
+var canCreateInvites = false;
+var canUseConsole = false;
 var adminUsersLoading = false;
 var scrollListenerBound = false;
 var latestInviteUrl = '';
@@ -2607,6 +2613,11 @@ function clearStoredAuth() {
 function resetSessionUi() {
   myName = null;
   myToken = null;
+  myRole = 'user';
+  isAdmin = false;
+  canManageUsers = false;
+  canCreateInvites = false;
+  canUseConsole = false;
   roomsCache = [];
   roomUsersCache = [];
   currentRoomId = '';
@@ -2811,17 +2822,19 @@ function renderLoginUsers(users) {
     var name = document.createElement('span');
     name.textContent = user.username;
     head.appendChild(name);
-    if (user.role === 'admin') {
+    if (user.role === 'admin' || user.role === 'superuser') {
       var badge = document.createElement('span');
       badge.className = 'user-badge admin';
-      badge.textContent = 'ADMIN';
+      badge.textContent = user.role === 'admin' ? 'ADMIN' : 'SUPER';
       head.appendChild(badge);
     }
     copy.appendChild(head);
 
     var role = document.createElement('span');
     role.className = 'user-role-copy';
-    role.textContent = user.role === 'admin' ? 'Amministratore' : 'Utente';
+    role.textContent = user.role === 'admin'
+      ? 'Amministratore'
+      : (user.role === 'superuser' ? 'Superuser' : 'Utente');
     copy.appendChild(role);
 
     btn.appendChild(copy);
@@ -2837,6 +2850,7 @@ async function loadLoginUsers() {
   } catch (e) {
     renderLoginUsers([
       { username: 'Giovanni', role: 'admin' },
+      { username: 'Operatore', role: 'superuser' },
       { username: 'Cabras', role: 'user' },
       { username: 'Test', role: 'user' }
     ]);
@@ -2911,6 +2925,9 @@ async function joinAs(name, token) {
   var session = await (await authFetch('/chat/me')).json();
   myRole = session.role || 'user';
   isAdmin = !!session.isAdmin;
+  canManageUsers = !!session.canManageUsers;
+  canCreateInvites = !!session.canCreateInvites;
+  canUseConsole = !!session.canUseConsole;
   roomsCache = session.rooms || [];
   roomUsersCache = [];
   var initialRoom = roomsCache.find(function(room) { return room.id === currentRoomId; }) || roomsCache[0] || null;
@@ -2930,15 +2947,32 @@ function showOnboarding() {
 async function enterChatApp() {
   document.getElementById('onboarding').style.display = 'none';
   document.getElementById('chat').style.display = 'flex';
-  document.querySelectorAll('#settings-menu .admin-only').forEach(function(el) {
-    el.style.display = isAdmin ? '' : 'none';
+  document.querySelectorAll('#settings-menu .manage-users-only').forEach(function(el) {
+    el.style.display = canManageUsers ? '' : 'none';
   });
+  document.querySelectorAll('#settings-menu .console-access-only').forEach(function(el) {
+    el.style.display = canUseConsole ? '' : 'none';
+  });
+  document.querySelectorAll('#settings-menu .admin-access-only').forEach(function(el) {
+    el.style.display = (canManageUsers || canCreateInvites || canUseConsole) ? '' : 'none';
+  });
+  var adminMenuBtn = document.getElementById('admin-menu-btn');
+  if (adminMenuBtn) adminMenuBtn.textContent = canManageUsers ? 'Utenti' : 'Inviti';
+  document.querySelectorAll('.manage-users-only').forEach(function(el) {
+    el.style.display = canManageUsers ? '' : 'none';
+  });
+  var adminInviteCopy = document.getElementById('admin-invite-copy');
+  if (adminInviteCopy) {
+    adminInviteCopy.textContent = canManageUsers
+      ? 'Crea un link monouso con indirizzo casuale. Chi lo apre puo\' registrarsi con nome e password.'
+      : 'Crea un link monouso per invitare un nuovo utente senza accedere alla gestione completa utenti.';
+  }
   document.getElementById('user-rooms-wrap').style.display = 'inline-block';
   renderUserRoomsMenu();
   renderUserRoomsMenu();
   initScrollListener();
   setView('chat');
-  if (isAdmin) await loadRoomsData();
+  if (canManageUsers) await loadRoomsData();
   if (!ws || ws.readyState > 1) connect();
   setTimeout(initPush, 2000);
 }
@@ -3209,9 +3243,9 @@ document.addEventListener('paste', async function(e) {
 
 function setView(view) {
   var nextView = 'chat';
-  if (view === 'rooms' && isAdmin) nextView = 'rooms';
-  if (view === 'console' && isAdmin) nextView = 'console';
-  if (view === 'admin' && isAdmin) nextView = 'admin';
+  if (view === 'rooms' && canManageUsers) nextView = 'rooms';
+  if (view === 'console' && canUseConsole) nextView = 'console';
+  if (view === 'admin' && (canManageUsers || canCreateInvites)) nextView = 'admin';
   if (nextView !== 'console') stopConsoleAutoRefresh();
   currentView = nextView;
   document.body.classList.toggle('subpage-view', nextView !== 'chat');
@@ -3266,7 +3300,10 @@ function renderRoomMemberOptions(targetId, users, selectedNames) {
     checkbox.checked = selectedSet.has(user.username);
     label.appendChild(checkbox);
     var text = document.createElement('span');
-    text.textContent = user.username + (user.role === 'admin' ? ' • admin' : '');
+    text.textContent = user.username + (
+      user.role === 'admin' ? ' • admin' :
+      (user.role === 'superuser' ? ' • superuser' : '')
+    );
     label.appendChild(text);
     target.appendChild(label);
   });
@@ -3559,13 +3596,13 @@ function renderAdminUsers(users, currentUsername) {
 
     var meta = document.createElement('div');
     meta.className = 'admin-user-meta';
-    meta.textContent = user.role + (user.username === currentUsername ? ' • tu' : '');
+    meta.textContent = formatRoleLabel(user.role) + (user.username === currentUsername ? ' • tu' : '');
     main.appendChild(meta);
     item.appendChild(main);
 
     var badge = document.createElement('span');
-    badge.className = 'user-badge' + (user.role === 'admin' ? ' admin' : '');
-    badge.textContent = user.role.toUpperCase();
+    badge.className = 'user-badge' + ((user.role === 'admin' || user.role === 'superuser') ? ' admin' : '');
+    badge.textContent = user.role === 'superuser' ? 'SUPER' : user.role.toUpperCase();
     var actions = document.createElement('div');
     actions.className = 'admin-user-actions';
 
@@ -3590,6 +3627,12 @@ function renderAdminUsers(users, currentUsername) {
 
     list.appendChild(item);
   });
+}
+
+function formatRoleLabel(role) {
+  if (role === 'admin') return 'amministratore';
+  if (role === 'superuser') return 'superuser';
+  return 'utente';
 }
 
 function resetAdminForm() {
@@ -3619,7 +3662,7 @@ function startAdminEdit(user) {
 }
 
 async function loadAdminUsers() {
-  if (!isAdmin || adminUsersLoading) return;
+  if (!canManageUsers || adminUsersLoading) return;
   adminUsersLoading = true;
   var status = document.getElementById('admin-status');
   try {
@@ -3640,7 +3683,7 @@ async function loadAdminUsers() {
 }
 
 async function saveAdminUser() {
-  if (!isAdmin) return;
+  if (!canManageUsers) return;
   var username = document.getElementById('admin-username').value.trim();
   var role = document.getElementById('admin-role').value;
   var password = document.getElementById('admin-password').value;
@@ -3673,7 +3716,7 @@ async function saveAdminUser() {
 }
 
 async function deleteAdminUser(username) {
-  if (!isAdmin || !username) return;
+  if (!canManageUsers || !username) return;
   var status = document.getElementById('admin-status');
   if (!confirm('Eliminare l\'utente ' + username + '?')) return;
   status.textContent = 'Elimino utente...';
@@ -3705,7 +3748,7 @@ function stopConsoleAutoRefresh() {
 }
 
 function startConsoleAutoRefresh() {
-  if (!isAdmin || currentView !== 'console' || consoleAutoRefresh) return;
+  if (!canUseConsole || currentView !== 'console' || consoleAutoRefresh) return;
   consoleAutoRefresh = setInterval(function() {
     if (currentView !== 'console') {
       stopConsoleAutoRefresh();
@@ -3816,7 +3859,7 @@ function addConsoleRow(target, label, value, klass) {
 }
 
 async function loadConsoleData() {
-  if (!isAdmin || consoleLoading) return;
+  if (!canUseConsole || consoleLoading) return;
   consoleLoading = true;
   var status = document.getElementById('console-status-line');
   var grid = document.getElementById('console-grid');
@@ -3883,7 +3926,7 @@ function renderInvite(invite) {
 }
 
 async function createInvite() {
-  if (!isAdmin) return;
+  if (!canCreateInvites) return;
   var button = document.getElementById('admin-invite-btn');
   var copyBtn = document.getElementById('admin-copy-invite-btn');
   var meta = document.getElementById('admin-invite-meta');
@@ -3937,14 +3980,16 @@ document.getElementById('user-rooms-btn').onclick = function(e) {
 document.querySelectorAll('#settings-menu button[data-view]').forEach(function(btn) {
   btn.onclick = function(e) {
     e.stopPropagation();
-    if (!isAdmin) return;
     var view = btn.getAttribute('data-view');
+    if (view === 'admin' && !(canManageUsers || canCreateInvites)) return;
+    if (view === 'console' && !canUseConsole) return;
+    if (view === 'rooms' && !canManageUsers) return;
     document.getElementById('settings-menu').classList.remove('open');
     var nextView = currentView === view ? 'chat' : view;
     setView(nextView);
     if (nextView === 'console') loadConsoleData();
     else if (nextView === 'rooms') loadRoomsData();
-    else if (nextView === 'admin') loadAdminUsers();
+    else if (nextView === 'admin' && canManageUsers) loadAdminUsers();
   };
 });
 document.addEventListener('click', function(e) {

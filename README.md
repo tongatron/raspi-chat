@@ -151,6 +151,7 @@ Esempio:
 ```json
 [
   { "username": "Giovanni", "password": "change-me-giovanni", "role": "admin" },
+  { "username": "Operatore", "password": "change-me-operatore", "role": "superuser" },
   { "username": "Cabras", "password": "change-me-cabras", "role": "user" }
 ]
 ```
