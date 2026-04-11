@@ -36,6 +36,7 @@ let testWorkers = [];   // { username, token, ws, sent, errors, latencies }
 let testStats   = { sent: 0, received: 0, errors: 0, latencies: [], startedAt: null, series: [] };
 let monitorInterval = null;
 let rampInterval    = null;
+let adminToken  = null;   // saved after first login, used for fetchPiStats
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function httpReq(url, opts, body) {
@@ -77,9 +78,25 @@ function openWs(token, roomId, onMsg) {
 }
 
 async function fetchPiStats() {
+  if (!adminToken) return null;
   try {
-    const r = await httpReq(`${TARGET}/chat/console/data`, { method: 'GET', headers: {} });
-    if (r.status === 200) return r.body;
+    const r = await httpReq(`${TARGET}/chat/console/data`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    if (r.status === 200) {
+      const d = r.body;
+      const mem = d?.raspberry?.memory;
+      const cpuCount = d?.raspberry?.cpuCount || 1;
+      const load1 = d?.raspberry?.loadAvg?.[0] ?? null;
+      return {
+        cpu:     load1 !== null ? Math.min(100, Math.round(load1 / cpuCount * 100)) : null,
+        ramUsed: mem ? Math.round(mem.used / mem.total * 100) : null,
+        loadAvg: load1 !== null ? load1.toFixed(2) : null,
+        ramMB:   mem ? Math.round(mem.used / 1024 / 1024) : null,
+        ramTotalMB: mem ? Math.round(mem.total / 1024 / 1024) : null,
+      };
+    }
   } catch(_) {}
   return null;
 }
@@ -155,6 +172,7 @@ async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePe
   try {
     // Try login directly first
     token = await login(adminUser || username, adminPass || password);
+    if (!adminToken) adminToken = token;   // save for fetchPiStats
   } catch(e) {
     pushEvent('log', { level: 'warn', text: `Login fallito per ${username}: ${e.message}` });
     testStats.errors++;
@@ -193,6 +211,7 @@ async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePe
 function stopTest(reason) {
   if (!testRunning) return;
   testRunning = false;
+  adminToken = null;
   clearInterval(monitorInterval);
   clearInterval(rampInterval);
 
