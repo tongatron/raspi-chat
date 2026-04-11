@@ -10,6 +10,12 @@
 
 Self-hosted web chat designed for Raspberry Pi and small home servers.
 
+<p align="center">
+  <img src="public/assets/screenshot-desktop.png" alt="Raspi Chat desktop" width="480" />
+  &nbsp;&nbsp;
+  <img src="public/assets/screenshot-mobile.png" alt="Raspi Chat mobile" width="200" />
+</p>
+
 The project includes:
 - Node.js/Fastify backend
 - Web/PWA frontend with no framework
