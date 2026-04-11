@@ -4155,8 +4155,15 @@ document.getElementById('admin-restore-input').onchange = async function() {
     });
     var data = await res.json();
     if (res.ok) {
-      status.textContent = '✓ ' + data.message;
       status.style.color = 'var(--success)';
+      var secs = 6;
+      function tick() {
+        status.textContent = '✓ Database ripristinato. Ricarico tra ' + secs + 's…';
+        if (secs <= 0) { location.reload(); return; }
+        secs--;
+        setTimeout(tick, 1000);
+      }
+      tick();
     } else {
       status.textContent = '✗ ' + (data.error || 'Errore');
       status.style.color = '#e53e3e';
