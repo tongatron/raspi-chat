@@ -1,7 +1,7 @@
 # raspi-chat
 
 <p align="center">
-  <img src="public/assets/logo.png" alt="Raspi Chat" width="220" />
+  <img src="public/assets/raspinew-home.png" alt="Raspi Chat" width="320" />
 </p>
 
 Chat web self-hosted pensata per Raspberry Pi e piccoli server domestici.
