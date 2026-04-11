@@ -1460,6 +1460,14 @@ async function chatRoutes(app) {
     setTimeout(() => process.exit(0), 500);
   });
 
+  // ── Purge stress-test messages ───────────────────────────────────────────
+  app.post('/chat/admin/purge-stress', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user || user.role !== 'admin') return reply.code(403).send({ error: 'Forbidden' });
+    const result = db.prepare("DELETE FROM messages WHERE text LIKE '[stress-%'").run();
+    return { ok: true, deleted: result.changes };
+  });
+
   // ── Broadcast to all rooms ────────────────────────────────────────────────
   app.post('/chat/admin/broadcast', async (request, reply) => {
     const user = requireAuthUser(request, reply);

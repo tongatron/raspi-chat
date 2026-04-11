@@ -1867,6 +1867,14 @@
       cursor: default;
       box-shadow: none;
     }
+    #admin-purge-stress-btn {
+      background: rgba(15,34,59,.06);
+      color: var(--ink);
+    }
+    #admin-purge-stress-btn:disabled {
+      opacity: .55;
+      cursor: default;
+    }
     .btn-like {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
       color: white;
@@ -2505,6 +2513,13 @@
           </label>
         </div>
         <div class="admin-status" id="admin-backup-status"></div>
+        <div class="admin-divider"></div>
+        <h3>Pulizia messaggi stress test</h3>
+        <div class="admin-copy">Elimina tutti i messaggi generati dallo stress test (<code>[stress-N]…</code>) da tutte le stanze.</div>
+        <div class="admin-invite-actions">
+          <button id="admin-purge-stress-btn" type="button">🧹 Elimina messaggi stress test</button>
+        </div>
+        <div class="admin-status" id="admin-purge-stress-status"></div>
         <div class="admin-divider"></div>
         <h3>Messaggio a tutte le stanze</h3>
         <div class="admin-copy">Invia un messaggio a nome tuo in tutte le stanze contemporaneamente.</div>
@@ -4174,6 +4189,29 @@ document.getElementById('admin-restore-input').onchange = async function() {
   }
   this.value = '';
 };
+document.getElementById('admin-purge-stress-btn').onclick = async function() {
+  var status = document.getElementById('admin-purge-stress-status');
+  if (!confirm('Eliminare tutti i messaggi [stress-N] da tutte le stanze?')) return;
+  this.disabled = true;
+  status.textContent = 'Eliminazione in corso…';
+  status.style.color = 'var(--muted)';
+  try {
+    var res = await authFetch('/chat/admin/purge-stress', { method: 'POST' });
+    var data = await res.json();
+    if (res.ok) {
+      status.textContent = '✓ Eliminati ' + data.deleted + ' messagg' + (data.deleted === 1 ? 'io' : 'i') + '.';
+      status.style.color = 'var(--success)';
+    } else {
+      status.textContent = '✗ ' + (data.error || 'Errore');
+      status.style.color = '#e53e3e';
+    }
+  } catch(e) {
+    status.textContent = '✗ Errore di rete';
+    status.style.color = '#e53e3e';
+  }
+  this.disabled = false;
+};
+
 document.getElementById('admin-broadcast-btn').onclick = async function() {
   var text = document.getElementById('admin-broadcast-text').value.trim();
   var status = document.getElementById('admin-broadcast-status');
