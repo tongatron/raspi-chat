@@ -185,11 +185,18 @@ async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePe
   }
 
   const intervalMs = Math.round(60000 / Math.max(1, ratePerMin));
-  const worker = { username: adminUser || username, token, ws: null, sent: 0, errors: 0, timer: null };
+  const worker = { username: adminUser || username, token, ws: null, sent: 0, errors: 0, timer: null, pendingAcks: new Map() };
 
   worker.ws = openWs(worker.username, token, roomId || 'cabras-giovanni', msg => {
-    if (msg.type === 'message') {
+    if (msg.type === 'message' && msg.username === worker.username) {
+      // Only count echo-back of OUR messages as "received" for drop/latency calc
       testStats.received++;
+      // Match latency: find oldest pending ack
+      const oldest = worker.pendingAcks.keys().next().value;
+      if (oldest !== undefined) {
+        testStats.latencies.push(Date.now() - oldest);
+        worker.pendingAcks.delete(oldest);
+      }
     }
   });
 
@@ -203,10 +210,9 @@ async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePe
       worker.ws.send(JSON.stringify({ type: 'message', text }));
       worker.sent++;
       testStats.sent++;
-      // approximate latency via next received message delta
-      const unsub = () => { testStats.latencies.push(Date.now() - t0); };
-      broker.once('received_' + idx, unsub);
-      setTimeout(() => broker.removeListener('received_' + idx, unsub), 5000);
+      worker.pendingAcks.set(t0, true);
+      // cleanup stale acks after 5s
+      setTimeout(() => worker.pendingAcks.delete(t0), 5000);
     }, intervalMs);
   });
 
