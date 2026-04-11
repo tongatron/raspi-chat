@@ -919,6 +919,9 @@ function normalizeFacebookPreview(meta, url) {
 async function chatRoutes(app) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
+  // Allow raw binary uploads (needed for DB restore)
+  app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
+
   app.get('/sw.js', async (request, reply) =>
     reply.type('application/javascript')
       .header('Service-Worker-Allowed', '/')
@@ -1442,10 +1445,10 @@ async function chatRoutes(app) {
     return reply.send(fs.createReadStream(DB_PATH));
   });
 
-  app.post('/chat/admin/restore', { config: { rawBody: true } }, async (request, reply) => {
+  app.post('/chat/admin/restore', async (request, reply) => {
     const user = requireAuthUser(request, reply);
     if (!user || user.role !== 'admin') return reply.code(403).send({ error: 'Forbidden' });
-    const data = request.rawBody;
+    const data = request.body;   // Buffer, parsed by addContentTypeParser above
     if (!data || data.length < 1024) return reply.code(400).send({ error: 'File non valido' });
     // Check SQLite magic bytes
     const magic = data.slice(0, 16).toString('utf8');
