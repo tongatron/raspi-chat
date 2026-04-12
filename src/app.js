@@ -8,7 +8,7 @@ const setupRoutes = require('./routes/setup');
 const chatRoutes = require('./routes/chat');
 
 function buildApp() {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: true, bodyLimit: 32 * 1024 * 1024 }); // 32 MB
 
   app.register(require('@fastify/websocket'));
   app.register(require('@fastify/multipart'));
