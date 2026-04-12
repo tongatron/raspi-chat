@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
@@ -15,6 +15,8 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/chat/assets/favicon-16-v2.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="/chat/assets/icon-192-v2.png" />
   <meta name="theme-color" content="#111723" />
+  <meta name="google" content="notranslate" />
+  <meta http-equiv="Content-Language" content="it" />
   <meta property="og:title" content="Raspi Chat" />
   <meta property="og:description" content="Self-hosted chat on Raspberry Pi" />
   <meta property="og:image" content="/chat/assets/logo-v4.png" />
@@ -3252,7 +3254,7 @@ function buildMessage(msg) {
 
   if (!isMe) { var nm = document.createElement('div'); nm.className = 'msg-name'; nm.textContent = msg.username; wrap.appendChild(nm); }
 
-  var bubble = document.createElement('div'); bubble.className = 'bubble';
+  var bubble = document.createElement('div'); bubble.className = 'bubble'; bubble.setAttribute('translate', 'no');
 
   // Reply quote
   if (msg.replyTo) {
