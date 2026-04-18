@@ -5,7 +5,7 @@ const { config } = require('./config');
 const rootRoutes = require('./routes/root');
 const itemRoutes = require('./routes/items');
 const setupRoutes = require('./routes/setup');
-const chatRoutes = require('./routes/chat');
+const chatRoutes  = require('./routes/chat');
 
 function buildApp() {
   const app = Fastify({ logger: true, bodyLimit: 32 * 1024 * 1024 }); // 32 MB
