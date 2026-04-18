@@ -1929,6 +1929,21 @@
       box-shadow: 0 10px 24px rgba(28,42,57,.08);
     }
     .me .link-preview { border-color: rgba(255,255,255,.22); background: rgba(255,255,255,.16); box-shadow: none; }
+    .link-read-more {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 5px 12px;
+      border-radius: 5px;
+      background: rgba(122,180,255,.12);
+      border: 1px solid rgba(122,180,255,.24);
+      color: var(--primary);
+      font-size: .82rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background .15s;
+    }
+    .link-read-more:hover { background: rgba(122,180,255,.22); }
+    .me .link-read-more { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.28); color: #fff; }
     .link-preview-img { width: 100%; height: 132px; object-fit: cover; display: block; }
     .link-preview-body { padding: 10px 12px; }
     .link-preview-site { font-size: .72rem; color: var(--muted-soft); margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
@@ -2207,6 +2222,7 @@
         scroll-behavior: auto !important;
       }
     }
+
   </style>
 </head>
 <body>
@@ -3234,7 +3250,23 @@ async function attachLinkPreviews(bubble, urls) {
   try {
     var res = await authFetch('/chat/preview?url=' + encodeURIComponent(urls[0]));
     var data = await res.json();
-    if (!data.title && !data.image) return;
+
+    // Nascondi sempre il link grezzo nel testo del bubble
+    bubble.querySelectorAll('a').forEach(function(el) {
+      try { if (!el.classList.contains('link-preview') && new URL(el.href).href === new URL(urls[0]).href) el.style.display = 'none'; } catch(e) {}
+    });
+
+    if (!data.title && !data.image) {
+      // Nessun metadata disponibile: mostra link compatto stilizzato
+      var fb = document.createElement('a');
+      fb.href = urls[0]; fb.target = '_blank'; fb.rel = 'noopener';
+      fb.className = 'link-read-more';
+      fb.textContent = 'Leggi articolo →';
+      bubble.appendChild(fb);
+      return;
+    }
+
+    // Preview card completa
     var a = document.createElement('a'); a.href = urls[0]; a.target = '_blank'; a.className = 'link-preview';
     if (data.image) { var img = document.createElement('img'); img.src = data.image; img.className = 'link-preview-img'; img.onerror = function(){this.remove();}; a.appendChild(img); }
     var body = document.createElement('div'); body.className = 'link-preview-body';
@@ -4256,6 +4288,7 @@ document.getElementById('room-delete-btn').onclick = deleteRoom;
 
 function openLightbox(src) { document.getElementById('lightbox-img').src = src; document.getElementById('lightbox').classList.add('open'); }
 document.getElementById('lightbox').onclick = function() { document.getElementById('lightbox').classList.remove('open'); };
+
 </script>
 </body>
 </html>
