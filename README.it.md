@@ -191,6 +191,56 @@ Percorso consigliato:
 
 `/srv/apps/raspi-chat`
 
+## Tailscale (accesso VPN)
+
+[Tailscale](https://tailscale.com) e' una VPN semplice che ti permette di accedere alla tua Raspberry da ovunque senza aprire porte o configurare DNS.
+
+### Come funziona
+
+- Tailscale crea una VPN cifrata tra i tuoi dispositivi
+- Ogni dispositivo ottiene un IP privato (es. `100.x.x.x`)
+- Nessuna porta aperta, nessuna configurazione NAT
+- Funziona attraverso i firewall
+
+### Setup
+
+**1. Installa su Raspberry Pi:**
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+```
+
+Autorizza il dispositivo all'URL mostrato, poi:
+
+```bash
+sudo tailscale up --ssh
+```
+
+**2. Installa sul Mac/PC:**
+
+Scarica Tailscale da [tailscale.com/download](https://tailscale.com/download) e accedi.
+
+**3. Connettiti da ovunque:**
+
+```bash
+tailscale ssh giovanni@100.125.208.128
+```
+
+O usa l'app Tailscale — gira in background e tiene i tuoi dispositivi connessi.
+
+### Perche' Tailscale + Cloudflare Tunnel?
+
+| Funzionalita' | Tailscale | Cloudflare Tunnel |
+|---------------|-----------|-------------------|
+| Accesso SSH | ✅ Native | ❌ Serve config extra |
+| Accesso web | ✅ Rete completa | ✅ URL pubblico |
+| Nessuna porta aperta | ✅ | ✅ |
+| Funziona dietro NAT | ✅ | ✅ |
+| Gratis per uso personale | ✅ | ✅ |
+
+I due possono coesistere: usa Tailscale per SSH/admin remoto sicuro, Cloudflare Tunnel per l'accesso web pubblico alla chat.
+
 ## Cloudflare
 
 Se vuoi esporre la chat su Internet senza aprire direttamente porte sulla Raspberry, il modo piu' pratico e' usare Cloudflare Tunnel con `cloudflared`.
