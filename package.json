@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "check": "node --check server.js && node --check src/app.js && node --check src/routes/chat.js && node --check src/routes/root.js && node --check src/routes/items.js && node --check src/routes/setup.js",
+    "check": "node --check server.js && node --check src/app.js && node --check src/routes/chat.js && node --check src/routes/mail.js && node --check src/routes/root.js && node --check src/routes/items.js && node --check src/routes/setup.js && node --check src/services/mail-service.js && node --check src/services/telegram-service.js",
     "test": "node -e \"console.log('No tests configured yet')\"",
     "start": "node server.js",
     "dev": "node --watch server.js"
@@ -13,11 +13,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@fastify/cors": "^11.2.0",
     "@fastify/multipart": "^9.4.0",
     "@fastify/websocket": "^11.2.0",
     "better-sqlite3": "^12.8.0",
     "dotenv": "^17.4.1",
     "fastify": "^5.8.4",
+    "nodemailer": "^8.0.7",
     "web-push": "^3.6.7",
     "ws": "^8.20.0"
   }
