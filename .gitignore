@@ -6,3 +6,10 @@ data/
 config/chat-users.json
 public/backgrounds/*.jpg
 public/backgrounds/*.png
+
+*.bak.codex
+.git.backup-/
+chat.db
+firebase-service-account.json
+.env.bak.codex
+package.json.bak.codex
