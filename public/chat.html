@@ -652,6 +652,10 @@
     }
     #notif-btn { opacity: .56; }
     #notif-btn:hover { opacity: 1; }
+    #notif-btn.notif-on { opacity: 1; color: var(--primary); background: var(--primary-soft); }
+    #notif-btn.notif-off { opacity: .56; }
+    #notif-btn.notif-blocked { opacity: .4; }
+    #notif-btn:disabled { opacity: .4; cursor: progress; }
     #console-btn,
     #rooms-btn,
     #archive-btn,
@@ -1079,9 +1083,18 @@
       flex: 1;
       overflow: hidden;
     }
+    #stats-view {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      flex: 1;
+      overflow: hidden;
+    }
     body.subpage-view #rooms-view,
     body.subpage-view #console-view,
-    body.subpage-view #admin-view {
+    body.subpage-view #admin-view,
+    body.subpage-view #stats-view {
       flex: none;
       min-height: auto;
       overflow: visible;
@@ -1831,6 +1844,104 @@
     }
     .console-ok { color: var(--success); }
     .console-warn { color: var(--warning); }
+    /* ── Stats view ─────────────────────────────────────────── */
+    .stats-topbar {
+      padding: 10px 0 4px;
+    }
+    .stats-eyebrow {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .stats-topbar h3 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      margin: 0 0 2px;
+    }
+    .stats-copy {
+      font-size: .82rem;
+      color: var(--muted);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .stats-card {
+      padding: 16px;
+      grid-column: span 6;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background-color: var(--message-surface);
+      border: 1px solid rgba(255,255,255,.70);
+      border-radius: 6px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .stats-card.full { grid-column: 1 / -1; }
+    .stats-card h3 {
+      font-size: .9rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      margin: 0;
+    }
+    .stats-total {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      color: var(--accent, #3b82f6);
+    }
+    .stats-bar-list {
+      display: grid;
+      gap: 6px;
+    }
+    .stats-bar-row {
+      display: grid;
+      grid-template-columns: 80px 1fr 40px;
+      align-items: center;
+      gap: 8px;
+      font-size: .78rem;
+    }
+    .stats-bar-row.wide {
+      grid-template-columns: 40px 1fr 36px;
+    }
+    .stats-bar-label {
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .stats-bar-track {
+      height: 8px;
+      background: var(--surface-strong, rgba(0,0,0,.08));
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .stats-bar-fill {
+      height: 100%;
+      background: var(--accent, #3b82f6);
+      border-radius: 4px;
+      transition: width .4s ease;
+    }
+    .stats-bar-val {
+      text-align: right;
+      font-weight: 700;
+      color: var(--muted);
+      font-size: .75rem;
+    }
+    .stats-status-line {
+      font-size: .82rem;
+      color: var(--muted);
+      padding: 4px 0;
+    }
     .admin-divider {
       height: 1px;
       background: var(--border);
@@ -2121,6 +2232,10 @@
         overflow-y: auto;
         padding-bottom: 4px;
       }
+      #stats-view {
+        overflow-y: auto;
+        padding-bottom: 4px;
+      }
       .private-card, .private-list, .private-item { border-radius: 5px; }
       .admin-layout {
         grid-template-columns: 1fr;
@@ -2133,6 +2248,14 @@
       }
       .console-chart-grid {
         grid-template-columns: 1fr;
+      }
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      .stats-card {
+        grid-column: 1 / -1;
+        border-radius: 5px;
+        padding: 14px;
       }
       .console-card {
         grid-column: 1 / -1;
@@ -2312,6 +2435,7 @@
       </div>
       <button id="console-btn" type="button" style="display:none" hidden></button>
       <button id="rooms-btn" type="button" style="display:none" hidden></button>
+      <button id="notif-btn" class="toolbar-btn" type="button" style="display:none" title="Notifications" aria-label="Notifications">&#x1f515;</button>
       <div id="settings-wrap">
         <button id="settings-btn" class="toolbar-btn" type="button" title="Settings" aria-label="Settings">&#x2699;</button>
         <div id="settings-menu" role="menu">
@@ -2319,6 +2443,7 @@
           <button type="button" data-view="admin" role="menuitem" id="admin-menu-btn" class="admin-access-only" style="display:none">Users</button>
           <button type="button" data-view="rooms" role="menuitem" class="manage-users-only" style="display:none">Rooms</button>
           <button type="button" data-view="console" role="menuitem" class="console-access-only" style="display:none">Console</button>
+          <button type="button" data-view="stats" role="menuitem" class="console-access-only" style="display:none">Stats</button>
           <hr class="menu-sep admin-access-only" style="display:none" />
           <button type="button" id="logout-menu-btn" role="menuitem">Sign out</button>
         </div>
@@ -2547,6 +2672,40 @@
           <button id="admin-broadcast-btn" type="button">📢 Send to all rooms</button>
         </div>
         <div class="admin-status" id="admin-broadcast-status"></div>
+      </div>
+    </div>
+  </section>
+  <section id="stats-view">
+    <div class="stats-topbar">
+      <div class="stats-eyebrow">Analytics</div>
+      <h3>Message statistics</h3>
+      <div class="stats-copy">Overview of messages sent — per user, hour, day and room.</div>
+    </div>
+    <div id="stats-status-line" class="stats-status-line">Loading…</div>
+    <div class="stats-grid" id="stats-grid" hidden>
+      <div class="stats-card" style="grid-column:span 3">
+        <h3>Total messages</h3>
+        <div class="stats-total" id="stats-total">—</div>
+      </div>
+      <div class="stats-card full">
+        <h3>Last 30 days</h3>
+        <div class="stats-bar-list" id="stats-daily"></div>
+      </div>
+      <div class="stats-card">
+        <h3>Messages per user</h3>
+        <div class="stats-bar-list" id="stats-by-user"></div>
+      </div>
+      <div class="stats-card">
+        <h3>Messages per room</h3>
+        <div class="stats-bar-list" id="stats-by-room"></div>
+      </div>
+      <div class="stats-card">
+        <h3>Messages by hour</h3>
+        <div class="stats-bar-list" id="stats-by-hour"></div>
+      </div>
+      <div class="stats-card">
+        <h3>Messages by day of week</h3>
+        <div class="stats-bar-list" id="stats-by-dow"></div>
       </div>
     </div>
   </section>
@@ -3106,6 +3265,8 @@ document.getElementById('onboarding-enter-btn').onclick = async function() {
   showLogin();
 };
 
+document.getElementById('notif-btn').onclick = onNotifBtnClick;
+
 document.getElementById('logout-menu-btn').onclick = function() {
   sendLogout();
   clearStoredAuth();
@@ -3121,27 +3282,100 @@ function urlBase64ToUint8Array(b64) {
   for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
   return arr;
 }
-async function initPush() {
-  try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+var pushBusy = false;
+function notifSupported() {
+  return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+}
+async function getSwReg() {
+  if (!swReg) {
     swReg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
     swReg = await navigator.serviceWorker.ready;
-    var perm = Notification.permission;
-    if (perm === 'denied') return;
-    if (perm !== 'granted') perm = await Notification.requestPermission();
-    if (perm !== 'granted') return;
-    var vapidResp = await authFetch('/chat/vapid-public-key');
-    var serverKey = (await vapidResp.json()).key;
-    var savedKey = localStorage.getItem('chat-vapid-key');
-    var sub = null;
-    try { sub = await swReg.pushManager.getSubscription(); } catch(e) {}
-    if (sub && savedKey !== serverKey) { try { await sub.unsubscribe(); } catch(e) {} sub = null; }
-    if (!sub) {
-      sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(serverKey) });
-      localStorage.setItem('chat-vapid-key', serverKey);
+  }
+  return swReg;
+}
+async function currentPushSub() {
+  try { var reg = await getSwReg(); return await reg.pushManager.getSubscription(); } catch(e) { return null; }
+}
+// Subscribe (or re-subscribe if the server VAPID key changed) and register on the server.
+async function subscribePush() {
+  var reg = await getSwReg();
+  var vapidResp = await authFetch('/chat/vapid-public-key');
+  var serverKey = (await vapidResp.json()).key;
+  var savedKey = localStorage.getItem('chat-vapid-key');
+  var sub = await reg.pushManager.getSubscription();
+  if (sub && savedKey !== serverKey) { try { await sub.unsubscribe(); } catch(e) {} sub = null; }
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(serverKey) });
+  }
+  localStorage.setItem('chat-vapid-key', serverKey);
+  await authFetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON()}) });
+  return sub;
+}
+async function unsubscribePush() {
+  var sub = await currentPushSub();
+  if (sub) {
+    var ep = sub.endpoint;
+    try { await sub.unsubscribe(); } catch(e) {}
+    try { await authFetch('/chat/push-unsubscribe', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ endpoint: ep }) }); } catch(e) {}
+  }
+  localStorage.removeItem('chat-vapid-key');
+}
+async function refreshNotifBtn() {
+  var btn = document.getElementById('notif-btn');
+  if (!btn) return;
+  if (!notifSupported()) { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  var perm = Notification.permission;
+  var sub = (perm === 'granted') ? await currentPushSub() : null;
+  btn.classList.remove('notif-on', 'notif-off', 'notif-blocked');
+  if (perm === 'denied') {
+    btn.classList.add('notif-blocked');
+    btn.innerHTML = '&#x1f515;';
+    btn.title = 'Notifications blocked in browser settings';
+  } else if (sub) {
+    btn.classList.add('notif-on');
+    btn.innerHTML = '&#x1f514;';
+    btn.title = 'Notifications on — tap to turn off';
+  } else {
+    btn.classList.add('notif-off');
+    btn.innerHTML = '&#x1f515;';
+    btn.title = 'Notifications off — tap to turn on';
+  }
+  btn.setAttribute('aria-label', btn.title);
+}
+async function onNotifBtnClick() {
+  if (pushBusy) return;
+  if (!notifSupported()) { alert('Notifications are not supported on this browser.'); return; }
+  if (Notification.permission === 'denied') {
+    alert('Notifications are blocked for this site in your browser settings. Unblock them there to turn notifications back on.');
+    return;
+  }
+  pushBusy = true;
+  var btn = document.getElementById('notif-btn');
+  if (btn) btn.disabled = true;
+  try {
+    var sub = (Notification.permission === 'granted') ? await currentPushSub() : null;
+    if (sub) {
+      await unsubscribePush();
+    } else {
+      var perm = Notification.permission;
+      if (perm !== 'granted') perm = await Notification.requestPermission();
+      if (perm === 'granted') await subscribePush();
     }
-    await authFetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON()}) });
   } catch(e) {}
+  pushBusy = false;
+  if (btn) btn.disabled = false;
+  refreshNotifBtn();
+}
+// On load: only (re)subscribe silently if permission is already granted.
+// Requesting permission needs a user gesture (required on iOS), handled by the bell.
+async function initPush() {
+  try {
+    if (!notifSupported()) { refreshNotifBtn(); return; }
+    await getSwReg();
+    if (Notification.permission === 'granted') await subscribePush();
+  } catch(e) {}
+  refreshNotifBtn();
 }
 
 // WebSocket
@@ -3398,6 +3632,7 @@ function setView(view) {
   if (view === 'rooms' && canManageUsers) nextView = 'rooms';
   if (view === 'console' && canUseConsole) nextView = 'console';
   if (view === 'admin' && (canManageUsers || canCreateInvites)) nextView = 'admin';
+  if (view === 'stats' && canUseConsole) nextView = 'stats';
   if (nextView !== 'console') stopConsoleAutoRefresh();
   currentView = nextView;
   document.body.classList.toggle('subpage-view', nextView !== 'chat');
@@ -3405,6 +3640,7 @@ function setView(view) {
   document.getElementById('rooms-view').style.display = nextView === 'rooms' ? 'flex' : 'none';
   document.getElementById('console-view').style.display = nextView === 'console' ? 'flex' : 'none';
   document.getElementById('admin-view').style.display = nextView === 'admin' ? 'flex' : 'none';
+  document.getElementById('stats-view').style.display = nextView === 'stats' ? 'flex' : 'none';
   var consoleBtn = document.getElementById('console-btn');
   if (consoleBtn) {
     consoleBtn.classList.toggle('active', nextView === 'console');
@@ -3416,6 +3652,7 @@ function setView(view) {
     roomsBtn.textContent = 'Rooms';
   }
   if (nextView === 'console') startConsoleAutoRefresh();
+  if (nextView === 'stats') loadStats();
 }
 
 function formatBytes(bytes) {
@@ -4288,6 +4525,73 @@ document.getElementById('room-delete-btn').onclick = deleteRoom;
 
 function openLightbox(src) { document.getElementById('lightbox-img').src = src; document.getElementById('lightbox').classList.add('open'); }
 document.getElementById('lightbox').onclick = function() { document.getElementById('lightbox').classList.remove('open'); };
+
+// ── Stats view ─────────────────────────────────────────────────────────────
+function renderBarList(containerId, rows, labelKey, valKey, wide) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  var max = rows.reduce(function(m, r) { return Math.max(m, r[valKey]); }, 0) || 1;
+  el.innerHTML = rows.map(function(r) {
+    var pct = Math.round((r[valKey] / max) * 100);
+    return '<div class="stats-bar-row' + (wide ? ' wide' : '') + '">' +
+      '<span class="stats-bar-label" title="' + r[labelKey] + '">' + r[labelKey] + '</span>' +
+      '<div class="stats-bar-track"><div class="stats-bar-fill" style="width:' + pct + '%"></div></div>' +
+      '<span class="stats-bar-val">' + r[valKey] + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+var DOW_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function loadStats() {
+  var statusEl = document.getElementById('stats-status-line');
+  var gridEl   = document.getElementById('stats-grid');
+  statusEl.textContent = 'Loading…';
+  gridEl.hidden = true;
+  fetch('/chat/admin/stats', { headers: authHeaders() })
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(d) {
+      document.getElementById('stats-total').textContent = d.total.toLocaleString();
+
+      // Daily (last 30 days) — fill missing days with 0
+      var dailyMap = {};
+      (d.daily || []).forEach(function(r) { dailyMap[r.day] = r.count; });
+      var dailyRows = [];
+      for (var i = 29; i >= 0; i--) {
+        var dt = new Date(); dt.setDate(dt.getDate() - i);
+        var key = dt.toISOString().slice(0, 10);
+        var label = dt.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+        dailyRows.push({ label: label, count: dailyMap[key] || 0 });
+      }
+      renderBarList('stats-daily', dailyRows, 'label', 'count', true);
+
+      renderBarList('stats-by-user', d.byUser || [], 'username', 'count', false);
+
+      var roomRows = (d.byRoom || []).map(function(r) {
+        return { label: r.roomName || r.roomId, count: r.count };
+      });
+      renderBarList('stats-by-room', roomRows, 'label', 'count', false);
+
+      var hourRows = [];
+      for (var h = 0; h < 24; h++) {
+        var found = (d.byHour || []).find(function(r) { return r.hour === h; });
+        hourRows.push({ label: String(h).padStart(2, '0') + ':00', count: found ? found.count : 0 });
+      }
+      renderBarList('stats-by-hour', hourRows, 'label', 'count', true);
+
+      var dowRows = DOW_NAMES.map(function(name, i) {
+        var found = (d.byDow || []).find(function(r) { return r.dow === i; });
+        return { label: name, count: found ? found.count : 0 };
+      });
+      renderBarList('stats-by-dow', dowRows, 'label', 'count', true);
+
+      statusEl.textContent = '';
+      gridEl.hidden = false;
+    })
+    .catch(function(err) {
+      statusEl.textContent = 'Error loading statistics (' + err + ')';
+    });
+}
 
 </script>
 </body>
