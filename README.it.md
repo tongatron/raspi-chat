@@ -112,9 +112,9 @@ Comandi utili:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now fastify-api
-sudo systemctl status fastify-api
-journalctl -u fastify-api -f
+sudo systemctl enable --now raspi-chat
+sudo systemctl status raspi-chat
+journalctl -u raspi-chat -f
 ```
 
 ## Setup guidato via web
@@ -138,7 +138,7 @@ Lo wizard `/setup` fa queste cose:
 - scrive `config/chat-users.json`
 - crea `data/setup-complete.json`
 - genera:
-  - `data/setup-generated/fastify-api.service`
+  - `data/setup-generated/raspi-chat.service`
   - `data/setup-generated/nginx.chat.conf`
   - `data/setup-generated/cloudflared.config.yml`
 
@@ -290,10 +290,10 @@ curl -I https://chat.example.com/chat
 
 Controlli utili:
 
-- `sudo systemctl status fastify-api`
+- `sudo systemctl status raspi-chat`
 - `sudo systemctl status cloudflared`
 - `journalctl -u cloudflared -f`
-- `journalctl -u fastify-api -f`
+- `journalctl -u raspi-chat -f`
 
 ### Note pratiche
 

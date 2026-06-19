@@ -112,9 +112,9 @@ Useful commands:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now fastify-api
-sudo systemctl status fastify-api
-journalctl -u fastify-api -f
+sudo systemctl enable --now raspi-chat
+sudo systemctl status raspi-chat
+journalctl -u raspi-chat -f
 ```
 
 ## Web-based guided setup
@@ -138,7 +138,7 @@ The `/setup` wizard does the following:
 - writes `config/chat-users.json`
 - creates `data/setup-complete.json`
 - generates:
-  - `data/setup-generated/fastify-api.service`
+  - `data/setup-generated/raspi-chat.service`
   - `data/setup-generated/nginx.chat.conf`
   - `data/setup-generated/cloudflared.config.yml`
 
@@ -290,10 +290,10 @@ curl -I https://chat.example.com/chat
 
 Useful checks:
 
-- `sudo systemctl status fastify-api`
+- `sudo systemctl status raspi-chat`
 - `sudo systemctl status cloudflared`
 - `journalctl -u cloudflared -f`
-- `journalctl -u fastify-api -f`
+- `journalctl -u raspi-chat -f`
 
 ### Practical notes
 

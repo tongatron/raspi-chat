@@ -85,11 +85,35 @@ try { db.exec("ALTER TABLE invites ADD COLUMN used_at TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE invites ADD COLUMN used_by TEXT"); } catch(e) {}
 try { db.exec(`
   CREATE TABLE IF NOT EXISTS push_subscriptions (
-    username TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
     subscription TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (username, endpoint)
   )
 `); } catch(e) {}
+// Migrate old single-subscription table (username PK) to multi-device table
+try {
+  const cols = db.prepare("PRAGMA table_info(push_subscriptions)").all().map(r => r.name);
+  if (!cols.includes('endpoint')) {
+    db.exec(`
+      ALTER TABLE push_subscriptions RENAME TO push_subscriptions_old;
+      CREATE TABLE push_subscriptions (
+        username TEXT NOT NULL,
+        endpoint TEXT NOT NULL,
+        subscription TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (username, endpoint)
+      );
+      INSERT INTO push_subscriptions (username, endpoint, subscription, updated_at)
+        SELECT username, json_extract(subscription, '$.endpoint'), subscription, updated_at
+        FROM push_subscriptions_old
+        WHERE json_extract(subscription, '$.endpoint') IS NOT NULL;
+      DROP TABLE push_subscriptions_old;
+    `);
+    console.log('[Push] Migrated push_subscriptions to multi-device schema');
+  }
+} catch(e) { console.error('[Push] Migration error:', e.message); }
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);
@@ -452,9 +476,10 @@ const stmts = {
   countAdmins:   db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'"),
   countMessages: db.prepare('SELECT COUNT(*) AS count FROM messages'),
   deleteUser:    db.prepare('DELETE FROM users WHERE username = ?'),
-  upsertPushSub: db.prepare('INSERT OR REPLACE INTO push_subscriptions (username, subscription, updated_at) VALUES (?, ?, ?)'),
-  deletePushSub: db.prepare('DELETE FROM push_subscriptions WHERE username = ?'),
-  listPushSubs:  db.prepare('SELECT username, subscription FROM push_subscriptions'),
+  upsertPushSub: db.prepare('INSERT OR REPLACE INTO push_subscriptions (username, endpoint, subscription, updated_at) VALUES (?, ?, ?, ?)'),
+  deletePushSub: db.prepare('DELETE FROM push_subscriptions WHERE username = ? AND endpoint = ?'),
+  deleteAllPushSubs: db.prepare('DELETE FROM push_subscriptions WHERE username = ?'),
+  listPushSubs:  db.prepare('SELECT username, endpoint, subscription FROM push_subscriptions'),
   createInvite: db.prepare(`
     INSERT INTO invites (token, created_by, role, created_at)
     VALUES (?, ?, ?, ?)
@@ -574,19 +599,24 @@ function formatInvite(row, request) {
   };
 }
 
-function sendWebPushToUser(username, payload) {
-  const sub = pushSubs.get(username);
-  if (!sub) return Promise.resolve(false);
-  return webpush.sendNotification(sub, JSON.stringify(payload))
-    .then(() => true)
-    .catch((err) => {
+async function sendWebPushToUser(username, payload) {
+  const devices = pushSubs.get(username);
+  if (!devices || devices.size === 0) return false;
+  let sent = false;
+  for (const [endpoint, sub] of devices) {
+    try {
+      await webpush.sendNotification(sub, JSON.stringify(payload));
+      sent = true;
+    } catch (err) {
       console.error(`[Push] Direct WebPush failed for ${username}: ${err.statusCode || err.code || 'unknown'} ${err.message || err}`);
       if (err.statusCode === 410 || err.statusCode === 404) {
-        pushSubs.delete(username);
-        stmts.deletePushSub.run(username);
+        devices.delete(endpoint);
+        stmts.deletePushSub.run(username, endpoint);
+        if (devices.size === 0) pushSubs.delete(username);
       }
-      return false;
-    });
+    }
+  }
+  return sent;
 }
 
 function createInitialRoomForUser(username, createdBy, now) {
@@ -765,13 +795,18 @@ async function buildYoutubePreview(url) {
 }
 
 const clients   = new Map();
+// pushSubs: Map<username, Map<endpoint, subscriptionObject>>
 const pushSubs  = new Map();
 
 // Load persisted push subscriptions
 for (const row of stmts.listPushSubs.all()) {
-  try { pushSubs.set(row.username, JSON.parse(row.subscription)); } catch(e) {}
+  try {
+    if (!pushSubs.has(row.username)) pushSubs.set(row.username, new Map());
+    pushSubs.get(row.username).set(row.endpoint, JSON.parse(row.subscription));
+  } catch(e) {}
 }
-console.log(`[Push] Loaded ${pushSubs.size} persisted subscriptions`);
+const totalSubs = [...pushSubs.values()].reduce((n, m) => n + m.size, 0);
+console.log(`[Push] Loaded ${totalSubs} persisted subscriptions for ${pushSubs.size} users`);
 
 function broadcast(msg) {
   const raw = JSON.stringify(msg);
@@ -807,12 +842,7 @@ function onlineUsers(roomId) {
 }
 
 async function sendWebPush(msg, senderUsername, roomId) {
-  // Only send to members of the room who are NOT currently active in it
   const members = new Set(stmts.listRoomMembers.all(roomId).map(r => r.username));
-  const activeInRoom = new Set();
-  for (const client of clients.values()) {
-    if (client.roomId === roomId && client.username) activeInRoom.add(client.username);
-  }
   const roomRow = stmts.getRoomById.get(roomId);
   const roomName = roomRow ? roomRow.name : 'Chat';
   const payload = JSON.stringify({
@@ -820,16 +850,21 @@ async function sendWebPush(msg, senderUsername, roomId) {
     body: msg.text ? msg.text.slice(0, 100) : '📎 Image',
     url: '/chat'
   });
-  for (const [username, sub] of pushSubs) {
-    if (username === senderUsername) continue;       // non mandare al mittente
-    if (!members.has(username)) continue;            // room members only
-    if (activeInRoom.has(username)) continue;        // already connected in this room
-    try {
-      await webpush.sendNotification(sub, payload);
-      console.log(`[Push] WebPush sent to ${username} for room ${roomId}`);
-    } catch (err) {
-      console.error(`[Push] WebPush failed for ${username}: ${err.statusCode || err.code || 'unknown'} ${err.message || err}`);
-      if (err.statusCode === 410 || err.statusCode === 404) { pushSubs.delete(username); stmts.deletePushSub.run(username); }
+  for (const [username, devices] of pushSubs) {
+    if (username === senderUsername) continue;
+    if (!members.has(username)) continue;
+    for (const [endpoint, sub] of devices) {
+      try {
+        await webpush.sendNotification(sub, payload);
+        console.log(`[Push] WebPush sent to ${username} for room ${roomId}`);
+      } catch (err) {
+        console.error(`[Push] WebPush failed for ${username}: ${err.statusCode || err.code || 'unknown'} ${err.message || err}`);
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          devices.delete(endpoint);
+          stmts.deletePushSub.run(username, endpoint);
+          if (devices.size === 0) pushSubs.delete(username);
+        }
+      }
     }
   }
 }
@@ -1391,16 +1426,24 @@ async function chatRoutes(app) {
     const username = requireAuth(request, reply);
     if (!username) return;
     const { subscription } = request.body || {};
-    if (!subscription) return reply.code(400).send({ error: 'Missing data' });
-    pushSubs.set(username, subscription);
-    stmts.upsertPushSub.run(username, JSON.stringify(subscription), new Date().toISOString());
+    if (!subscription || !subscription.endpoint) return reply.code(400).send({ error: 'Missing data' });
+    if (!pushSubs.has(username)) pushSubs.set(username, new Map());
+    pushSubs.get(username).set(subscription.endpoint, subscription);
+    stmts.upsertPushSub.run(username, subscription.endpoint, JSON.stringify(subscription), new Date().toISOString());
     return { ok: true };
   });
   app.delete('/chat/push-unsubscribe', async (request, reply) => {
     const username = requireAuth(request, reply);
     if (!username) return;
-    pushSubs.delete(username);
-    stmts.deletePushSub.run(username);
+    const { endpoint } = request.body || {};
+    if (endpoint) {
+      pushSubs.get(username)?.delete(endpoint);
+      if (pushSubs.get(username)?.size === 0) pushSubs.delete(username);
+      stmts.deletePushSub.run(username, endpoint);
+    } else {
+      pushSubs.delete(username);
+      stmts.deleteAllPushSubs.run(username);
+    }
     return { ok: true };
   });
   app.get('/chat/vapid-public-key', async (request, reply) => {
@@ -1413,20 +1456,23 @@ async function chatRoutes(app) {
     const username = requireAuth(request, reply);
     if (!username) return;
     const { to } = request.query;
+    const totalSubs = [...pushSubs.values()].reduce((n, m) => n + m.size, 0);
     const info = {
-      webPushSubs: pushSubs.size, webPushUsers: [...pushSubs.keys()],
+      webPushSubs: totalSubs,
+      webPushUsers: Object.fromEntries([...pushSubs.entries()].map(([u, d]) => [u, d.size])),
       vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
     };
     if (to && pushSubs.has(to)) {
-      try {
-        await webpush.sendNotification(
-          pushSubs.get(to),
-          JSON.stringify({ title: 'Test', body: 'Test Web Push notification!', url: '/chat' })
-        );
-        info.webPushTestResult = 'sent';
-      } catch (e) {
-        info.webPushTestResult = 'error: ' + e.message;
+      const results = [];
+      for (const [endpoint, sub] of pushSubs.get(to)) {
+        try {
+          await webpush.sendNotification(sub, JSON.stringify({ title: 'Test', body: 'Test Web Push notification!', url: '/chat' }));
+          results.push({ endpoint: endpoint.slice(-20), result: 'sent' });
+        } catch (e) {
+          results.push({ endpoint: endpoint.slice(-20), result: 'error: ' + e.message });
+        }
       }
+      info.webPushTestResult = results;
     } else if (to) {
       info.webPushTestResult = 'missing-subscription';
     }
@@ -1555,6 +1601,41 @@ async function chatRoutes(app) {
     return reply.redirect('/chat');
   });
 
+  app.get('/chat/admin/stats', async (request, reply) => {
+    const user = requireConsoleAccess(request, reply);
+    if (!user) return;
+
+    const byUser = db.prepare(`
+      SELECT username, COUNT(*) AS count FROM messages GROUP BY username ORDER BY count DESC
+    `).all();
+
+    const byHour = db.prepare(`
+      SELECT CAST(strftime('%H', timestamp, 'localtime') AS INTEGER) AS hour, COUNT(*) AS count
+      FROM messages GROUP BY hour ORDER BY hour
+    `).all();
+
+    const byDow = db.prepare(`
+      SELECT CAST(strftime('%w', timestamp, 'localtime') AS INTEGER) AS dow, COUNT(*) AS count
+      FROM messages GROUP BY dow ORDER BY dow
+    `).all();
+
+    const byRoom = db.prepare(`
+      SELECT m.room_id AS roomId, r.name AS roomName, COUNT(*) AS count
+      FROM messages m LEFT JOIN rooms r ON r.id = m.room_id
+      GROUP BY m.room_id ORDER BY count DESC
+    `).all();
+
+    const daily = db.prepare(`
+      SELECT DATE(timestamp, 'localtime') AS day, COUNT(*) AS count
+      FROM messages WHERE DATE(timestamp, 'localtime') >= DATE('now', 'localtime', '-30 days')
+      GROUP BY day ORDER BY day
+    `).all();
+
+    const total = db.prepare('SELECT COUNT(*) AS count FROM messages').get().count;
+
+    return { total, byUser, byHour, byDow, byRoom, daily };
+  });
+
   app.get('/chat/invite/:token', async (request, reply) => {
     const token = String(request.params.token || '').trim();
     if (!token) return reply.code(404).send({ error: 'Invite not found' });
@@ -1578,7 +1659,7 @@ async function chatRoutes(app) {
       usersOnline: online,
       onlineCount: online.length,
       messageCount: stmts.countMessages.get().count,
-      pushSubscriptions: pushSubs.size,
+      pushSubscriptions: [...pushSubs.values()].reduce((n, m) => n + m.size, 0),
       vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
     };
 

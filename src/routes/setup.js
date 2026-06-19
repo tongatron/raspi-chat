@@ -10,7 +10,7 @@ const ENV_FILE = path.join(process.cwd(), '.env');
 const USERS_FILE = process.env.CHAT_USERS_FILE || path.join(process.cwd(), 'config', 'chat-users.json');
 const SETUP_STATE_FILE = process.env.SETUP_STATE_FILE || path.join(process.cwd(), 'data', 'setup-complete.json');
 const GENERATED_DIR = path.join(process.cwd(), 'data', 'setup-generated');
-const SERVICE_FILE = path.join(GENERATED_DIR, 'fastify-api.service');
+const SERVICE_FILE = path.join(GENERATED_DIR, 'raspi-chat.service');
 const NGINX_FILE = path.join(GENERATED_DIR, 'nginx.chat.conf');
 const CLOUDFLARE_FILE = path.join(GENERATED_DIR, 'cloudflared.config.yml');
 const APP_NAME = 'cabras-chat';
@@ -423,9 +423,9 @@ async function setupRoutes(app) {
     fs.writeFileSync(CLOUDFLARE_FILE, renderCloudflareFile({ hostname, port }), 'utf8');
 
     const nextCommands = [
-      `cp ${SERVICE_FILE} /etc/systemd/system/fastify-api.service`,
+      `cp ${SERVICE_FILE} /etc/systemd/system/raspi-chat.service`,
       'systemctl daemon-reload',
-      'systemctl enable --now fastify-api',
+      'systemctl enable --now raspi-chat',
     ];
     if (networkMode === 'nginx') {
       nextCommands.push(`cp ${NGINX_FILE} /etc/nginx/sites-available/cabras-chat.conf`);
