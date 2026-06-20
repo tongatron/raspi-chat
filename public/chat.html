@@ -838,6 +838,26 @@
     }
     .bubble p { margin: 0; }
     .bubble p + p { margin-top: 7px; }
+    .spoiler {
+      border-radius: 4px;
+      padding: 0 3px;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+      transition: color .15s, background-color .15s;
+    }
+    .spoiler:not(.revealed) {
+      background: #2a2a2a;
+      color: transparent;
+    }
+    .me .spoiler:not(.revealed) { background: rgba(0,0,0,.35); }
+    .spoiler.revealed {
+      background: rgba(127,127,127,.18);
+      color: inherit;
+      cursor: text;
+      -webkit-user-select: text;
+      user-select: text;
+    }
     .me .bubble {
       background: linear-gradient(180deg, #2877da, #1a63c0);
       color: white;
@@ -2804,7 +2824,7 @@ window.addEventListener('focus', clearUnread);
 function startReply(msg) {
   replyTo = msg;
   document.getElementById('reply-bar-name').textContent = msg.username;
-  document.getElementById('reply-bar-text').textContent = (msg.imageUrl && !msg.text) ? '📎 Image' : (msg.text || '');
+  document.getElementById('reply-bar-text').textContent = (msg.imageUrl && !msg.text) ? '📎 Image' : maskSpoilers(msg.text);
   document.getElementById('reply-bar').style.display = 'flex';
   document.getElementById('msg-input').focus();
 }
@@ -3480,6 +3500,30 @@ function linkifyNode(text) {
 }
 function extractUrls(text) { return Array.from(text.matchAll(/(https?:\/\/[^\s<>"']+)/g)).map(function(m){return m[1];}); }
 
+// Spoiler / testo nascosto: ||testo|| -> blocco cliccabile che si rivela al tap
+var SPOILER_RE = /\|\|([\s\S]+?)\|\|/g;
+function renderText(text) {
+  var frag = document.createDocumentFragment();
+  var last = 0, m;
+  SPOILER_RE.lastIndex = 0;
+  while ((m = SPOILER_RE.exec(text)) !== null) {
+    if (m.index > last) frag.appendChild(linkifyNode(text.slice(last, m.index)));
+    var s = document.createElement('span');
+    s.className = 'spoiler';
+    s.title = 'Spoiler nascosto – tocca per rivelare';
+    s.appendChild(linkifyNode(m[1]));
+    s.addEventListener('click', function() {
+      if (!this.classList.contains('revealed')) this.classList.add('revealed');
+    });
+    frag.appendChild(s);
+    last = SPOILER_RE.lastIndex;
+  }
+  if (last < text.length) frag.appendChild(linkifyNode(text.slice(last)));
+  return frag;
+}
+// Per anteprime/citazioni: sostituisce il contenuto spoiler con un placeholder
+function maskSpoilers(text) { return (text || '').replace(/\|\|[\s\S]+?\|\|/g, '███'); }
+
 async function attachLinkPreviews(bubble, urls) {
   try {
     var res = await authFetch('/chat/preview?url=' + encodeURIComponent(urls[0]));
@@ -3528,12 +3572,12 @@ function buildMessage(msg) {
     (function(rid) { rq.onclick = function() { scrollToMessage(rid); }; })(msg.replyTo.id);
     var rqName = document.createElement('div'); rqName.className = 'rq-name'; rqName.textContent = msg.replyTo.username; rq.appendChild(rqName);
     var rqText = document.createElement('div'); rqText.className = 'rq-text';
-    rqText.textContent = (msg.replyTo.imageUrl && !msg.replyTo.text) ? '📎 Image' : (msg.replyTo.text || '');
+    rqText.textContent = (msg.replyTo.imageUrl && !msg.replyTo.text) ? '📎 Image' : maskSpoilers(msg.replyTo.text);
     rq.appendChild(rqText); bubble.appendChild(rq);
   }
 
   if (msg.imageUrl) { var img = document.createElement('img'); img.src = msg.imageUrl; img.className = 'msg-img'; img.alt = ''; img.onclick = function(){openLightbox(msg.imageUrl);}; bubble.appendChild(img); }
-  if (msg.text) { var p = document.createElement('p'); p.appendChild(linkifyNode(msg.text)); bubble.appendChild(p); var urls = extractUrls(msg.text); if (urls.length) attachLinkPreviews(bubble, urls); }
+  if (msg.text) { var p = document.createElement('p'); p.appendChild(renderText(msg.text)); bubble.appendChild(p); var urls = extractUrls(msg.text); if (urls.length) attachLinkPreviews(bubble, urls); }
   if (msg.imageUrl && !msg.text && !msg.replyTo) bubble.classList.add('image-only');
   wrap.appendChild(bubble);
 

@@ -847,7 +847,7 @@ async function sendWebPush(msg, senderUsername, roomId) {
   const roomName = roomRow ? roomRow.name : 'Chat';
   const payload = JSON.stringify({
     title: `${msg.username} · ${roomName}`,
-    body: msg.text ? msg.text.slice(0, 100) : '📎 Image',
+    body: msg.text ? msg.text.replace(/\|\|[\s\S]+?\|\|/g, '███').slice(0, 100) : '📎 Image',
     url: '/chat'
   });
   for (const [username, devices] of pushSubs) {
