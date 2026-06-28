@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "org.tongatron.chat",
+      "sha256_cert_fingerprints": [
+        "08:C6:C9:5A:3F:5F:79:BE:2E:84:8B:53:96:65:90:C6:48:54:F3:A4:0C:CB:9E:FC:4F:CC:49:8A:D1:F9:C7:AD"
+      ]
+    }
+  }
+]

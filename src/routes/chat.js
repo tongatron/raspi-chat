@@ -963,6 +963,29 @@ async function chatRoutes(app) {
       .header('Cache-Control', 'no-store')
       .send(fs.readFileSync(path.join(process.cwd(), 'public', 'sw.js'), 'utf8')));
 
+  // Digital Asset Links: links the TWA/APK (Android app) to this domain so the
+  // wrapped PWA opens full-screen without the browser URL bar. Edit the SHA-256
+  // fingerprint in config/assetlinks.json after building the APK with Bubblewrap.
+  app.get('/.well-known/assetlinks.json', async (request, reply) => {
+    const filePath = path.join(process.cwd(), 'config', 'assetlinks.json');
+    if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not configured' });
+    return reply.type('application/json')
+      .header('Cache-Control', 'no-store')
+      .send(fs.readFileSync(filePath, 'utf8'));
+  });
+
+  // Direct download of the Android APK (place the built file at data/app.apk on
+  // the server). Lets the phone install/update the app without manual transfer.
+  app.get('/chat/app.apk', async (request, reply) => {
+    const filePath = path.join(process.cwd(), 'data', 'app.apk');
+    if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'APK not available' });
+    return reply
+      .type('application/vnd.android.package-archive')
+      .header('Content-Disposition', 'attachment; filename="raspi-chat.apk"')
+      .header('Cache-Control', 'no-store')
+      .send(fs.createReadStream(filePath));
+  });
+
   app.get('/chat/manifest.json', async (request, reply) =>
     reply.type('application/manifest+json')
       .header('Cache-Control', 'no-store')
