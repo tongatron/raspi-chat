@@ -3321,11 +3321,22 @@ async function subscribePush() {
   var reg = await getSwReg();
   var vapidResp = await authFetch('/chat/vapid-public-key');
   var serverKey = (await vapidResp.json()).key;
+  if (!serverKey) throw new Error('Server VAPID key not configured');
+  var appKey = urlBase64ToUint8Array(serverKey);
   var savedKey = localStorage.getItem('chat-vapid-key');
   var sub = await reg.pushManager.getSubscription();
+  // Drop any existing subscription created with a different key.
   if (sub && savedKey !== serverKey) { try { await sub.unsubscribe(); } catch(e) {} sub = null; }
   if (!sub) {
-    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(serverKey) });
+    try {
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: appKey });
+    } catch (err) {
+      // "push service error"/AbortError often comes from a stale or orphaned FCM
+      // registration. Clear whatever exists and retry once after a short wait.
+      try { var orphan = await reg.pushManager.getSubscription(); if (orphan) await orphan.unsubscribe(); } catch(e) {}
+      await new Promise(function(r){ setTimeout(r, 1500); });
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: appKey });
+    }
   }
   localStorage.setItem('chat-vapid-key', serverKey);
   await authFetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON()}) });
