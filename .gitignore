@@ -14,5 +14,10 @@ firebase-service-account.json
 .env.bak.codex
 package.json.bak.codex
 
+# Android signing-key backup (encrypted) — never commit, even encrypted
+raspi-chat-keystore-backup.tar.gz.enc
+*.keystore
+*.enc
+
 # Separate local news-bot project
 bot/
