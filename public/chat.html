@@ -3382,7 +3382,9 @@ async function onNotifBtnClick() {
       if (perm !== 'granted') perm = await Notification.requestPermission();
       if (perm === 'granted') await subscribePush();
     }
-  } catch(e) {}
+  } catch(e) {
+    alert('Notifiche, errore: ' + (e && e.name ? e.name + ' — ' : '') + (e && e.message ? e.message : e));
+  }
   pushBusy = false;
   if (btn) btn.disabled = false;
   refreshNotifBtn();
