@@ -300,6 +300,26 @@ Useful checks:
 - if you use PWA and notifications, a stable public domain is important
 - if you want extra protection, you can add a Cloudflare Access policy in front of the domain, but for a typical private chat it is usually not needed
 
+## Android app (APK)
+
+Besides the PWA, the chat is available as a native Android app via a **TWA** (Trusted Web Activity): an APK that wraps the PWA, meant for personal sideload install without the Play Store. Notifications still go through Web Push/VAPID, but the installed app is harder for the system to suspend in the background.
+
+**Install on the phone:** open `https://<your-domain>/chat/app.apk` in the browser, download and install (you must enable "Install unknown apps"), then grant the notification permission. For reliable notifications, set the app's battery usage to **"Unrestricted"**.
+
+The APK lives on the server at `data/app.apk`, and the APK↔domain association is served from `config/assetlinks.json` (the signing certificate's SHA-256 fingerprint).
+
+**Rebuild the APK** (only needed when the icon, name or colors change; the TWA project is generated with [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap)):
+
+```bash
+cd raspi-chat-android
+BUBBLEWRAP_KEYSTORE_PASSWORD="$(cat signing-password.txt)" \
+BUBBLEWRAP_KEY_PASSWORD="$(cat signing-password.txt)" \
+  bubblewrap build
+scp app-release-signed.apk giovanni@raspberrypi.local:/srv/apps/raspi-chat/data/app.apk
+```
+
+> ⚠️ Keep `android.keystore` and its password safe: without them you can no longer ship updates installable over the existing app (only uninstall + reinstall).
+
 ## Useful endpoints
 
 Public:
@@ -307,6 +327,8 @@ Public:
 - `POST /chat/login`
 - `GET /chat/ws`
 - `GET /chat/manifest.json`
+- `GET /chat/app.apk`
+- `GET /.well-known/assetlinks.json`
 - `GET /sw.js`
 - `GET /health`
 - `GET /version`
