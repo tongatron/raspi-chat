@@ -4,10 +4,11 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "check": "node --check server.js && node --check src/app.js && node --check src/routes/chat.js && node --check src/routes/mail.js && node --check src/routes/root.js && node --check src/routes/items.js && node --check src/routes/setup.js && node --check src/services/mail-service.js && node --check src/services/telegram-service.js",
+    "check": "node --check server.js && node --check src/app.js && node --check src/routes/chat.js && node --check src/routes/mail.js && node --check src/routes/root.js && node --check src/routes/items.js && node --check src/routes/setup.js && node --check src/services/mail-service.js && node --check src/services/telegram-service.js && node --check cli/chat-cli.js && node --check cli/lib/auth.js && node --check cli/lib/connection.js && node --check cli/lib/ui.js",
     "test": "node -e \"console.log('No tests configured yet')\"",
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "cli": "node cli/chat-cli.js"
   },
   "keywords": [],
   "author": "",

@@ -320,6 +320,17 @@ scp app-release-signed.apk giovanni@raspberrypi.local:/srv/apps/raspi-chat/data/
 
 > ⚠️ Conserva con cura `android.keystore` e la relativa password: senza non è più possibile pubblicare aggiornamenti installabili sopra l'app esistente (resterebbe solo disinstalla + reinstalla).
 
+## Client CLI
+
+Un client chat da terminale che usa lo stesso backend (login HTTP + WebSocket), senza browser:
+
+```bash
+npm run cli                                   # default http://localhost:3000
+node cli/chat-cli.js --url http://pi.local:3000 --room cabras-giovanni
+```
+
+Le credenziali sono richieste in modo interattivo (oppure lette da `RASPI_CHAT_USER` / `RASPI_CHAT_PASS`); l'URL del server viene da `--url` o `RASPI_CHAT_URL`. Supporta messaggi in tempo reale, utenti online, selezione room e riconnessione automatica. Vedi [cli/README.md](cli/README.md).
+
 ## Endpoint utili
 
 Pubblici:
