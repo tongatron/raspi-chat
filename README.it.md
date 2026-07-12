@@ -103,7 +103,7 @@ bash ops/install-rpi.sh
 
 Poi:
 1. avvia una volta l'app con `npm start`
-2. apri il wizard su `http://raspberrypi.local:3000/setup` oppure `http://IP-DELLA-RASPBERRY:3000/setup`
+2. apri il wizard su `http://raspi4.local:3000/setup` oppure `http://IP-DELLA-RASPBERRY:3000/setup`
 3. completa i passaggi web
 4. usa i file generati in `data/setup-generated/`
 5. abilita `systemd`
@@ -315,7 +315,7 @@ cd raspi-chat-android
 BUBBLEWRAP_KEYSTORE_PASSWORD="$(cat signing-password.txt)" \
 BUBBLEWRAP_KEY_PASSWORD="$(cat signing-password.txt)" \
   bubblewrap build
-scp app-release-signed.apk giovanni@raspberrypi.local:/srv/apps/raspi-chat/data/app.apk
+scp app-release-signed.apk giovanni@raspi4.local:/srv/apps/raspi-chat/data/app.apk
 ```
 
 > ⚠️ Conserva con cura `android.keystore` e la relativa password: senza non è più possibile pubblicare aggiornamenti installabili sopra l'app esistente (resterebbe solo disinstalla + reinstalla).

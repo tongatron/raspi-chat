@@ -21,7 +21,7 @@ Se ometti `--room`, la CLI ti elenca le tue room e te le fa scegliere.
 ## 2. Direttamente sulla Raspberry (in locale)
 
 ```bash
-ssh giovanni@raspberrypi.local
+ssh giovanni@raspi4.local
 cd /srv/apps/raspi-chat
 npm run cli
 ```
