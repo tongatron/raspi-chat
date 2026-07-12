@@ -22,3 +22,6 @@ raspi-chat-keystore-backup.tar.gz.enc
 
 # Separate local news-bot project
 bot/
+
+# Coordinate server di produzione (non versionare)
+SERVERraspi4.md
