@@ -881,6 +881,8 @@
     .bubble video.msg-img { max-width: 260px; max-height: 260px; border-radius: 4px; display: block; }
     .bubble audio { max-width: 260px; display: block; }
     .bubble .msg-file { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 6px; background: rgba(127,127,127,0.15); text-decoration: none; color: inherit; word-break: break-all; }
+    .bubble .attach-media { display: block; }
+    .bubble .attach-name { margin-top: 4px; font-size: 12px; opacity: 0.7; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .bubble .msg-img + p, .bubble audio + p, .bubble .msg-file + p { margin-top: 8px; }
     .msg-meta {
       font-size: .72rem;
@@ -3677,20 +3679,35 @@ function attachKind(url) {
   if (ATTACH_AUDIO.indexOf(ext) !== -1) return 'audio';
   return 'file';
 }
+// Original filename embedded in the stored name `<ts>-<hex>-<name>.<ext>`; '' for legacy uploads without it.
+function attachName(url) {
+  var seg = (url || '').split('/').pop().split('?')[0].split('#')[0];
+  try { seg = decodeURIComponent(seg); } catch (e) {}
+  var m = /^\d+-[0-9a-f]+-(.+)$/i.exec(seg);
+  return m ? m[1] : '';
+}
+function attachNameEl(url) {
+  var name = attachName(url);
+  if (!name) return null;
+  var cap = document.createElement('div'); cap.className = 'attach-name'; cap.textContent = name; cap.title = name;
+  return cap;
+}
 function renderAttachment(url) {
   var kind = attachKind(url);
   if (kind === 'image') {
     var img = document.createElement('img'); img.src = url; img.className = 'msg-img'; img.alt = '';
     img.onclick = function(){ openLightbox(url); }; return img;
   }
-  if (kind === 'video') {
-    var v = document.createElement('video'); v.src = url; v.className = 'msg-img'; v.controls = true; v.preload = 'metadata'; return v;
-  }
-  if (kind === 'audio') {
-    var a = document.createElement('audio'); a.src = url; a.controls = true; a.preload = 'metadata'; return a;
+  if (kind === 'video' || kind === 'audio') {
+    var box = document.createElement('div'); box.className = 'attach-media';
+    var media = document.createElement(kind); media.src = url; media.controls = true; media.preload = 'metadata';
+    if (kind === 'video') media.className = 'msg-img';
+    box.appendChild(media);
+    var cap = attachNameEl(url); if (cap) box.appendChild(cap);
+    return box;
   }
   var link = document.createElement('a'); link.className = 'msg-file'; link.href = url; link.target = '_blank'; link.rel = 'noopener';
-  link.textContent = '\u{1F4CE} ' + (attachExt(url) ? attachExt(url).toUpperCase() + ' file' : 'file');
+  link.textContent = '\u{1F4CE} ' + (attachName(url) || (attachExt(url) ? attachExt(url).toUpperCase() + ' file' : 'file'));
   return link;
 }
 

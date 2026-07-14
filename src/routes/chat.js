@@ -41,6 +41,19 @@ const ATTACHMENT_MIME = {
 // Extensions we let the browser render inline (image/video/audio/pdf); everything else is forced as a download.
 const ATTACHMENT_INLINE = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'mov', 'mp4', 'webm', 'm4v', 'mp3', 'wav', 'ogg', 'm4a']);
 const ATTACHMENT_ALLOWED = new Set(Object.keys(ATTACHMENT_MIME));
+
+// Sanitize an uploaded filename into a URL/filesystem-safe base (no extension), preserving readability.
+function safeAttachmentBase(originalName) {
+  const base = path.basename(String(originalName || ''), path.extname(String(originalName || '')));
+  const cleaned = base.normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g, '_').replace(/^[_.]+|[_.]+$/g, '').slice(0, 60);
+  return cleaned || 'file';
+}
+
+// Recover the display filename from a stored name `<ts>-<hex>-<base>.<ext>`; returns '' for legacy names without the base.
+function attachmentDisplayName(storedName) {
+  const m = /^\d+-[a-f0-9]+-(.+)$/.exec(String(storedName || ''));
+  return m ? m[1] : '';
+}
 const DB_PATH = path.join(process.cwd(), 'data', 'chat.db');
 const CHAT_USERS_FILE = process.env.CHAT_USERS_FILE || path.join(process.cwd(), 'config', 'chat-users.json');
 const DEFAULT_ADMIN_USERNAME = normalizeUsername(process.env.DEFAULT_ADMIN_USERNAME || 'Giovanni');
@@ -1742,7 +1755,8 @@ async function chatRoutes(app) {
     const ext = path.extname(filename).slice(1).toLowerCase();
     const mime = ATTACHMENT_MIME[ext] || 'application/octet-stream';
     // Inline for media/pdf; force download for documents/archives (and anything unknown) to avoid serving executable content in-page.
-    const disposition = ATTACHMENT_INLINE.has(ext) ? 'inline' : `attachment; filename="${filename}"`;
+    const downloadName = (attachmentDisplayName(filename) || filename).replace(/"/g, '');
+    const disposition = ATTACHMENT_INLINE.has(ext) ? 'inline' : `attachment; filename="${downloadName}"`;
     return reply.type(mime).header('Content-Disposition', disposition).send(fs.createReadStream(filePath));
   });
 
@@ -1753,7 +1767,7 @@ async function chatRoutes(app) {
     if (!data) return reply.code(400).send({ error: 'No file provided' });
     const ext = path.extname(data.filename).slice(1).toLowerCase();
     if (!ATTACHMENT_ALLOWED.has(ext)) return reply.code(400).send({ error: 'Unsupported format' });
-    const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
+    const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}-${safeAttachmentBase(data.filename)}.${ext}`;
     await pipeline(data.file, fs.createWriteStream(path.join(UPLOADS_DIR, filename)));
     if (data.file.truncated) {
       fs.unlink(path.join(UPLOADS_DIR, filename), () => {});
