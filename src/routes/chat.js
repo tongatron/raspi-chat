@@ -25,6 +25,22 @@ if (hasVapidConfig) {
 }
 
 const UPLOADS_DIR = path.join(process.cwd(), 'data', 'uploads');
+
+// Attachment handling: extended whitelist + MIME map shared by upload and serve routes.
+const UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
+const ATTACHMENT_MIME = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+  pdf: 'application/pdf',
+  mov: 'video/quicktime', mp4: 'video/mp4', webm: 'video/webm', m4v: 'video/x-m4v',
+  mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', m4a: 'audio/mp4',
+  doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  txt: 'text/plain', csv: 'text/csv', zip: 'application/zip',
+};
+// Extensions we let the browser render inline (image/video/audio/pdf); everything else is forced as a download.
+const ATTACHMENT_INLINE = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'mov', 'mp4', 'webm', 'm4v', 'mp3', 'wav', 'ogg', 'm4a']);
+const ATTACHMENT_ALLOWED = new Set(Object.keys(ATTACHMENT_MIME));
 const DB_PATH = path.join(process.cwd(), 'data', 'chat.db');
 const CHAT_USERS_FILE = process.env.CHAT_USERS_FILE || path.join(process.cwd(), 'config', 'chat-users.json');
 const DEFAULT_ADMIN_USERNAME = normalizeUsername(process.env.DEFAULT_ADMIN_USERNAME || 'Giovanni');
@@ -1724,20 +1740,26 @@ async function chatRoutes(app) {
     const filePath = path.join(UPLOADS_DIR, filename);
     if (!fs.existsSync(filePath)) return reply.code(404).send({ error: 'Not found' });
     const ext = path.extname(filename).slice(1).toLowerCase();
-    const mime = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' }[ext] || 'application/octet-stream';
-    return reply.type(mime).send(fs.createReadStream(filePath));
+    const mime = ATTACHMENT_MIME[ext] || 'application/octet-stream';
+    // Inline for media/pdf; force download for documents/archives (and anything unknown) to avoid serving executable content in-page.
+    const disposition = ATTACHMENT_INLINE.has(ext) ? 'inline' : `attachment; filename="${filename}"`;
+    return reply.type(mime).header('Content-Disposition', disposition).send(fs.createReadStream(filePath));
   });
 
   app.post('/chat/upload', async (request, reply) => {
     const username = requireAuth(request, reply);
     if (!username) return;
-    const data = await request.file({ limits: { fileSize: 10 * 1024 * 1024 } });
+    const data = await request.file({ limits: { fileSize: UPLOAD_MAX_BYTES } });
     if (!data) return reply.code(400).send({ error: 'No file provided' });
-    const ext = path.extname(data.filename).toLowerCase();
-    if (!['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) return reply.code(400).send({ error: 'Unsupported format' });
-    const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`;
+    const ext = path.extname(data.filename).slice(1).toLowerCase();
+    if (!ATTACHMENT_ALLOWED.has(ext)) return reply.code(400).send({ error: 'Unsupported format' });
+    const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
     await pipeline(data.file, fs.createWriteStream(path.join(UPLOADS_DIR, filename)));
-    return { url: `/chat/images/${filename}` };
+    if (data.file.truncated) {
+      fs.unlink(path.join(UPLOADS_DIR, filename), () => {});
+      return reply.code(413).send({ error: 'File too large' });
+    }
+    return { url: `/chat/images/${filename}`, name: data.filename };
   });
 
   app.get('/chat/ws', { websocket: true }, (socket) => {
