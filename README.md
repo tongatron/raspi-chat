@@ -386,3 +386,6 @@ then `raspi-chat` is a lighter base better suited to Raspberry/home server use.
 - improve the guided setup automation further
 - document backup/restore of `chat.db`
 - add minimal automated tests
+- queue outgoing messages when the WebSocket is closed and auto-send them on
+  reconnect, so a single Enter is enough even if the socket dropped (currently
+  the text is preserved but the user must press Enter again after reconnect)

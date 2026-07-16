@@ -2760,7 +2760,7 @@
 
 <script>
 var WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/chat/ws';
-var ws, myName, myToken, pendingImageUrl = null, swReg = null, reconnectTimer = null;
+var ws, myName, myToken, pendingImageUrl = null, swReg = null, reconnectTimer = null, outbox = [];
 var msgElements = {}; // id -> { wrap, statusEl }
 
 // Reply state
@@ -3425,7 +3425,10 @@ function connect() {
   }
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
   ws = new WebSocket(WS_URL);
-  ws.onopen = function() { ws.send(JSON.stringify({ type: 'join', username: myName, token: myToken, roomId: currentRoomId })); };
+  ws.onopen = function() {
+    ws.send(JSON.stringify({ type: 'join', username: myName, token: myToken, roomId: currentRoomId }));
+    flushOutbox();
+  };
   ws.onmessage = function(e) { handleMsg(JSON.parse(e.data)); };
   ws.onclose = function() {
     ws = null;
@@ -3654,22 +3657,42 @@ msgInput.oninput = function() {
 function sendMessage() {
   var text = msgInput.value.trim();
   if (!text && !pendingImageUrl) return;
-  // Se il socket non è aperto il messaggio verrebbe scartato in silenzio: non
-  // svuotare l'input, riconnetti e lascia che l'utente riprovi.
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    connect();
-    return;
-  }
   var payload = { type: 'message', text: text, imageUrl: pendingImageUrl };
   if (replyTo) { payload.replyToId = replyTo.id; }
-  try {
-    ws.send(JSON.stringify(payload));
-  } catch (e) {
+  // Se il socket non è aperto, metti in coda: il messaggio partirà da solo alla
+  // riconnessione (flushOutbox in onopen). L'input si svuota comunque, così per
+  // l'utente basta un solo Invio.
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    outbox.push(payload);
     connect();
-    return;
+  } else {
+    try {
+      ws.send(JSON.stringify(payload));
+    } catch (e) {
+      outbox.push(payload);
+      connect();
+    }
   }
   msgInput.value = ''; msgInput.style.height = 'auto';
   clearImagePreview(); cancelReply();
+}
+
+// Spedisce i messaggi accumulati mentre il socket era chiuso. Va chiamata dopo
+// il join (il server scarta i messaggi finché il client non ha fatto join).
+function flushOutbox() {
+  if (!outbox.length || !ws || ws.readyState !== WebSocket.OPEN) return;
+  var pending = outbox;
+  outbox = [];
+  for (var i = 0; i < pending.length; i++) {
+    try {
+      ws.send(JSON.stringify(pending[i]));
+    } catch (e) {
+      // Socket ricaduto a metà: rimetti in coda ciò che resta e riprova dopo.
+      outbox = pending.slice(i).concat(outbox);
+      connect();
+      return;
+    }
+  }
 }
 
 // File upload
