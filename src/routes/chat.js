@@ -859,6 +859,12 @@ function broadcastToRoom(roomId, msg) {
     if (client.ws.readyState === 1) client.ws.send(raw);
   }
 }
+// TEMP-DEBUG: quanti socket vivi ci sono in una stanza — RIMUOVERE dopo il debug.
+function countRoomClients(roomId) {
+  let n = 0;
+  for (const client of clients.values()) if (client.roomId === roomId && client.ws.readyState === 1) n++;
+  return n;
+}
 function broadcastOnline(roomId) {
   const members = stmts.listRoomMembers.all(roomId).map(r => r.username);
   broadcastToRoom(roomId, { type: 'online', users: onlineUsers(roomId), members, roomId });
@@ -1872,9 +1878,12 @@ async function chatRoutes(app) {
         const replyToId = msg.replyToId ? String(msg.replyToId).slice(0, 36) : null;
         const cid = msg.cid ? String(msg.cid).slice(0, 64) : null;
         if (!text && !imageUrl) return;
+        // TEMP-DEBUG: diagnosi messaggi che spariscono — RIMUOVERE dopo il debug.
+        app.log.info(`[DEBUG-MSG] recv user=${client.username} room=${client.roomId} cid=${cid} len=${text.length} img=${imageUrl ? 1 : 0}`);
         // Reinvio di un messaggio già consegnato (dopo riconnessione): non
         // duplicarlo, ma confermare comunque così il client lo toglie dall'outbox.
         if (cid && recentCids.has(cid)) {
+          app.log.info(`[DEBUG-MSG] dup user=${client.username} cid=${cid} -> ack`); // TEMP-DEBUG
           try { socket.send(JSON.stringify({ type: 'ack', cid })); } catch {}
           return;
         }
@@ -1887,6 +1896,7 @@ async function chatRoutes(app) {
         stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, replyToId);
         if (cid) recentCids.set(cid, Date.now());
         broadcastToRoom(client.roomId, out);
+        app.log.info(`[DEBUG-MSG] bcast user=${out.username} room=${out.roomId} cid=${cid} id=${out.id} recipients=${countRoomClients(out.roomId)}`); // TEMP-DEBUG
         const roomRow = stmts.getRoomById.get(client.roomId);
         notifyUnread(client.roomId, roomRow ? roomRow.name : '', client.username);
         sendAllPush(out, client.username, client.roomId);
