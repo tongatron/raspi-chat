@@ -1789,6 +1789,20 @@ async function chatRoutes(app) {
     const id = crypto.randomUUID();
     clients.set(id, { ws: socket, username: null, roomId: null });
 
+    // Keepalive lato server (ping WebSocket a livello di protocollo). Senza
+    // traffico, nginx (proxy_read_timeout 60s) e Cloudflare (~100s) chiudono la
+    // connessione inattiva: diventa uno "zombie" e i messaggi vanno persi in
+    // silenzio. Il ping tiene viva la connessione e rileva i socket morti; il
+    // browser risponde da solo col pong, quindi protegge anche i client vecchi.
+    socket.isAlive = true;
+    socket.on('pong', () => { socket.isAlive = true; });
+    const keepAlive = setInterval(() => {
+      if (socket.isAlive === false) { try { socket.terminate(); } catch {} return; }
+      socket.isAlive = false;
+      try { socket.ping(); } catch {}
+    }, 30000);
+    keepAlive.unref?.();
+
     socket.on('message', (raw) => {
       let msg;
       try { msg = JSON.parse(raw.toString()); } catch { return; }
@@ -1864,7 +1878,6 @@ async function chatRoutes(app) {
           try { socket.send(JSON.stringify({ type: 'ack', cid })); } catch {}
           return;
         }
-        if (cid) recentCids.set(cid, Date.now());
         let replyTo = null;
         if (replyToId) {
           const replied = stmts.getById.get(replyToId, client.roomId);
@@ -1872,6 +1885,7 @@ async function chatRoutes(app) {
         }
         const out = { type: 'message', cid, id: crypto.randomUUID(), roomId: client.roomId, username: client.username, text, imageUrl, timestamp: new Date().toISOString(), readBy: [], replyTo };
         stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, replyToId);
+        if (cid) recentCids.set(cid, Date.now());
         broadcastToRoom(client.roomId, out);
         const roomRow = stmts.getRoomById.get(client.roomId);
         notifyUnread(client.roomId, roomRow ? roomRow.name : '', client.username);
@@ -1880,6 +1894,7 @@ async function chatRoutes(app) {
     });
 
     socket.on('close', () => {
+      clearInterval(keepAlive);
       const client = clients.get(id);
       clients.delete(id);
       if (client?.username && client.roomId) broadcastOnline(client.roomId);
