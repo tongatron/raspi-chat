@@ -2761,6 +2761,11 @@
 <script>
 var WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/chat/ws';
 var ws, myName, myToken, pendingImageUrl = null, swReg = null, reconnectTimer = null, outbox = [];
+var heartbeatTimer = null, lastPong = 0;
+function newCid() {
+  try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+}
 var msgElements = {}; // id -> { wrap, statusEl }
 
 // Reply state
@@ -3428,9 +3433,11 @@ function connect() {
   ws.onopen = function() {
     ws.send(JSON.stringify({ type: 'join', username: myName, token: myToken, roomId: currentRoomId }));
     flushOutbox();
+    startHeartbeat();
   };
   ws.onmessage = function(e) { handleMsg(JSON.parse(e.data)); };
   ws.onclose = function() {
+    stopHeartbeat();
     ws = null;
     if (!myName || !myToken) return;
     reconnectTimer = setTimeout(function() {
@@ -3438,6 +3445,26 @@ function connect() {
       connect();
     }, 2000);
   };
+}
+
+// Heartbeat: un socket "zombie" resta in stato OPEN ma non consegna nulla.
+// Inviamo un ping periodico; se non arriva un pong entro la finestra, la
+// connessione è morta: la chiudiamo per forzare la riconnessione (che a sua
+// volta rispedisce l'outbox non ancora confermato).
+function startHeartbeat() {
+  stopHeartbeat();
+  lastPong = Date.now();
+  heartbeatTimer = setInterval(function() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (Date.now() - lastPong > 30000) {
+      try { ws.close(); } catch (e) {}
+      return;
+    }
+    try { ws.send(JSON.stringify({ type: 'ping' })); } catch (e) {}
+  }, 15000);
+}
+function stopHeartbeat() {
+  if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
 }
 
 function handleMsg(msg) {
@@ -3477,7 +3504,16 @@ function handleMsg(msg) {
     if (unreadIds.length && ws.readyState === 1) ws.send(JSON.stringify({ type: 'read', ids: unreadIds }));
   }
   else if (msg.type === 'online') { updateOnline(msg.users, msg.members); }
+  else if (msg.type === 'ack') {
+    confirmSent(msg.cid);
+    return;
+  }
+  else if (msg.type === 'pong') {
+    lastPong = Date.now();
+    return;
+  }
   else if (msg.type === 'message') {
+    if (msg.cid && msg.username === myName) confirmSent(msg.cid);
     if (msg.id && msgElements[msg.id]) return;
     document.getElementById('messages').appendChild(buildMessage(msg));
     trackTimestamp(msg.timestamp);
@@ -3657,41 +3693,41 @@ msgInput.oninput = function() {
 function sendMessage() {
   var text = msgInput.value.trim();
   if (!text && !pendingImageUrl) return;
-  var payload = { type: 'message', text: text, imageUrl: pendingImageUrl };
+  var payload = { type: 'message', cid: newCid(), text: text, imageUrl: pendingImageUrl };
   if (replyTo) { payload.replyToId = replyTo.id; }
-  // Se il socket non è aperto, metti in coda: il messaggio partirà da solo alla
-  // riconnessione (flushOutbox in onopen). L'input si svuota comunque, così per
-  // l'utente basta un solo Invio.
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    outbox.push(payload);
-    connect();
-  } else {
-    try {
-      ws.send(JSON.stringify(payload));
-    } catch (e) {
-      outbox.push(payload);
-      connect();
-    }
-  }
+  // Il messaggio resta in outbox finché il server non lo conferma (eco/ack).
+  // Un socket "zombie" (readyState OPEN ma connessione morta) accetta la send
+  // senza consegnare: senza conferma il messaggio andrebbe perso in silenzio.
+  outbox.push(payload);
+  trySend(payload);
   msgInput.value = ''; msgInput.style.height = 'auto';
   clearImagePreview(); cancelReply();
 }
 
-// Spedisce i messaggi accumulati mentre il socket era chiuso. Va chiamata dopo
-// il join (il server scarta i messaggi finché il client non ha fatto join).
+// Invia un payload sul socket se aperto; altrimenti (o su errore) forza la
+// riconnessione. Non rimuove nulla dall'outbox: ci pensa la conferma del server.
+function trySend(payload) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    try { ws.send(JSON.stringify(payload)); return; } catch (e) {}
+  }
+  connect();
+}
+
+// Rispedisce tutti i messaggi non ancora confermati. Va chiamata dopo il join
+// (il server scarta i messaggi finché il client non ha fatto join); la
+// deduplica lato server evita doppioni se qualcuno era già arrivato.
 function flushOutbox() {
-  if (!outbox.length || !ws || ws.readyState !== WebSocket.OPEN) return;
-  var pending = outbox;
-  outbox = [];
-  for (var i = 0; i < pending.length; i++) {
-    try {
-      ws.send(JSON.stringify(pending[i]));
-    } catch (e) {
-      // Socket ricaduto a metà: rimetti in coda ciò che resta e riprova dopo.
-      outbox = pending.slice(i).concat(outbox);
-      connect();
-      return;
-    }
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  for (var i = 0; i < outbox.length; i++) {
+    try { ws.send(JSON.stringify(outbox[i])); } catch (e) { connect(); return; }
+  }
+}
+
+// Rimuove dall'outbox il messaggio confermato dal server.
+function confirmSent(cid) {
+  if (!cid) return;
+  for (var i = 0; i < outbox.length; i++) {
+    if (outbox[i].cid === cid) { outbox.splice(i, 1); return; }
   }
 }
 

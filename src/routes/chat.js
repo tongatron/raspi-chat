@@ -826,6 +826,15 @@ async function buildYoutubePreview(url) {
 const clients   = new Map();
 // pushSubs: Map<username, Map<endpoint, subscriptionObject>>
 const pushSubs  = new Map();
+// recentCids: cid -> timestamp. Deduplica i reinvii del client (dopo una
+// riconnessione un messaggio già consegnato può essere rispedito): evita di
+// duplicarlo e permette di rimandare un ack. Pulita periodicamente.
+const recentCids = new Map();
+const CID_TTL_MS = 10 * 60 * 1000;
+setInterval(() => {
+  const cutoff = Date.now() - CID_TTL_MS;
+  for (const [cid, ts] of recentCids) if (ts < cutoff) recentCids.delete(cid);
+}, CID_TTL_MS).unref?.();
 
 // Load persisted push subscriptions
 for (const row of stmts.listPushSubs.all()) {
@@ -1785,6 +1794,11 @@ async function chatRoutes(app) {
       try { msg = JSON.parse(raw.toString()); } catch { return; }
       const client = clients.get(id);
 
+      if (msg.type === 'ping') {
+        try { socket.send(JSON.stringify({ type: 'pong' })); } catch {}
+        return;
+      }
+
       if (msg.type === 'join') {
         const username = normalizeUsername(msg.username);
         if (!username) return;
@@ -1842,13 +1856,21 @@ async function chatRoutes(app) {
         const text = String(msg.text || '').trim().slice(0, 2000);
         const imageUrl = msg.imageUrl ? String(msg.imageUrl) : null;
         const replyToId = msg.replyToId ? String(msg.replyToId).slice(0, 36) : null;
+        const cid = msg.cid ? String(msg.cid).slice(0, 64) : null;
         if (!text && !imageUrl) return;
+        // Reinvio di un messaggio già consegnato (dopo riconnessione): non
+        // duplicarlo, ma confermare comunque così il client lo toglie dall'outbox.
+        if (cid && recentCids.has(cid)) {
+          try { socket.send(JSON.stringify({ type: 'ack', cid })); } catch {}
+          return;
+        }
+        if (cid) recentCids.set(cid, Date.now());
         let replyTo = null;
         if (replyToId) {
           const replied = stmts.getById.get(replyToId, client.roomId);
           if (replied) replyTo = { id: replied.id, username: replied.username, text: replied.text || '', imageUrl: replied.imageUrl || null };
         }
-        const out = { type: 'message', id: crypto.randomUUID(), roomId: client.roomId, username: client.username, text, imageUrl, timestamp: new Date().toISOString(), readBy: [], replyTo };
+        const out = { type: 'message', cid, id: crypto.randomUUID(), roomId: client.roomId, username: client.username, text, imageUrl, timestamp: new Date().toISOString(), readBy: [], replyTo };
         stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, replyToId);
         broadcastToRoom(client.roomId, out);
         const roomRow = stmts.getRoomById.get(client.roomId);
