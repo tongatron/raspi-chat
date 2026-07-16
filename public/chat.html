@@ -3654,9 +3654,20 @@ msgInput.oninput = function() {
 function sendMessage() {
   var text = msgInput.value.trim();
   if (!text && !pendingImageUrl) return;
+  // Se il socket non è aperto il messaggio verrebbe scartato in silenzio: non
+  // svuotare l'input, riconnetti e lascia che l'utente riprovi.
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    connect();
+    return;
+  }
   var payload = { type: 'message', text: text, imageUrl: pendingImageUrl };
   if (replyTo) { payload.replyToId = replyTo.id; }
-  ws.send(JSON.stringify(payload));
+  try {
+    ws.send(JSON.stringify(payload));
+  } catch (e) {
+    connect();
+    return;
+  }
   msgInput.value = ''; msgInput.style.height = 'auto';
   clearImagePreview(); cancelReply();
 }
