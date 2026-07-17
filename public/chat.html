@@ -27,26 +27,26 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <style>
     :root {
-      --bg-top: #090d14;
-      --bg-mid: #0d1420;
-      --bg-bottom: #070b12;
-      --surface: rgba(10,16,26,.84);
-      --surface-strong: rgba(14,21,33,.94);
-      --surface-muted: rgba(18,26,39,.94);
-      --border: rgba(214,228,247,.18);
-      --border-strong: rgba(224,236,252,.28);
-      --ink: #f3f7fd;
-      --muted: #b4c0cf;
-      --muted-soft: #91a0b4;
-      --primary: #7ab4ff;
-      --primary-strong: #539cf2;
-      --primary-soft: rgba(122,180,255,.16);
+      --bg-top: #000000;
+      --bg-mid: #050505;
+      --bg-bottom: #000000;
+      --surface: rgba(20,20,20,.90);
+      --surface-strong: rgba(28,28,28,.95);
+      --surface-muted: rgba(15,15,15,.95);
+      --border: rgba(255,255,255,.14);
+      --border-strong: rgba(255,255,255,.24);
+      --ink: #ffffff;
+      --muted: #8a8a8a;
+      --muted-soft: #6f6f6f;
+      --primary: #e6e6e6;
+      --primary-strong: #ffffff;
+      --primary-soft: rgba(255,255,255,.14);
       --accent: #f09c75;
       --success: #6fe0a8;
       --warning: #f4c972;
       --shadow: 0 24px 60px rgba(0,0,0,.42);
       --shadow-soft: 0 12px 30px rgba(0,0,0,.30);
-      --message-surface: rgba(7,11,18,.72);
+      --message-surface: rgba(0,0,0,.75);
     }
     body.theme-light {
       --bg-top: #eef0f3;
@@ -184,7 +184,7 @@
     body:not(.theme-light) #reply-cancel:hover,
     body:not(.theme-light) .reply-btn:hover,
     body:not(.theme-light) .delete-btn:hover {
-      background: rgba(122,180,255,.14);
+      background: rgba(255,255,255,.14);
     }
     body.theme-light .user-btn:hover,
     body.theme-light .toolbar-btn:hover,
@@ -208,7 +208,7 @@
     }
     body:not(.theme-light) #input-area textarea:focus {
       background: rgba(10,16,27,.96);
-      border-color: rgba(122,180,255,.42);
+      border-color: rgba(255,255,255,.35);
     }
     body.theme-light #input-area textarea:focus {
       background: #ffffff;
@@ -223,8 +223,8 @@
       border-color: rgba(23,29,38,.10);
     }
     body:not(.theme-light) .me .bubble {
-      background: linear-gradient(180deg, #327bdb, #225fb2);
-      border-color: rgba(255,255,255,.12);
+      background: linear-gradient(180deg, #3a3a3a, #262626);
+      border-color: rgba(255,255,255,.18);
     }
     body.theme-light .me .bubble {
       background: linear-gradient(180deg, #3a7be0, #2a5fc0);
@@ -296,7 +296,7 @@
     }
     body:not(.theme-light) #private-note:focus {
       background: rgba(10,16,27,.96);
-      border-color: rgba(122,180,255,.42);
+      border-color: rgba(255,255,255,.35);
     }
     body.theme-light #private-note:focus {
       background: #ffffff;
@@ -304,14 +304,14 @@
     }
     body:not(.theme-light) .private-download,
     body:not(.theme-light) #private-refresh-btn:hover {
-      background: rgba(122,180,255,.14);
+      background: rgba(255,255,255,.14);
     }
     body.theme-light .private-download,
     body.theme-light #private-refresh-btn:hover {
       background: var(--primary-soft);
     }
     body:not(.theme-light) #private-save-note-btn:hover {
-      background: rgba(122,180,255,.14);
+      background: rgba(255,255,255,.14);
     }
     body.theme-light #private-save-note-btn:hover {
       background: var(--primary-soft);
@@ -1905,7 +1905,7 @@
     body:not(.theme-light) .admin-field input:focus,
     body:not(.theme-light) .admin-field select:focus {
       background-color: rgba(10,16,27,.96);
-      border-color: rgba(122,180,255,.42);
+      border-color: rgba(255,255,255,.35);
     }
     #admin-save-btn {
       border: none;
