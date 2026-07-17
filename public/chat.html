@@ -48,6 +48,28 @@
       --shadow-soft: 0 12px 30px rgba(0,0,0,.30);
       --message-surface: rgba(7,11,18,.72);
     }
+    body.theme-light {
+      --bg-top: #eef0f3;
+      --bg-mid: #e7e9ec;
+      --bg-bottom: #dfe2e6;
+      --surface: rgba(255,255,255,.86);
+      --surface-strong: rgba(255,255,255,.96);
+      --surface-muted: rgba(246,247,249,.96);
+      --border: rgba(23,29,38,.12);
+      --border-strong: rgba(23,29,38,.20);
+      --ink: #1c222c;
+      --muted: #5a6472;
+      --muted-soft: #78818f;
+      --primary: #2f6fe0;
+      --primary-strong: #1f57bd;
+      --primary-soft: rgba(47,111,224,.12);
+      --accent: #c96a3e;
+      --success: #1f9d63;
+      --warning: #a5730c;
+      --shadow: 0 24px 60px rgba(23,29,38,.14);
+      --shadow-soft: 0 12px 30px rgba(23,29,38,.10);
+      --message-surface: rgba(255,255,255,.9);
+    }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -87,117 +109,226 @@
       pointer-events: none;
     }
     #login, #chat, #lightbox { position: relative; z-index: 1; }
-    body .login-box,
-    body header,
-    body #messages,
-    body #reply-bar,
-    body #input-area,
-    body #image-preview,
-    body #notif-banner,
-    body #debug-log {
+    body:not(.theme-light) .login-box,
+    body:not(.theme-light) header,
+    body:not(.theme-light) #messages,
+    body:not(.theme-light) #reply-bar,
+    body:not(.theme-light) #input-area,
+    body:not(.theme-light) #image-preview,
+    body:not(.theme-light) #notif-banner,
+    body:not(.theme-light) #debug-log {
       border-color: rgba(229,239,252,.18);
       box-shadow: 0 18px 42px rgba(0,0,0,.34);
     }
-    body .login-eyebrow,
-    body .selected-user,
-    body .user-btn,
-    body .pwd-input,
-    body .toolbar-btn,
-    body #attach-btn,
-    body #image-preview button,
-    body #reply-cancel,
-    body .delete-btn,
-    body .reply-btn {
+    body.theme-light .login-box,
+    body.theme-light header,
+    body.theme-light #messages,
+    body.theme-light #reply-bar,
+    body.theme-light #input-area,
+    body.theme-light #image-preview,
+    body.theme-light #debug-log {
+      border-color: rgba(23,29,38,.10);
+      box-shadow: 0 18px 42px rgba(23,29,38,.10);
+    }
+    body:not(.theme-light) .login-eyebrow,
+    body:not(.theme-light) .selected-user,
+    body:not(.theme-light) .user-btn,
+    body:not(.theme-light) .pwd-input,
+    body:not(.theme-light) .toolbar-btn,
+    body:not(.theme-light) #attach-btn,
+    body:not(.theme-light) #image-preview button,
+    body:not(.theme-light) #reply-cancel,
+    body:not(.theme-light) .delete-btn,
+    body:not(.theme-light) .reply-btn {
       border-color: rgba(229,239,252,.16);
     }
-    body .login-eyebrow,
-    body .selected-user,
-    body .user-btn,
-    body .pwd-input,
-    body .toolbar-btn,
-    body #attach-btn,
-    body #image-preview,
-    body #debug-log,
-    body #typing-indicator {
+    body.theme-light .login-eyebrow,
+    body.theme-light .selected-user,
+    body.theme-light .user-btn,
+    body.theme-light .pwd-input,
+    body.theme-light .toolbar-btn,
+    body.theme-light #attach-btn,
+    body.theme-light #image-preview button,
+    body.theme-light #reply-cancel,
+    body.theme-light .delete-btn,
+    body.theme-light .reply-btn {
+      border-color: rgba(23,29,38,.12);
+    }
+    body:not(.theme-light) .login-eyebrow,
+    body:not(.theme-light) .selected-user,
+    body:not(.theme-light) .user-btn,
+    body:not(.theme-light) .pwd-input,
+    body:not(.theme-light) .toolbar-btn,
+    body:not(.theme-light) #attach-btn,
+    body:not(.theme-light) #image-preview,
+    body:not(.theme-light) #debug-log,
+    body:not(.theme-light) #typing-indicator {
       background: rgba(17,25,37,.84);
     }
-    body .user-btn:hover,
-    body .toolbar-btn:hover,
-    body #attach-btn:hover,
-    body #console-btn:hover,
-    body #image-preview button:hover,
-    body #reply-cancel:hover,
-    body .reply-btn:hover,
-    body .delete-btn:hover {
+    body.theme-light .login-eyebrow,
+    body.theme-light .selected-user,
+    body.theme-light .user-btn,
+    body.theme-light .pwd-input,
+    body.theme-light .toolbar-btn,
+    body.theme-light #attach-btn,
+    body.theme-light #image-preview,
+    body.theme-light #debug-log,
+    body.theme-light #typing-indicator {
+      background: rgba(23,29,38,.045);
+    }
+    body:not(.theme-light) .user-btn:hover,
+    body:not(.theme-light) .toolbar-btn:hover,
+    body:not(.theme-light) #attach-btn:hover,
+    body:not(.theme-light) #console-btn:hover,
+    body:not(.theme-light) #image-preview button:hover,
+    body:not(.theme-light) #reply-cancel:hover,
+    body:not(.theme-light) .reply-btn:hover,
+    body:not(.theme-light) .delete-btn:hover {
       background: rgba(122,180,255,.14);
     }
-    body #input-area textarea {
+    body.theme-light .user-btn:hover,
+    body.theme-light .toolbar-btn:hover,
+    body.theme-light #attach-btn:hover,
+    body.theme-light #console-btn:hover,
+    body.theme-light #image-preview button:hover,
+    body.theme-light #reply-cancel:hover,
+    body.theme-light .reply-btn:hover,
+    body.theme-light .delete-btn:hover {
+      background: var(--primary-soft);
+    }
+    body:not(.theme-light) #input-area textarea {
       background: rgba(8,14,24,.88);
       border-color: rgba(229,239,252,.14);
       color: var(--ink);
     }
-    body #input-area textarea:focus {
+    body.theme-light #input-area textarea {
+      background: rgba(255,255,255,.9);
+      border-color: rgba(23,29,38,.14);
+      color: var(--ink);
+    }
+    body:not(.theme-light) #input-area textarea:focus {
       background: rgba(10,16,27,.96);
       border-color: rgba(122,180,255,.42);
     }
-    body .other .bubble {
+    body.theme-light #input-area textarea:focus {
+      background: #ffffff;
+      border-color: rgba(47,111,224,.45);
+    }
+    body:not(.theme-light) .other .bubble {
       background: rgba(16,24,36,.96);
       border-color: rgba(229,239,252,.14);
     }
-    body .me .bubble {
+    body.theme-light .other .bubble {
+      background: #ffffff;
+      border-color: rgba(23,29,38,.10);
+    }
+    body:not(.theme-light) .me .bubble {
       background: linear-gradient(180deg, #327bdb, #225fb2);
       border-color: rgba(255,255,255,.12);
     }
-    body .link-preview {
+    body.theme-light .me .bubble {
+      background: linear-gradient(180deg, #3a7be0, #2a5fc0);
+      border-color: rgba(255,255,255,.20);
+    }
+    body:not(.theme-light) .link-preview {
       background: rgba(12,18,28,.96);
       border-color: rgba(229,239,252,.14);
       box-shadow: 0 12px 26px rgba(0,0,0,.28);
     }
-    body .private-card,
-    body .private-list,
-    body .private-item,
-    body .rooms-card,
-    body .rooms-list,
-    body .admin-card,
-    body .admin-list,
-    body .console-topbar,
-    body .console-card {
+    body.theme-light .link-preview {
+      background: #ffffff;
+      border-color: rgba(23,29,38,.10);
+      box-shadow: 0 12px 26px rgba(23,29,38,.08);
+    }
+    body:not(.theme-light) .private-card,
+    body:not(.theme-light) .private-list,
+    body:not(.theme-light) .private-item,
+    body:not(.theme-light) .rooms-card,
+    body:not(.theme-light) .rooms-list,
+    body:not(.theme-light) .admin-card,
+    body:not(.theme-light) .admin-list,
+    body:not(.theme-light) .console-topbar,
+    body:not(.theme-light) .console-card {
       border-color: rgba(229,239,252,.18);
       box-shadow: 0 18px 42px rgba(0,0,0,.34);
     }
-    body .private-item,
-    body #private-refresh-btn {
+    body.theme-light .private-card,
+    body.theme-light .private-list,
+    body.theme-light .private-item,
+    body.theme-light .rooms-card,
+    body.theme-light .rooms-list,
+    body.theme-light .admin-card,
+    body.theme-light .admin-list,
+    body.theme-light .console-topbar,
+    body.theme-light .console-card {
+      border-color: rgba(23,29,38,.10);
+      box-shadow: 0 18px 42px rgba(23,29,38,.10);
+    }
+    body:not(.theme-light) .private-item,
+    body:not(.theme-light) #private-refresh-btn {
       background: rgba(17,25,37,.84);
     }
-    body #private-save-note-btn,
-    body .private-note-badge {
+    body.theme-light .private-item,
+    body.theme-light #private-refresh-btn {
+      background: rgba(23,29,38,.045);
+    }
+    body:not(.theme-light) #private-save-note-btn,
+    body:not(.theme-light) .private-note-badge {
       background: rgba(17,25,37,.84);
       color: var(--muted);
       border-color: rgba(229,239,252,.16);
     }
-    body #private-note {
+    body.theme-light #private-save-note-btn,
+    body.theme-light .private-note-badge {
+      background: rgba(23,29,38,.05);
+      color: var(--muted);
+      border-color: rgba(23,29,38,.12);
+    }
+    body:not(.theme-light) #private-note {
       background: rgba(8,14,24,.88);
       border-color: rgba(229,239,252,.14);
       color: var(--ink);
     }
-    body #private-note:focus {
+    body.theme-light #private-note {
+      background: rgba(255,255,255,.9);
+      border-color: rgba(23,29,38,.14);
+      color: var(--ink);
+    }
+    body:not(.theme-light) #private-note:focus {
       background: rgba(10,16,27,.96);
       border-color: rgba(122,180,255,.42);
     }
-    body .private-download,
-    body #private-refresh-btn:hover {
+    body.theme-light #private-note:focus {
+      background: #ffffff;
+      border-color: rgba(47,111,224,.45);
+    }
+    body:not(.theme-light) .private-download,
+    body:not(.theme-light) #private-refresh-btn:hover {
       background: rgba(122,180,255,.14);
     }
-    body #private-save-note-btn:hover {
+    body.theme-light .private-download,
+    body.theme-light #private-refresh-btn:hover {
+      background: var(--primary-soft);
+    }
+    body:not(.theme-light) #private-save-note-btn:hover {
       background: rgba(122,180,255,.14);
+    }
+    body.theme-light #private-save-note-btn:hover {
+      background: var(--primary-soft);
     }
     body .me .link-preview {
       background: rgba(255,255,255,.10);
       border-color: rgba(255,255,255,.16);
     }
-    body .admin-invite-link {
+    body:not(.theme-light) .admin-invite-link {
       background: rgba(8,14,24,.92);
       border-color: rgba(229,239,252,.14);
+      color: var(--ink);
+      -webkit-text-fill-color: var(--ink);
+    }
+    body.theme-light .admin-invite-link {
+      background: rgba(255,255,255,.92);
+      border-color: rgba(23,29,38,.14);
       color: var(--ink);
       -webkit-text-fill-color: var(--ink);
     }
@@ -732,27 +863,25 @@
       display: none;
       position: absolute;
       top: calc(100% + 6px);
-      left: 0;
+      right: 0;
+      left: auto;
+      max-width: min(240px, calc(100vw - 24px));
       min-width: 170px;
-      background: #ffffff;
-      border: 1px solid rgba(0,0,0,.14);
+      background: var(--menu-bg, #1c2129);
+      border: 1px solid var(--menu-border, rgba(255,255,255,.14));
       border-radius: 5px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.18);
+      box-shadow: var(--menu-shadow, 0 8px 24px rgba(0,0,0,.6));
       padding: 4px;
       z-index: 1000;
       flex-direction: column;
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
     }
-    #user-rooms-menu {
-      left: auto;
-      right: 0;
-    }
-    body #settings-menu,
-    body #user-rooms-menu {
-      background: #1c2129;
-      border-color: rgba(255,255,255,.14);
-      box-shadow: 0 8px 24px rgba(0,0,0,.6);
+    body.theme-light #settings-menu,
+    body.theme-light #user-rooms-menu {
+      --menu-bg: #ffffff;
+      --menu-border: rgba(23,29,38,.14);
+      --menu-shadow: 0 8px 24px rgba(23,29,38,.16);
     }
     #settings-menu.open,
     #user-rooms-menu.open { display: flex; }
@@ -765,24 +894,24 @@
       font: inherit;
       font-size: .92rem;
       font-weight: 600;
-      color: #1d2a39;
+      color: var(--menu-text, #f3f7fd);
       border-radius: 3px;
       cursor: pointer;
       width: 100%;
     }
-    body #settings-menu button,
-    body #user-rooms-menu button { color: #f3f7fd; }
+    body.theme-light #settings-menu button,
+    body.theme-light #user-rooms-menu button { --menu-text: #1d2a39; }
     #settings-menu button:hover,
-    #user-rooms-menu button:hover { background: rgba(15,34,59,.08); }
-    body #settings-menu button:hover,
-    body #user-rooms-menu button:hover { background: rgba(255,255,255,.08); }
+    #user-rooms-menu button:hover { background: rgba(255,255,255,.08); }
+    body.theme-light #settings-menu button:hover,
+    body.theme-light #user-rooms-menu button:hover { background: rgba(15,34,59,.08); }
     .menu-sep {
       border: none;
-      border-top: 1px solid rgba(0,0,0,.10);
+      border-top: 1px solid rgba(255,255,255,.12);
       margin: 4px 8px;
     }
-    body .menu-sep {
-      border-top-color: rgba(255,255,255,.12);
+    body.theme-light .menu-sep {
+      border-top-color: rgba(23,29,38,.12);
     }
     #user-rooms-wrap { order: 20; }
     #console-btn { order: 30; }
@@ -1151,7 +1280,7 @@
       outline: none;
       cursor: pointer;
     }
-    body #media-filter-select {
+    body:not(.theme-light) #media-filter-select {
       background: rgba(255,255,255,.06);
       color: #f3f7fd;
       border-color: rgba(255,255,255,.14);
@@ -1756,25 +1885,25 @@
       box-shadow: 0 0 0 4px rgba(31,111,210,.10);
       background-color: rgba(255,255,255,.96);
     }
-    body .admin-field input,
-    body .admin-field select {
+    body:not(.theme-light) .admin-field input,
+    body:not(.theme-light) .admin-field select {
       background: rgba(8,14,24,.88);
       border-color: rgba(229,239,252,.14);
       color: var(--ink);
     }
-    body .admin-field input::placeholder { color: rgba(229,239,252,.40); }
-    body .admin-field select {
+    body:not(.theme-light) .admin-field input::placeholder { color: rgba(229,239,252,.40); }
+    body:not(.theme-light) .admin-field select {
       background-image: linear-gradient(45deg, transparent 50%, #e5effc 50%), linear-gradient(135deg, #e5effc 50%, transparent 50%);
       background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
       background-size: 5px 5px, 5px 5px;
       background-repeat: no-repeat;
     }
-    body .admin-field select option {
+    body:not(.theme-light) .admin-field select option {
       background: #111925;
       color: var(--ink);
     }
-    body .admin-field input:focus,
-    body .admin-field select:focus {
+    body:not(.theme-light) .admin-field input:focus,
+    body:not(.theme-light) .admin-field select:focus {
       background-color: rgba(10,16,27,.96);
       border-color: rgba(122,180,255,.42);
     }
@@ -2593,6 +2722,8 @@
           <button type="button" data-view="rooms" role="menuitem" class="manage-users-only" style="display:none">Rooms</button>
           <button type="button" data-view="console" role="menuitem" class="console-access-only" style="display:none">Console</button>
           <button type="button" data-view="stats" role="menuitem" class="console-access-only" style="display:none">Stats</button>
+          <hr class="menu-sep" />
+          <button type="button" id="theme-toggle-btn" role="menuitem">🌙 Tema scuro</button>
           <hr class="menu-sep admin-access-only" style="display:none" />
           <button type="button" id="logout-menu-btn" role="menuitem">Sign out</button>
         </div>
@@ -2897,6 +3028,19 @@
 </div>
 
 <script>
+function applyTheme(theme) {
+  document.body.classList.toggle('theme-light', theme === 'light');
+  var btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.textContent = theme === 'light' ? '☀️ Tema chiaro' : '🌙 Tema scuro';
+}
+applyTheme(localStorage.getItem('chat-theme') || 'dark');
+document.getElementById('theme-toggle-btn').onclick = function(e) {
+  e.stopPropagation();
+  var next = document.body.classList.contains('theme-light') ? 'dark' : 'light';
+  localStorage.setItem('chat-theme', next);
+  applyTheme(next);
+};
+
 var WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/chat/ws';
 var ws, myName, myToken, pendingImageUrl = null, swReg = null, reconnectTimer = null, outbox = [];
 var heartbeatTimer = null, lastPong = 0;
