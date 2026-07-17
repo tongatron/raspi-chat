@@ -665,6 +665,7 @@
       border: none;
       border-radius: 4px;
       padding: 0 16px;
+      -webkit-tap-highlight-color: transparent;
       background: rgba(15,34,59,.06);
       color: var(--muted);
       font-size: .88rem;
@@ -690,18 +691,29 @@
       background: var(--primary-soft);
       color: var(--primary-strong);
     }
-    #user-rooms-btn { position: relative; gap: 6px; }
+    #user-rooms-btn {
+      position: relative;
+      gap: 6px;
+      width: 42px;
+      padding: 0;
+      color: var(--muted);
+    }
+    #user-rooms-btn svg { display: block; }
+    #user-rooms-btn:hover { color: var(--ink); }
     #rooms-unread-dot {
+      position: absolute;
+      top: -5px;
+      right: -5px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 18px;
-      height: 18px;
-      padding: 0 5px;
+      min-width: 17px;
+      height: 17px;
+      padding: 0 4px;
       border-radius: 999px;
       background: #e53e3e;
       color: #fff;
-      font-size: .72rem;
+      font-size: .68rem;
       font-weight: 800;
       line-height: 1;
       animation: pulseDot 2.4s ease infinite;
@@ -794,7 +806,7 @@
       background: rgba(255,255,255,.08);
       color: #ffffff;
       box-shadow: none;
-      transform: rotate(22deg);
+      transform: none;
     }
     /* Messages */
     #chat-main-view { display: contents; }
@@ -1092,6 +1104,92 @@
       flex: 1;
       overflow: hidden;
     }
+    #media-view {
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 0;
+      flex: 1;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,.70);
+      border-radius: 6px;
+      box-shadow: var(--shadow-soft);
+      padding: 18px;
+    }
+    .media-topbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .media-topbar h3 { font-size: 1.1rem; letter-spacing: -.02em; }
+    .media-topbar .eyebrow {
+      font-size: .72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+    }
+    .media-filter {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    #media-filter-select {
+      border: 1px solid rgba(21,39,66,.14);
+      border-radius: 4px;
+      background: rgba(255,255,255,.9);
+      color: #0f1623;
+      padding: 8px 10px;
+      font: inherit;
+      font-size: .85rem;
+      outline: none;
+      cursor: pointer;
+    }
+    body #media-filter-select {
+      background: rgba(255,255,255,.06);
+      color: #f3f7fd;
+      border-color: rgba(255,255,255,.14);
+    }
+    #media-status { font-size: .86rem; color: var(--muted); }
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+      gap: 8px;
+    }
+    .media-cell {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border-radius: 5px;
+      overflow: hidden;
+      background: rgba(15,34,59,.08);
+      cursor: pointer;
+    }
+    .media-cell img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .media-cell .media-who {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 3px 6px;
+      font-size: .68rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.6));
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     #console-view {
       display: none;
       flex-direction: column;
@@ -1119,7 +1217,8 @@
     body.subpage-view #rooms-view,
     body.subpage-view #console-view,
     body.subpage-view #admin-view,
-    body.subpage-view #stats-view {
+    body.subpage-view #stats-view,
+    body.subpage-view #media-view {
       flex: none;
       min-height: auto;
       overflow: visible;
@@ -2136,6 +2235,23 @@
       color: var(--muted);
       cursor: pointer;
     }
+    #new-room-users label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 4px;
+      cursor: pointer;
+      font-size: .92rem;
+      color: var(--ink);
+    }
+    #new-room-users input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+      padding: 0;
+      margin: 0;
+      accent-color: var(--primary);
+    }
 
     /* Misc */
     #notif-banner {
@@ -2177,16 +2293,16 @@
       .onboarding-grid { grid-template-columns: 1fr; }
       #chat { padding: 8px; gap: 8px; }
       header {
-        padding: 12px 14px;
+        padding: 10px 12px;
         border-radius: 5px;
-        align-items: flex-start;
-        flex-wrap: wrap;
-        row-gap: 10px;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 10px;
       }
       .header-main {
-        flex: 1 1 0;
+        flex: 1 1 auto;
         min-width: 0;
-        align-items: flex-start;
+        align-items: center;
       }
       .header-copy { gap: 2px; }
       header h2 {
@@ -2219,10 +2335,11 @@
         height: 14px;
       }
       .header-actions {
-        width: 100%;
+        width: auto;
+        flex: 0 0 auto;
         margin-left: 0;
         justify-content: flex-end;
-        gap: 6px;
+        gap: 4px;
       }
       .toolbar-btn {
         width: 38px;
@@ -2237,6 +2354,11 @@
         padding: 0 12px;
         font-size: .8rem;
       }
+      #user-rooms-btn {
+        width: 38px;
+        height: 38px;
+      }
+      .header-presence { flex-wrap: nowrap; overflow: hidden; }
       #messages { border-radius: 5px; padding: 14px 12px 18px; }
       .msg-wrap { max-width: 86%; }
       #reply-bar, #image-preview, #notif-banner { border-radius: 5px; }
@@ -2456,7 +2578,7 @@
     </div>
     <div class="header-actions">
       <div id="user-rooms-wrap" style="position:relative; display:none;">
-        <button id="user-rooms-btn" type="button">Rooms</button>
+        <button id="user-rooms-btn" type="button" title="Rooms" aria-label="Rooms"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.6" fill="currentColor"/><rect x="14" y="3" width="7" height="7" rx="1.6" fill="currentColor"/><rect x="3" y="14" width="7" height="7" rx="1.6" fill="currentColor"/><rect x="14" y="14" width="7" height="7" rx="1.6" fill="currentColor"/></svg></button>
         <div id="user-rooms-menu" role="menu"></div>
       </div>
       <button id="console-btn" type="button" style="display:none" hidden></button>
@@ -2465,6 +2587,7 @@
       <div id="settings-wrap">
         <button id="settings-btn" class="toolbar-btn" type="button" title="Settings" aria-label="Settings">&#x2699;</button>
         <div id="settings-menu" role="menu">
+          <button type="button" data-view="media" role="menuitem">Media</button>
           <button type="button" data-view="chat" role="menuitem" class="manage-users-only" style="display:none">Chat</button>
           <button type="button" data-view="admin" role="menuitem" id="admin-menu-btn" class="admin-access-only" style="display:none">Users</button>
           <button type="button" data-view="rooms" role="menuitem" class="manage-users-only" style="display:none">Rooms</button>
@@ -2545,6 +2668,21 @@
         <div class="rooms-status" id="rooms-status"></div>
       </div>
     </div>
+  </section>
+  <section id="media-view">
+    <div class="media-topbar">
+      <div>
+        <div class="eyebrow">Galleria</div>
+        <h3 id="media-title">Media</h3>
+        <div class="rooms-copy">Anteprima delle immagini condivise nella stanza.</div>
+      </div>
+      <label class="media-filter">
+        <span>Mostra</span>
+        <select id="media-filter-select"><option value="__all__">Da tutti</option></select>
+      </label>
+    </div>
+    <div id="media-status">Caricamento…</div>
+    <div id="media-grid" class="media-grid" hidden></div>
   </section>
   <section id="console-view">
     <div class="console-topbar">
@@ -3811,6 +3949,7 @@ function setView(view) {
   if (view === 'console' && canUseConsole) nextView = 'console';
   if (view === 'admin' && (canManageUsers || canCreateInvites)) nextView = 'admin';
   if (view === 'stats' && canUseConsole) nextView = 'stats';
+  if (view === 'media' && currentRoomId) nextView = 'media';
   if (nextView !== 'console') stopConsoleAutoRefresh();
   currentView = nextView;
   document.body.classList.toggle('subpage-view', nextView !== 'chat');
@@ -3819,6 +3958,7 @@ function setView(view) {
   document.getElementById('console-view').style.display = nextView === 'console' ? 'flex' : 'none';
   document.getElementById('admin-view').style.display = nextView === 'admin' ? 'flex' : 'none';
   document.getElementById('stats-view').style.display = nextView === 'stats' ? 'flex' : 'none';
+  document.getElementById('media-view').style.display = nextView === 'media' ? 'flex' : 'none';
   var consoleBtn = document.getElementById('console-btn');
   if (consoleBtn) {
     consoleBtn.classList.toggle('active', nextView === 'console');
@@ -3831,7 +3971,77 @@ function setView(view) {
   }
   if (nextView === 'console') startConsoleAutoRefresh();
   if (nextView === 'stats') loadStats();
+  if (nextView === 'media') loadMedia();
 }
+
+var mediaItems = [];
+async function loadMedia() {
+  var titleEl = document.getElementById('media-title');
+  var statusEl = document.getElementById('media-status');
+  var gridEl = document.getElementById('media-grid');
+  if (titleEl) titleEl.textContent = 'Media • ' + (currentRoomName || 'Chat');
+  statusEl.style.display = '';
+  statusEl.textContent = 'Caricamento…';
+  gridEl.hidden = true;
+  try {
+    var res = await authFetch('/chat/media?roomId=' + encodeURIComponent(currentRoomId));
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore');
+    mediaItems = data.images || [];
+    populateMediaFilter();
+    renderMedia();
+  } catch (e) {
+    statusEl.textContent = 'Impossibile caricare i media: ' + e.message;
+    gridEl.hidden = true;
+  }
+}
+
+function populateMediaFilter() {
+  var select = document.getElementById('media-filter-select');
+  var prev = select.value;
+  var users = [];
+  mediaItems.forEach(function(it) { if (users.indexOf(it.username) === -1) users.push(it.username); });
+  users.sort(function(a, b) { return a.localeCompare(b); });
+  select.innerHTML = '<option value="__all__">Da tutti</option>';
+  users.forEach(function(u) {
+    var opt = document.createElement('option');
+    opt.value = u; opt.textContent = 'Da ' + u;
+    select.appendChild(opt);
+  });
+  select.value = users.indexOf(prev) !== -1 ? prev : '__all__';
+}
+
+function renderMedia() {
+  var statusEl = document.getElementById('media-status');
+  var gridEl = document.getElementById('media-grid');
+  var filter = document.getElementById('media-filter-select').value;
+  var items = filter === '__all__' ? mediaItems : mediaItems.filter(function(it) { return it.username === filter; });
+  gridEl.innerHTML = '';
+  if (!items.length) {
+    statusEl.style.display = '';
+    statusEl.textContent = mediaItems.length ? 'Nessuna immagine per questo filtro.' : 'Nessuna immagine condivisa in questa stanza.';
+    gridEl.hidden = true;
+    return;
+  }
+  statusEl.style.display = 'none';
+  gridEl.hidden = false;
+  items.forEach(function(it) {
+    var cell = document.createElement('div');
+    cell.className = 'media-cell';
+    cell.onclick = function() { openLightbox(it.imageUrl); };
+    var img = document.createElement('img');
+    img.src = it.imageUrl; img.loading = 'lazy'; img.alt = '';
+    img.onerror = function() { cell.remove(); };
+    cell.appendChild(img);
+    var who = document.createElement('span');
+    who.className = 'media-who';
+    who.textContent = it.username;
+    cell.appendChild(who);
+    gridEl.appendChild(cell);
+  });
+}
+
+document.getElementById('media-filter-select').onchange = renderMedia;
 
 function formatBytes(bytes) {
   if (!bytes) return '0 B';
@@ -4555,6 +4765,8 @@ async function copyInviteLink() {
 document.getElementById('settings-btn').onclick = function(e) {
   e.stopPropagation();
   document.getElementById('user-rooms-menu').classList.remove('open');
+  var chatItem = document.querySelector('#settings-menu button[data-view="chat"]');
+  if (chatItem) chatItem.style.display = (canManageUsers && currentView !== 'chat') ? '' : 'none';
   document.getElementById('settings-menu').classList.toggle('open');
 };
 document.getElementById('user-rooms-btn').onclick = function(e) {

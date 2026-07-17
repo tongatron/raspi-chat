@@ -41,6 +41,12 @@ const ATTACHMENT_MIME = {
 // Extensions we let the browser render inline (image/video/audio/pdf); everything else is forced as a download.
 const ATTACHMENT_INLINE = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'mov', 'mp4', 'webm', 'm4v', 'mp3', 'wav', 'ogg', 'm4a']);
 const ATTACHMENT_ALLOWED = new Set(Object.keys(ATTACHMENT_MIME));
+// Estensioni considerate "immagine" per la galleria Media.
+const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+function isImageUrl(url) {
+  const ext = String(url || '').split('.').pop().toLowerCase();
+  return IMAGE_EXTS.has(ext);
+}
 
 // Sanitize an uploaded filename into a URL/filesystem-safe base (no extension), preserving readability.
 function safeAttachmentBase(originalName) {
@@ -501,6 +507,12 @@ const stmts = {
   deleteRoom: db.prepare('DELETE FROM rooms WHERE id = ?'),
   deleteRoomMembers: db.prepare('DELETE FROM room_members WHERE room_id = ?'),
   deleteRoomMessages: db.prepare('DELETE FROM messages WHERE room_id = ?'),
+  listRoomImages: db.prepare(`
+    SELECT username, image_url AS imageUrl, timestamp
+    FROM messages
+    WHERE room_id = ? AND image_url IS NOT NULL AND image_url != ''
+    ORDER BY timestamp DESC
+  `),
   countUsers:    db.prepare('SELECT COUNT(*) AS count FROM users'),
   countAdmins:   db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'"),
   countMessages: db.prepare('SELECT COUNT(*) AS count FROM messages'),
@@ -859,12 +871,6 @@ function broadcastToRoom(roomId, msg) {
     if (client.ws.readyState === 1) client.ws.send(raw);
   }
 }
-// TEMP-DEBUG: quanti socket vivi ci sono in una stanza — RIMUOVERE dopo il debug.
-function countRoomClients(roomId) {
-  let n = 0;
-  for (const client of clients.values()) if (client.roomId === roomId && client.ws.readyState === 1) n++;
-  return n;
-}
 function broadcastOnline(roomId) {
   const members = stmts.listRoomMembers.all(roomId).map(r => r.username);
   broadcastToRoom(roomId, { type: 'online', users: onlineUsers(roomId), members, roomId });
@@ -1125,6 +1131,19 @@ async function chatRoutes(app) {
       rooms: loadRoomsForUser(user.username),
       users: stmts.listUsers.all().map(u => ({ username: u.username })),
     };
+  });
+
+  app.get('/chat/media', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+    const roomId = String(request.query?.roomId || DEFAULT_ROOM_ID);
+    if (!stmts.getRoomMember.get(roomId, user.username)) {
+      return reply.code(403).send({ error: 'Not a member of this room' });
+    }
+    const images = stmts.listRoomImages.all(roomId)
+      .filter(row => isImageUrl(row.imageUrl))
+      .map(row => ({ username: row.username, imageUrl: row.imageUrl, timestamp: row.timestamp }));
+    return { images };
   });
 
   app.post('/chat/my-rooms', async (request, reply) => {
@@ -1878,12 +1897,9 @@ async function chatRoutes(app) {
         const replyToId = msg.replyToId ? String(msg.replyToId).slice(0, 36) : null;
         const cid = msg.cid ? String(msg.cid).slice(0, 64) : null;
         if (!text && !imageUrl) return;
-        // TEMP-DEBUG: diagnosi messaggi che spariscono — RIMUOVERE dopo il debug.
-        app.log.info(`[DEBUG-MSG] recv user=${client.username} room=${client.roomId} cid=${cid} len=${text.length} img=${imageUrl ? 1 : 0}`);
         // Reinvio di un messaggio già consegnato (dopo riconnessione): non
         // duplicarlo, ma confermare comunque così il client lo toglie dall'outbox.
         if (cid && recentCids.has(cid)) {
-          app.log.info(`[DEBUG-MSG] dup user=${client.username} cid=${cid} -> ack`); // TEMP-DEBUG
           try { socket.send(JSON.stringify({ type: 'ack', cid })); } catch {}
           return;
         }
@@ -1896,7 +1912,6 @@ async function chatRoutes(app) {
         stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, replyToId);
         if (cid) recentCids.set(cid, Date.now());
         broadcastToRoom(client.roomId, out);
-        app.log.info(`[DEBUG-MSG] bcast user=${out.username} room=${out.roomId} cid=${cid} id=${out.id} recipients=${countRoomClients(out.roomId)}`); // TEMP-DEBUG
         const roomRow = stmts.getRoomById.get(client.roomId);
         notifyUnread(client.roomId, roomRow ? roomRow.name : '', client.username);
         sendAllPush(out, client.username, client.roomId);
