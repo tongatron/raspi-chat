@@ -368,6 +368,22 @@ curl -X POST \
 npm run check
 ```
 
+## Tests
+
+The test suite uses Node's built-in runner (`node --test`, no extra
+dependencies) and exercises the HTTP layer with `app.inject()`, without starting
+a server or touching the production databases (tests run isolated in a temporary
+directory):
+
+```bash
+npm test
+```
+
+The same checks (`npm run check` + `npm test`) run automatically in CI on every
+push and pull request via GitHub Actions (`.github/workflows/ci.yml`). From v1.1
+onward, every new feature must ship with its own tests (see the project
+constitution, Principle III).
+
 ## Positioning vs other projects
 
 If you want a heavily structured and federated chat, there are larger options like Matrix or Snikket.

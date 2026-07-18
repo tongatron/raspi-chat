@@ -368,6 +368,22 @@ curl -X POST \
 npm run check
 ```
 
+## Test
+
+La suite di test usa il runner nativo di Node (`node --test`, nessuna dipendenza
+aggiuntiva) e verifica il layer HTTP con `app.inject()`, senza avviare un server
+né toccare i database di produzione (i test girano isolati in una directory
+temporanea):
+
+```bash
+npm test
+```
+
+Gli stessi controlli (`npm run check` + `npm test`) girano automaticamente in CI
+su ogni push e pull request tramite GitHub Actions (`.github/workflows/ci.yml`).
+Dalla v1.1 ogni nuova feature deve arrivare con i propri test (vedi la
+constitution del progetto, Principio III).
+
 ## Posizionamento rispetto ad altri progetti
 
 Se vuoi una chat molto strutturata e federata, esistono opzioni piu' grandi come Matrix o Snikket.
