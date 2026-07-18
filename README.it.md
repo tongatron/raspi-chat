@@ -128,8 +128,7 @@ Il percorso pensato per chi installa il progetto per la prima volta e':
 2. `npm start`
 3. apri `/setup`
 4. compila i passaggi
-5. copia i file generati
-6. abilita il servizio
+5. esegui `sudo bash data/setup-generated/finish-setup.sh`
 
 Lo wizard `/setup` fa queste cose:
 
@@ -144,8 +143,9 @@ Lo wizard `/setup` fa queste cose:
   - `data/setup-generated/raspi-chat.service`
   - `data/setup-generated/nginx.chat.conf`
   - `data/setup-generated/cloudflared.config.yml`
+  - `data/setup-generated/finish-setup.sh` (script eseguibile che copia il service file, fa `systemctl daemon-reload` + `enable --now`, e se la modalita' rete e' `nginx` copia/abilita anche il vhost)
 
-Quando il setup e' completato, `/setup` si disattiva e la app torna a mostrare la chat normale.
+Quando il setup e' completato, `/setup` si disattiva e la app torna a mostrare la chat normale. Con la modalita' `cloudflare` va comunque completato a mano `cloudflared.config.yml` (serve il tunnel ID) e avviato `cloudflared` separatamente: il wizard non puo' automatizzare quella parte.
 
 Nota pratica:
 
@@ -426,5 +426,4 @@ allora `raspi-chat` e' una base piu' leggera e piu' adatta a Raspberry/home serv
 ## Prossimi passi consigliati
 
 - creare una modalita' “public room” esplicita
-- aggiungere un setup guidato ancora piu' automatico
 - documentare backup/ripristino di `chat.db`

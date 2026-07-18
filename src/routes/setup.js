@@ -13,6 +13,7 @@ const GENERATED_DIR = path.join(process.cwd(), 'data', 'setup-generated');
 const SERVICE_FILE = path.join(GENERATED_DIR, 'raspi-chat.service');
 const NGINX_FILE = path.join(GENERATED_DIR, 'nginx.chat.conf');
 const CLOUDFLARE_FILE = path.join(GENERATED_DIR, 'cloudflared.config.yml');
+const FINISH_SCRIPT_FILE = path.join(GENERATED_DIR, 'finish-setup.sh');
 const APP_NAME = 'cabras-chat';
 
 function normalizeUsername(value) {
@@ -271,6 +272,32 @@ function renderCloudflareFile({ hostname, port }) {
   ].join('\n');
 }
 
+function renderFinishScript({ serviceFile, nginxFile, networkMode }) {
+  const lines = [
+    '#!/usr/bin/env bash',
+    'set -euo pipefail',
+    '',
+    'if [ "$(id -u)" -ne 0 ]; then',
+    '  echo "Esegui questo script con sudo: sudo bash finish-setup.sh" >&2',
+    '  exit 1',
+    'fi',
+    '',
+    `cp "${serviceFile}" /etc/systemd/system/raspi-chat.service`,
+    'systemctl daemon-reload',
+    'systemctl enable --now raspi-chat',
+  ];
+  if (networkMode === 'nginx') {
+    lines.push(
+      '',
+      `cp "${nginxFile}" /etc/nginx/sites-available/cabras-chat.conf`,
+      'ln -sf /etc/nginx/sites-available/cabras-chat.conf /etc/nginx/sites-enabled/cabras-chat.conf',
+      'nginx -t && systemctl reload nginx'
+    );
+  }
+  lines.push('', 'echo "Setup completato: servizio raspi-chat attivo."', '');
+  return lines.join('\n');
+}
+
 function setupResponsePayload(request) {
   const state = detectSetupState();
   return {
@@ -288,6 +315,7 @@ function setupResponsePayload(request) {
       serviceFile: SERVICE_FILE,
       nginxFile: NGINX_FILE,
       cloudflareFile: CLOUDFLARE_FILE,
+      finishScript: FINISH_SCRIPT_FILE,
     },
   };
 }
@@ -421,17 +449,14 @@ async function setupRoutes(app) {
     fs.writeFileSync(SERVICE_FILE, renderServiceFile({ appDir: process.cwd(), nodePath: process.execPath, userName }), 'utf8');
     fs.writeFileSync(NGINX_FILE, renderNginxFile({ hostname, port }), 'utf8');
     fs.writeFileSync(CLOUDFLARE_FILE, renderCloudflareFile({ hostname, port }), 'utf8');
+    fs.writeFileSync(
+      FINISH_SCRIPT_FILE,
+      renderFinishScript({ serviceFile: SERVICE_FILE, nginxFile: NGINX_FILE, networkMode }),
+      { encoding: 'utf8', mode: 0o755 }
+    );
+    fs.chmodSync(FINISH_SCRIPT_FILE, 0o755);
 
-    const nextCommands = [
-      `cp ${SERVICE_FILE} /etc/systemd/system/raspi-chat.service`,
-      'systemctl daemon-reload',
-      'systemctl enable --now raspi-chat',
-    ];
-    if (networkMode === 'nginx') {
-      nextCommands.push(`cp ${NGINX_FILE} /etc/nginx/sites-available/cabras-chat.conf`);
-      nextCommands.push('ln -sf /etc/nginx/sites-available/cabras-chat.conf /etc/nginx/sites-enabled/cabras-chat.conf');
-      nextCommands.push('nginx -t && systemctl reload nginx');
-    }
+    const nextCommands = [`sudo bash ${FINISH_SCRIPT_FILE}`];
 
     return {
       ok: true,
@@ -442,13 +467,14 @@ async function setupRoutes(app) {
         serviceFile: SERVICE_FILE,
         nginxFile: NGINX_FILE,
         cloudflareFile: CLOUDFLARE_FILE,
+        finishScript: FINISH_SCRIPT_FILE,
       },
       publicUrl: hostname
         ? `${networkMode === 'lan' ? 'http' : 'https'}://${hostname}/chat`
         : `http://${host}:${port}/chat`,
       nextCommands,
       notes: [
-        'Restart or enable the systemd service using the generated file.',
+        `Esegui "sudo bash ${FINISH_SCRIPT_FILE}" per installare e avviare il servizio systemd (e nginx, se configurato).`,
         'For Cloudflare Tunnel, use cloudflared.config.yml as the base and fill in the tunnel ID.',
         'After the first restart, the /setup page will be hidden and access will switch to the chat.',
       ],

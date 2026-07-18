@@ -108,14 +108,13 @@ Then:
 1. Start the app once with `npm start`
 2. Open the wizard at `http://raspi4.local:3000/setup` or `http://RASPBERRY-IP:3000/setup`
 3. Complete the web steps
-4. Use the generated files in `data/setup-generated/`
-5. Enable `systemd`
+4. Run `sudo bash data/setup-generated/finish-setup.sh`
+
+That script copies the generated service file, runs `systemctl daemon-reload` and `enable --now`, and (when network mode is `nginx`) also installs and reloads the nginx vhost.
 
 Useful commands:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now raspi-chat
 sudo systemctl status raspi-chat
 journalctl -u raspi-chat -f
 ```
@@ -128,8 +127,7 @@ The recommended path for first-time installs:
 2. `npm start`
 3. Open `/setup`
 4. Fill in the steps
-5. Copy the generated files
-6. Enable the service
+5. Run `sudo bash data/setup-generated/finish-setup.sh`
 
 The `/setup` wizard does the following:
 
@@ -144,8 +142,9 @@ The `/setup` wizard does the following:
   - `data/setup-generated/raspi-chat.service`
   - `data/setup-generated/nginx.chat.conf`
   - `data/setup-generated/cloudflared.config.yml`
+  - `data/setup-generated/finish-setup.sh` (executable script that installs and enables the systemd service, and the nginx vhost when network mode is `nginx`)
 
-When setup is complete, `/setup` deactivates and the app returns to showing the normal chat.
+When setup is complete, `/setup` deactivates and the app returns to showing the normal chat. Cloudflare mode still needs `cloudflared.config.yml` filled in by hand (it needs the tunnel ID) and `cloudflared` started separately — the wizard can't automate that part.
 
 Practical note:
 
@@ -426,5 +425,4 @@ then `raspi-chat` is a lighter base better suited to Raspberry/home server use.
 ## Suggested next steps
 
 - add an explicit "public room" mode
-- improve the guided setup automation further
 - document backup/restore of `chat.db`

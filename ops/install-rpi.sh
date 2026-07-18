@@ -23,6 +23,5 @@ echo
 echo "Next steps:"
 echo "1. Start the app once: cd ${REPO_DIR} && npm start"
 echo "2. Open the setup wizard: ${SETUP_URL}"
-echo "3. Complete the wizard and let it generate the real .env and users file"
-echo "4. Copy the generated service file from ${REPO_DIR}/data/setup-generated/raspi-chat.service"
-echo "5. Enable systemd: sudo systemctl daemon-reload && sudo systemctl enable --now raspi-chat"
+echo "3. Complete the wizard and let it generate the real .env, users file and finish-setup.sh"
+echo "4. Run: sudo bash ${REPO_DIR}/data/setup-generated/finish-setup.sh"
