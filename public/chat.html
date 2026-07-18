@@ -752,7 +752,7 @@
       box-shadow: 0 0 0 3px rgba(38,162,105,.18);
       animation: pulseDot 2.4s ease infinite;
     }
-    #online-list:empty::before { content: "Connessione in corso"; font-size:.78rem; color:var(--muted); }
+    #online-list:empty::before { content: "Connecting…"; font-size:.78rem; color:var(--muted); }
     .header-actions {
       display: flex;
       align-items: center;
@@ -905,6 +905,37 @@
     #user-rooms-menu button:hover { background: rgba(255,255,255,.08); }
     body.theme-light #settings-menu button:hover,
     body.theme-light #user-rooms-menu button:hover { background: rgba(15,34,59,.08); }
+    /* Voce "Dark theme": interruttore a levetta stile Google (colori tema invariati). */
+    #theme-toggle-btn {
+      display: flex !important;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .theme-switch {
+      position: relative;
+      width: 38px;
+      height: 20px;
+      border-radius: 999px;
+      background: var(--menu-switch-off, rgba(255,255,255,.28));
+      flex-shrink: 0;
+      transition: background .2s ease;
+    }
+    body.theme-light .theme-switch { --menu-switch-off: rgba(23,29,38,.26); }
+    .theme-switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.4);
+      transition: transform .2s ease, background .2s ease;
+    }
+    #theme-toggle-btn[aria-checked="true"] .theme-switch { background: #8ab4f8; }
+    #theme-toggle-btn[aria-checked="true"] .theme-switch::after { transform: translateX(18px); background: #1a73e8; }
     .menu-sep {
       border: none;
       border-top: 1px solid rgba(255,255,255,.12);
@@ -927,13 +958,16 @@
       border-radius: 4px;
       font-size: 1.4rem;
       background: transparent;
-      color: rgba(255,255,255,.75);
+      /* Prima era bianco hardcoded: invisibile nel tema chiaro. Ora segue --ink. */
+      color: var(--ink);
+      opacity: .8;
       box-shadow: none;
       border: none;
     }
     #settings-btn:hover {
-      background: rgba(255,255,255,.08);
-      color: #ffffff;
+      background: var(--primary-soft);
+      color: var(--ink);
+      opacity: 1;
       box-shadow: none;
       transform: none;
     }
@@ -1137,6 +1171,7 @@
 
     /* Input area */
     #input-area {
+      position: relative;
       background: var(--surface);
       border: 1px solid rgba(255,255,255,.75);
       border-radius: 6px;
@@ -1192,6 +1227,44 @@
     }
     #send-btn:hover { transform: translateY(-1px); filter: brightness(1.03); }
     #send-btn:active { transform: translateY(0); }
+    /* Tema scuro: --primary è bianco, quindi il gradient bianco + icona bianca rende
+       l'invio invisibile. Accento blu stile Google, leggibile su nero e su chiaro. */
+    body:not(.theme-light) #send-btn {
+      background: linear-gradient(180deg, #4285f4, #1a73e8);
+      color: #ffffff;
+      box-shadow: 0 12px 22px rgba(0,0,0,.45);
+    }
+    #emoji-btn { background: rgba(15,34,59,.06); color: var(--muted); font-size: 1.25rem; }
+    #emoji-btn:hover { transform: translateY(-1px); background: var(--primary-soft); color: var(--primary); }
+    #emoji-btn.active { background: var(--primary-soft); color: var(--primary); }
+    #emoji-panel {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 8px;
+      width: min(320px, calc(100vw - 24px));
+      max-height: 220px;
+      overflow-y: auto;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 8px;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 2px;
+      z-index: 1000;
+    }
+    #emoji-panel[hidden] { display: none; }
+    #emoji-panel button {
+      border: none;
+      background: transparent;
+      font-size: 1.2rem;
+      line-height: 1;
+      padding: 5px 0;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #emoji-panel button:hover { background: var(--primary-soft); }
     #file-input { display: none; }
     #image-preview {
       background: rgba(255,255,255,.82);
@@ -2723,7 +2796,7 @@
           <button type="button" data-view="console" role="menuitem" class="console-access-only" style="display:none">Console</button>
           <button type="button" data-view="stats" role="menuitem" class="console-access-only" style="display:none">Stats</button>
           <hr class="menu-sep" />
-          <button type="button" id="theme-toggle-btn" role="menuitem">🌙 Tema scuro</button>
+          <button type="button" id="theme-toggle-btn" role="menuitemcheckbox" aria-checked="true"><span>Dark theme</span><span class="theme-switch" aria-hidden="true"></span></button>
           <hr class="menu-sep admin-access-only" style="display:none" />
           <button type="button" id="logout-menu-btn" role="menuitem">Sign out</button>
         </div>
@@ -2745,7 +2818,9 @@
     <button class="icon-btn" id="attach-btn" title="Attach image">&#x1f4ce;</button>
     <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mov,.mp4,.webm,.m4v,.mp3,.wav,.ogg,.m4a,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip" />
     <textarea id="msg-input" rows="1" placeholder="Write a message..."></textarea>
+    <button class="icon-btn" id="emoji-btn" type="button" title="Emoji" aria-label="Emoji" aria-expanded="false">&#x1F642;</button>
     <button class="icon-btn" id="send-btn" title="Send">&#x27A4;</button>
+    <div id="emoji-panel" role="listbox" aria-label="Emoji picker" hidden></div>
   </div>
   </div>
   <section id="rooms-view">
@@ -2805,14 +2880,14 @@
       <div>
         <div class="eyebrow">Galleria</div>
         <h3 id="media-title">Media</h3>
-        <div class="rooms-copy">Anteprima delle immagini condivise nella stanza.</div>
+        <div class="rooms-copy">Preview of images shared in this room.</div>
       </div>
       <label class="media-filter">
         <span>Mostra</span>
         <select id="media-filter-select"><option value="__all__">Da tutti</option></select>
       </label>
     </div>
-    <div id="media-status">Caricamento…</div>
+    <div id="media-status">Loading…</div>
     <div id="media-grid" class="media-grid" hidden></div>
   </section>
   <section id="console-view">
@@ -3029,9 +3104,11 @@
 
 <script>
 function applyTheme(theme) {
-  document.body.classList.toggle('theme-light', theme === 'light');
+  var isLight = theme === 'light';
+  document.body.classList.toggle('theme-light', isLight);
   var btn = document.getElementById('theme-toggle-btn');
-  if (btn) btn.textContent = theme === 'light' ? '☀️ Tema chiaro' : '🌙 Tema scuro';
+  // Lo switch riflette "Dark theme": acceso (checked) quando il tema scuro è attivo.
+  if (btn) btn.setAttribute('aria-checked', isLight ? 'false' : 'true');
 }
 applyTheme(localStorage.getItem('chat-theme') || 'dark');
 document.getElementById('theme-toggle-btn').onclick = function(e) {
@@ -3040,6 +3117,65 @@ document.getElementById('theme-toggle-btn').onclick = function(e) {
   localStorage.setItem('chat-theme', next);
   applyTheme(next);
 };
+
+// Emoji picker: pannello leggero, nessuna dipendenza esterna (offline/CSP-safe).
+// Inserisce l'emoji alla posizione del cursore nel campo messaggio.
+(function initEmojiPicker() {
+  var EMOJIS = ['😀','😁','😂','🤣','😊','😍','😘','😎','🤩','🥳','🙂','😉','😇','🤔','🤗','😴',
+    '😅','😆','😜','😝','🤪','😭','😢','😤','😠','😡','🥺','😱','🙄','😏','😬','🤫',
+    '👍','👎','👏','🙏','💪','🙌','👋','🤝','✌️','🤞','👌','🤙','🫶','🤟','☝️','🖐️',
+    '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','❣️','💕','💞','🔥','✨','⭐','🌟',
+    '🎉','🎊','💯','✅','❌','❓','❗','⚡','☀️','🌙','☕','🍕','🍺','🍷','🎂','🎁',
+    '📌','📎','📷','🎵','⚽','🚀','💩','🤖','👀','🎈'];
+  var btn = document.getElementById('emoji-btn');
+  var panel = document.getElementById('emoji-panel');
+  var input = document.getElementById('msg-input');
+  if (!btn || !panel || !input) return;
+
+  function insertAtCursor(el, text) {
+    var start = el.selectionStart, end = el.selectionEnd;
+    if (start == null || end == null) {
+      el.value += text;
+    } else {
+      el.value = el.value.slice(0, start) + text + el.value.slice(end);
+      var pos = start + text.length;
+      el.selectionStart = el.selectionEnd = pos;
+    }
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  EMOJIS.forEach(function(emo) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = emo;
+    b.setAttribute('aria-label', emo);
+    b.addEventListener('click', function(ev) {
+      ev.preventDefault();
+      insertAtCursor(input, emo);
+      setOpen(false);
+      input.focus();
+    });
+    panel.appendChild(b);
+  });
+
+  function setOpen(open) {
+    panel.hidden = !open;
+    btn.classList.toggle('active', open);
+    btn.setAttribute('aria-expanded', String(open));
+  }
+
+  btn.addEventListener('click', function(ev) {
+    ev.stopPropagation();
+    setOpen(panel.hidden);
+  });
+  document.addEventListener('click', function(ev) {
+    if (panel.hidden) return;
+    if (!panel.contains(ev.target) && ev.target !== btn) setOpen(false);
+  });
+  document.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Escape' && !panel.hidden) setOpen(false);
+  });
+})();
 
 var WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/chat/ws';
 var ws, myName, myToken, pendingImageUrl = null, swReg = null, reconnectTimer = null, outbox = [];
@@ -3687,7 +3823,7 @@ async function onNotifBtnClick() {
       if (perm === 'granted') await subscribePush();
     }
   } catch(e) {
-    alert('Notifiche, errore: ' + (e && e.name ? e.name + ' — ' : '') + (e && e.message ? e.message : e));
+    alert('Notifications error: ' + (e && e.name ? e.name + ' — ' : '') + (e && e.message ? e.message : e));
   }
   pushBusy = false;
   if (btn) btn.disabled = false;
@@ -4125,17 +4261,17 @@ async function loadMedia() {
   var gridEl = document.getElementById('media-grid');
   if (titleEl) titleEl.textContent = 'Media • ' + (currentRoomName || 'Chat');
   statusEl.style.display = '';
-  statusEl.textContent = 'Caricamento…';
+  statusEl.textContent = 'Loading…';
   gridEl.hidden = true;
   try {
     var res = await authFetch('/chat/media?roomId=' + encodeURIComponent(currentRoomId));
     var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Errore');
+    if (!res.ok) throw new Error(data.error || 'Error');
     mediaItems = data.images || [];
     populateMediaFilter();
     renderMedia();
   } catch (e) {
-    statusEl.textContent = 'Impossibile caricare i media: ' + e.message;
+    statusEl.textContent = 'Failed to load media: ' + e.message;
     gridEl.hidden = true;
   }
 }
@@ -4146,10 +4282,10 @@ function populateMediaFilter() {
   var users = [];
   mediaItems.forEach(function(it) { if (users.indexOf(it.username) === -1) users.push(it.username); });
   users.sort(function(a, b) { return a.localeCompare(b); });
-  select.innerHTML = '<option value="__all__">Da tutti</option>';
+  select.innerHTML = '<option value="__all__">From everyone</option>';
   users.forEach(function(u) {
     var opt = document.createElement('option');
-    opt.value = u; opt.textContent = 'Da ' + u;
+    opt.value = u; opt.textContent = 'From ' + u;
     select.appendChild(opt);
   });
   select.value = users.indexOf(prev) !== -1 ? prev : '__all__';
@@ -4163,7 +4299,7 @@ function renderMedia() {
   gridEl.innerHTML = '';
   if (!items.length) {
     statusEl.style.display = '';
-    statusEl.textContent = mediaItems.length ? 'Nessuna immagine per questo filtro.' : 'Nessuna immagine condivisa in questa stanza.';
+    statusEl.textContent = mediaItems.length ? 'No images for this filter.' : 'No images shared in this room.';
     gridEl.hidden = true;
     return;
   }
