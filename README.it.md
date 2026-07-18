@@ -170,6 +170,21 @@ Esempio:
 ]
 ```
 
+### Stanze pubbliche
+
+Oltre alle room private (membership a invito, gestita dal creatore o da un admin), un
+utente qualsiasi puo' creare una **room pubblica**: chiunque sia autenticato la puo'
+scoprire e unirsi da solo, senza bisogno di essere invitato.
+
+- Dal client web: menu **Rooms → + New room...**, spunta "Public room (anyone can find
+  and join it)".
+- Per scoprirle e unirsi: menu **Rooms → ⌘ Browse public rooms...** elenca tutte le
+  room pubbliche con il numero di membri; il pulsante **Join** aggiunge l'utente come
+  membro immediatamente (nessuna approvazione richiesta).
+- Via API: `POST /chat/my-rooms` accetta `{ name, members, isPublic: true }`;
+  `GET /chat/public-rooms` elenca le room pubbliche; `POST /chat/public-rooms/:roomId/join`
+  esegue il join. Vedi `specs/009-explicit-public-room/`.
+
 ### Variabili ambiente
 
 Le principali sono gia' documentate in [.env.example](/Users/tonga/Documents/GitHub/raspi-chat/.env.example):
@@ -465,4 +480,5 @@ allora `raspi-chat` e' una base piu' leggera e piu' adatta a Raspberry/home serv
 
 ## Prossimi passi consigliati
 
-- creare una modalita' “public room” esplicita
+Nessuno al momento: gli spunti storici (public room esplicita, setup guidato piu'
+automatico, documentazione backup/ripristino) sono stati tutti implementati.

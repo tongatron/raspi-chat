@@ -169,6 +169,21 @@ Example:
 ]
 ```
 
+### Public rooms
+
+Besides private rooms (invite-only membership, managed by the creator or an admin), any
+user can create a **public room**: any authenticated user can discover it and join on
+their own, no invite required.
+
+- From the web client: **Rooms → + New room...** menu, check "Public room (anyone can
+  find and join it)".
+- To discover and join: **Rooms → ⌘ Browse public rooms...** lists every public room
+  with its member count; the **Join** button adds the user as a member immediately (no
+  approval needed).
+- Via the API: `POST /chat/my-rooms` accepts `{ name, members, isPublic: true }`;
+  `GET /chat/public-rooms` lists public rooms; `POST /chat/public-rooms/:roomId/join`
+  performs the join. See `specs/009-explicit-public-room/`.
+
 ### Environment variables
 
 The main ones are documented in `.env.example`:
@@ -463,4 +478,5 @@ then `raspi-chat` is a lighter base better suited to Raspberry/home server use.
 
 ## Suggested next steps
 
-- add an explicit "public room" mode
+None right now: the earlier suggestions (explicit public room, more automated guided
+setup, backup/restore documentation) have all been implemented.

@@ -2446,6 +2446,50 @@
       font-size: .92rem;
       color: var(--ink);
     }
+    #public-rooms-dialog {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 1100;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+    }
+    #public-rooms-dialog.open { display: flex; }
+    #public-rooms-panel {
+      background: #1c2129;
+      border: 1px solid rgba(229,239,252,.18);
+      border-radius: 6px;
+      box-shadow: 0 18px 42px rgba(0,0,0,.5);
+      padding: 20px;
+      width: min(380px, 90vw);
+      color: var(--ink);
+    }
+    .public-room-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 4px;
+      border-bottom: 1px solid rgba(229,239,252,.1);
+      font-size: .92rem;
+    }
+    .public-room-row button {
+      border: none;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font: inherit;
+      font-weight: 700;
+      background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+      color: white;
+      cursor: pointer;
+    }
+    .public-room-row button:disabled {
+      background: rgba(255,255,255,.08);
+      color: var(--muted);
+      cursor: default;
+    }
     #new-room-users input[type="checkbox"] {
       width: 16px;
       height: 16px;
@@ -3095,9 +3139,23 @@
       <label>Invite users</label>
       <div id="new-room-users" style="max-height:180px;overflow-y:auto"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer;font-size:.92rem;">
+      <input id="new-room-public" type="checkbox" />
+      Public room (anyone can find and join it)
+    </label>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button id="new-room-create-btn" type="button" onclick="createUserRoom()">Create room</button>
       <button id="new-room-cancel-btn" type="button" onclick="document.getElementById('new-room-dialog').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="public-rooms-dialog">
+  <div id="public-rooms-panel">
+    <h3 style="margin:0 0 12px">Public rooms</h3>
+    <div id="public-rooms-list" style="max-height:280px;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button id="public-rooms-close-btn" type="button" onclick="document.getElementById('public-rooms-dialog').classList.remove('open')">Close</button>
     </div>
   </div>
 </div>
@@ -3450,12 +3508,85 @@ function renderUserRoomsMenu() {
     openNewRoomDialog();
   };
   menu.appendChild(newBtn);
+
+  var browseBtn = document.createElement('button');
+  browseBtn.type = 'button';
+  browseBtn.setAttribute('role', 'menuitem');
+  browseBtn.textContent = '⌘ Browse public rooms...';
+  browseBtn.style.color = 'var(--primary)';
+  browseBtn.onclick = function(e) {
+    e.stopPropagation();
+    menu.classList.remove('open');
+    openPublicRoomsDialog();
+  };
+  menu.appendChild(browseBtn);
+}
+
+async function openPublicRoomsDialog() {
+  var dialog = document.getElementById('public-rooms-dialog');
+  var list = document.getElementById('public-rooms-list');
+  list.innerHTML = '<div style="color:var(--muted);padding:8px">Loading...</div>';
+  dialog.classList.add('open');
+  try {
+    var res = await authFetch('/chat/public-rooms');
+    var data = await res.json();
+    var rooms = data.rooms || [];
+    list.innerHTML = '';
+    if (!rooms.length) {
+      list.innerHTML = '<div style="color:var(--muted);padding:8px">No public rooms yet.</div>';
+      return;
+    }
+    rooms.forEach(function(room) {
+      var row = document.createElement('div');
+      row.className = 'public-room-row';
+      var label = document.createElement('span');
+      label.textContent = room.name + ' (' + room.memberCount + ')';
+      row.appendChild(label);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      if (room.joined) {
+        btn.textContent = 'Open';
+        btn.onclick = function() {
+          dialog.classList.remove('open');
+          openRoom(room.id, false);
+        };
+      } else {
+        btn.textContent = 'Join';
+        btn.onclick = function() { joinPublicRoom(room.id, btn); };
+      }
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+  } catch(e) {
+    list.innerHTML = '<div style="color:var(--muted)">Unable to load public rooms</div>';
+  }
+}
+
+async function joinPublicRoom(roomId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Joining...'; }
+  try {
+    var res = await authFetch('/chat/public-rooms/' + encodeURIComponent(roomId) + '/join', { method: 'POST' });
+    var data = await res.json();
+    if (data.ok && data.room) {
+      roomsCache = data.rooms || roomsCache;
+      renderUserRoomsMenu();
+      document.getElementById('public-rooms-dialog').classList.remove('open');
+      openRoom(data.room.id, false);
+    } else {
+      alert(data.error || 'Join failed');
+      if (btn) { btn.disabled = false; btn.textContent = 'Join'; }
+    }
+  } catch(e) {
+    alert('Network error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Join'; }
+  }
 }
 
 async function openNewRoomDialog() {
   var dialog = document.getElementById('new-room-dialog');
   var usersList = document.getElementById('new-room-users');
   document.getElementById('new-room-name').value = '';
+  document.getElementById('new-room-public').checked = false;
   usersList.innerHTML = '<div style="color:var(--muted);padding:8px">Loading...</div>';
   dialog.classList.add('open');
   try {
@@ -3484,11 +3615,12 @@ async function createUserRoom() {
   if (!name) { alert('Enter a room name'); return; }
   var members = [];
   document.querySelectorAll('.new-room-cb:checked').forEach(function(cb) { members.push(cb.value); });
+  var isPublic = document.getElementById('new-room-public').checked;
   try {
     var res = await authFetch('/chat/my-rooms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, members: members })
+      body: JSON.stringify({ name: name, members: members, isPublic: isPublic })
     });
     var data = await res.json();
     if (data.ok && data.room) {

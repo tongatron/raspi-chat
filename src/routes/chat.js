@@ -160,6 +160,7 @@ db.exec(`
 `);
 // Migration: add reply_to_id if missing (existing installs)
 try { db.exec('ALTER TABLE messages ADD COLUMN reply_to_id TEXT'); } catch(e) {}
+try { db.exec('ALTER TABLE rooms ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0'); } catch(e) {}
 try { db.exec(`ALTER TABLE messages ADD COLUMN room_id TEXT NOT NULL DEFAULT '${DEFAULT_ROOM_ID}'`); } catch(e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"); } catch(e) {}
 try { db.exec("ALTER TABLE invites ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"); } catch(e) {}
@@ -510,8 +511,8 @@ const stmts = {
     ORDER BY CASE role WHEN 'admin' THEN 0 WHEN 'superuser' THEN 1 ELSE 2 END, username COLLATE NOCASE ASC
   `),
   createRoom: db.prepare(`
-    INSERT INTO rooms (id, name, created_by, created_at)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO rooms (id, name, created_by, created_at, is_public)
+    VALUES (?, ?, ?, ?, ?)
   `),
   renameRoom: db.prepare(`
     UPDATE rooms
@@ -528,16 +529,25 @@ const stmts = {
     WHERE room_id = ? AND username = ?
   `),
   getRoomById: db.prepare(`
-    SELECT id, name, created_by AS createdBy, created_at AS createdAt
+    SELECT id, name, created_by AS createdBy, created_at AS createdAt, is_public AS isPublic
     FROM rooms
     WHERE id = ?
   `),
   listRoomsForUser: db.prepare(`
-    SELECT r.id, r.name, r.created_by AS createdBy, r.created_at AS createdAt,
+    SELECT r.id, r.name, r.created_by AS createdBy, r.created_at AS createdAt, r.is_public AS isPublic,
            GROUP_CONCAT(rm.username) AS members
     FROM rooms r
     JOIN room_members mine ON mine.room_id = r.id AND mine.username = ?
     LEFT JOIN room_members rm ON rm.room_id = r.id
+    GROUP BY r.id
+    ORDER BY r.created_at ASC, r.name COLLATE NOCASE ASC
+  `),
+  listPublicRooms: db.prepare(`
+    SELECT r.id, r.name, r.created_by AS createdBy, r.created_at AS createdAt, r.is_public AS isPublic,
+           GROUP_CONCAT(rm.username) AS members
+    FROM rooms r
+    LEFT JOIN room_members rm ON rm.room_id = r.id
+    WHERE r.is_public = 1
     GROUP BY r.id
     ORDER BY r.created_at ASC, r.name COLLATE NOCASE ASC
   `),
@@ -606,7 +616,7 @@ if (configuredUsers.length) {
 const seedDefaultRoom = db.transaction(() => {
   const existingRoom = stmts.getRoomById.get(DEFAULT_ROOM_ID);
   if (!existingRoom) {
-    stmts.createRoom.run(DEFAULT_ROOM_ID, DEFAULT_ROOM_NAME, DEFAULT_ADMIN_USERNAME || 'system', new Date().toISOString());
+    stmts.createRoom.run(DEFAULT_ROOM_ID, DEFAULT_ROOM_NAME, DEFAULT_ADMIN_USERNAME || 'system', new Date().toISOString(), 0);
     const users = stmts.listUsers.all();
     const joinedAt = new Date().toISOString();
     for (const user of users) {
@@ -649,6 +659,8 @@ function formatRoom(row, currentUsername) {
     members,
     memberCount: members.length,
     isOwner: normalizeUsername(row.createdBy) === currentUsername,
+    isPublic: !!row.isPublic,
+    joined: currentUsername ? members.includes(currentUsername) : false,
   };
 }
 
@@ -722,7 +734,7 @@ function createInitialRoomForUser(username, createdBy, now) {
   const roomId = buildDirectRoomId(owner, username);
   const roomName = `${owner}, ${username}`;
   if (!stmts.getRoomById.get(roomId)) {
-    stmts.createRoom.run(roomId, roomName, owner, now);
+    stmts.createRoom.run(roomId, roomName, owner, now, 0);
   }
   stmts.addRoomMember.run(roomId, owner, owner, now);
   stmts.addRoomMember.run(roomId, username, owner, now);
@@ -1200,6 +1212,7 @@ async function chatRoutes(app) {
 
     const name = normalizeRoomName(request.body?.name);
     if (!name) return reply.code(400).send({ error: 'Missing room name' });
+    const isPublic = request.body?.isPublic === true ? 1 : 0;
 
     const requestedMembers = Array.isArray(request.body?.members) ? request.body.members : [];
     const memberSet = new Set([user.username]);
@@ -1213,7 +1226,7 @@ async function chatRoutes(app) {
     const roomId = crypto.randomBytes(8).toString('hex');
     const createdAt = new Date().toISOString();
     const createRoom = db.transaction(() => {
-      stmts.createRoom.run(roomId, name, user.username, createdAt);
+      stmts.createRoom.run(roomId, name, user.username, createdAt, isPublic);
       for (const username of memberSet) {
         stmts.addRoomMember.run(roomId, username, user.username, createdAt);
       }
@@ -1223,6 +1236,33 @@ async function chatRoutes(app) {
     return {
       ok: true,
       room: loadRoomsForUser(user.username).find((room) => room.id === roomId) || null,
+      rooms: loadRoomsForUser(user.username),
+    };
+  });
+
+  app.get('/chat/public-rooms', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+    return {
+      rooms: stmts.listPublicRooms.all().map((row) => formatRoom(row, user.username)),
+    };
+  });
+
+  app.post('/chat/public-rooms/:roomId/join', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+
+    const roomId = String(request.params.roomId || '').trim();
+    const room = stmts.getRoomById.get(roomId);
+    if (!room || !room.isPublic) return reply.code(404).send({ error: 'Public room not found' });
+
+    if (!stmts.getRoomMember.get(roomId, user.username)) {
+      stmts.addRoomMember.run(roomId, user.username, user.username, new Date().toISOString());
+    }
+
+    return {
+      ok: true,
+      room: loadRoomsForUser(user.username).find((r) => r.id === roomId) || null,
       rooms: loadRoomsForUser(user.username),
     };
   });
@@ -1242,6 +1282,7 @@ async function chatRoutes(app) {
 
     const name = normalizeRoomName(request.body?.name);
     if (!name) return reply.code(400).send({ error: 'Missing room name' });
+    const isPublic = request.body?.isPublic === true ? 1 : 0;
 
     const requestedMembers = Array.isArray(request.body?.members) ? request.body.members : [];
     const memberSet = new Set([user.username]);
@@ -1255,7 +1296,7 @@ async function chatRoutes(app) {
     const roomId = crypto.randomBytes(8).toString('hex');
     const createdAt = new Date().toISOString();
     const createRoom = db.transaction(() => {
-      stmts.createRoom.run(roomId, name, user.username, createdAt);
+      stmts.createRoom.run(roomId, name, user.username, createdAt, isPublic);
       for (const username of memberSet) {
         stmts.addRoomMember.run(roomId, username, user.username, createdAt);
       }
