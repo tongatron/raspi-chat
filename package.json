@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "check": "node --check server.js && node --check src/app.js && node --check src/routes/chat.js && node --check src/routes/mail.js && node --check src/routes/root.js && node --check src/routes/items.js && node --check src/routes/setup.js && node --check src/services/mail-service.js && node --check src/services/telegram-service.js && node --check cli/chat-cli.js && node --check cli/lib/auth.js && node --check cli/lib/connection.js && node --check cli/lib/ui.js && node --check ops/encrypt-db.js",
+    "check": "node --check server.js && node --check src/app.js && node --check src/routes/chat.js && node --check src/routes/mail.js && node --check src/routes/root.js && node --check src/routes/items.js && node --check src/routes/setup.js && node --check src/services/mail-service.js && node --check src/services/telegram-service.js && node --check cli/chat-cli.js && node --check cli/lib/auth.js && node --check cli/lib/connection.js && node --check cli/lib/ui.js && node --check ops/encrypt-db.js && node --check src/attachment-crypto.js && node --check ops/encrypt-uploads.js",
     "test": "node --test tests/*.test.js",
     "start": "node server.js",
     "dev": "node --watch server.js",

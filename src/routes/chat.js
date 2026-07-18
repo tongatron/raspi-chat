@@ -8,6 +8,8 @@ const { execFileSync } = require('node:child_process');
 const { pipeline } = require('node:stream/promises');
 const webpush = require('web-push');
 const Database = require('better-sqlite3-multiple-ciphers');
+// Cifratura at-rest degli allegati (spec 007): riusa CHAT_DB_KEY.
+const { encryptBuffer, decryptBuffer } = require('../attachment-crypto');
 
 // Apre chat.db applicando la cifratura at-rest quando `key` è presente (spec 004).
 // Senza chiave il DB resta in chiaro: default di produzione invariato. La stessa
@@ -1844,6 +1846,18 @@ async function chatRoutes(app) {
     // Inline for media/pdf; force download for documents/archives (and anything unknown) to avoid serving executable content in-page.
     const downloadName = (attachmentDisplayName(filename) || filename).replace(/"/g, '');
     const disposition = ATTACHMENT_INLINE.has(ext) ? 'inline' : `attachment; filename="${downloadName}"`;
+    // Con CHAT_DB_KEY: gli allegati sono cifrati a riposo (spec 007). Decifra in
+    // memoria e servi il contenuto originale. I file in chiaro legacy (senza header)
+    // passano invariati (passthrough in decryptBuffer). Senza chiave: streaming come prima.
+    if (process.env.CHAT_DB_KEY) {
+      let out;
+      try {
+        out = decryptBuffer(fs.readFileSync(filePath), process.env.CHAT_DB_KEY);
+      } catch {
+        return reply.code(500).send({ error: 'Cannot decrypt attachment' });
+      }
+      return reply.type(mime).header('Content-Disposition', disposition).send(out);
+    }
     return reply.type(mime).header('Content-Disposition', disposition).send(fs.createReadStream(filePath));
   });
 
@@ -1855,10 +1869,20 @@ async function chatRoutes(app) {
     const ext = path.extname(data.filename).slice(1).toLowerCase();
     if (!ATTACHMENT_ALLOWED.has(ext)) return reply.code(400).send({ error: 'Unsupported format' });
     const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}-${safeAttachmentBase(data.filename)}.${ext}`;
-    await pipeline(data.file, fs.createWriteStream(path.join(UPLOADS_DIR, filename)));
-    if (data.file.truncated) {
-      fs.unlink(path.join(UPLOADS_DIR, filename), () => {});
-      return reply.code(413).send({ error: 'File too large' });
+    const dest = path.join(UPLOADS_DIR, filename);
+    // Con CHAT_DB_KEY: cifra l'allegato a riposo (spec 007). Il tag GCM si verifica
+    // a fine file, quindi bufferizziamo (fino a UPLOAD_MAX_BYTES) invece di streammare.
+    // Senza chiave: streaming in chiaro come baseline.
+    if (process.env.CHAT_DB_KEY) {
+      const plain = await data.toBuffer();
+      if (data.file.truncated) return reply.code(413).send({ error: 'File too large' });
+      fs.writeFileSync(dest, encryptBuffer(plain, process.env.CHAT_DB_KEY));
+    } else {
+      await pipeline(data.file, fs.createWriteStream(dest));
+      if (data.file.truncated) {
+        fs.unlink(dest, () => {});
+        return reply.code(413).send({ error: 'File too large' });
+      }
     }
     return { url: `/chat/images/${filename}`, name: data.filename };
   });

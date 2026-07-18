@@ -183,8 +183,9 @@ Le principali sono gia' documentate in [.env.example](/Users/tonga/Documents/Git
 ### Cifratura at-rest di `chat.db` (opzionale)
 
 Di default `chat.db` è un file SQLite in chiaro. Imposta `CHAT_DB_KEY` per cifrarlo
-a riposo (messaggi, hash password, inviti). È **opt-in**: senza chiave il
-comportamento resta invariato.
+a riposo (messaggi, hash password, inviti). La **stessa chiave** cifra anche gli
+allegati in `data/uploads/` (spec 007). È **opt-in**: senza chiave il comportamento
+resta invariato.
 
 ```bash
 # genera una chiave forte e mettila nel .env (git-ignorato)
@@ -192,10 +193,14 @@ echo "CHAT_DB_KEY=$(openssl rand -hex 32)" >> .env
 
 # cifra un chat.db in chiaro esistente (crea prima un backup .plain.bak)
 CHAT_DB_KEY=... node ops/encrypt-db.js
+
+# cifra gli allegati in chiaro esistenti (opzionale; backup in uploads.plain.bak/)
+CHAT_DB_KEY=... node ops/encrypt-uploads.js
 ```
 
 ⚠️ **Conserva la chiave fuori dal Pi** (gestore password/backup). Se perdi
-`CHAT_DB_KEY`, i dati cifrati sono irrecuperabili. Vedi `specs/004-encrypted-chat-db/`.
+`CHAT_DB_KEY`, i dati cifrati (chat.db e allegati) sono irrecuperabili.
+Vedi `specs/004-encrypted-chat-db/` e `specs/007-encrypted-attachments/`.
 
 ## Deploy tipico
 

@@ -183,7 +183,8 @@ The main ones are documented in `.env.example`:
 ### At-rest encryption of `chat.db` (optional)
 
 By default `chat.db` is a plaintext SQLite file. Set `CHAT_DB_KEY` to encrypt it
-at rest (messages, password hashes, invites). It is **opt-in**: with no key the
+at rest (messages, password hashes, invites). The **same key** also encrypts the
+attachments in `data/uploads/` (spec 007). It is **opt-in**: with no key the
 behaviour is unchanged.
 
 ```bash
@@ -192,10 +193,14 @@ echo "CHAT_DB_KEY=$(openssl rand -hex 32)" >> .env
 
 # encrypt an existing plaintext chat.db (makes a .plain.bak backup first)
 CHAT_DB_KEY=... node ops/encrypt-db.js
+
+# encrypt existing plaintext attachments (optional; backs up to uploads.plain.bak/)
+CHAT_DB_KEY=... node ops/encrypt-uploads.js
 ```
 
 ⚠️ **Keep the key safe outside the Pi** (password manager/backup). If you lose
-`CHAT_DB_KEY`, the encrypted data is unrecoverable. See `specs/004-encrypted-chat-db/`.
+`CHAT_DB_KEY`, the encrypted data (chat.db and attachments) is unrecoverable.
+See `specs/004-encrypted-chat-db/` and `specs/007-encrypted-attachments/`.
 
 ## Typical deploy
 
