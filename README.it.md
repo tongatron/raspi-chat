@@ -420,8 +420,3 @@ allora `raspi-chat` e' una base piu' leggera e piu' adatta a Raspberry/home serv
 - creare una modalita' “public room” esplicita
 - aggiungere un setup guidato ancora piu' automatico
 - documentare backup/ripristino di `chat.db`
-- aggiungere test automatici minimi
-- mettere in coda i messaggi in uscita quando il WebSocket e' chiuso e inviarli
-  automaticamente alla riconnessione, cosi' basta un solo Invio anche se il
-  socket era caduto (ora il testo viene conservato ma l'utente deve ripremere
-  Invio dopo la riconnessione)

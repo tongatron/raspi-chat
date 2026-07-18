@@ -196,11 +196,11 @@ async function main() {
       if (text.trim() === '/quit' || text.trim() === '/exit') return shutdown(0);
       if (text.trim() === '/online') return; // l'ultimo stato online è già stato stampato
       const res = conn.sendMessage(text);
-      if (!res.sent) {
-        if (res.reason === 'not_connected') ui.warn('⚠ Non connesso: messaggio non inviato.');
-        // 'empty' → silenzioso (FR-006)
-      } else if (res.truncated) {
-        ui.warn('⚠ Messaggio troncato a 2000 caratteri.');
+      // 'empty' → silenzioso (FR-006). Altrimenti il messaggio è sempre accodato:
+      // avvisa se troncato e/o messo in coda per invio differito (spec 006).
+      if (res.sent) {
+        if (res.truncated) ui.warn('⚠ Messaggio troncato a 2000 caratteri.');
+        if (res.queued) ui.warn('⚠ Non connesso: messaggio in coda, verrà inviato alla riconnessione.');
       }
     },
     onClose: () => shutdown(exitCode),

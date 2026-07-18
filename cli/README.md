@@ -48,6 +48,7 @@ Le credenziali vengono chieste in modo interattivo, oppure lette da `RASPI_CHAT_
 - Lista utenti online
 - Selezione room: se non passi `--room`, la CLI elenca le tue room (`GET /chat/my-rooms`) e le sceglie automaticamente (se è una sola) o te le fa scegliere
 - Riconnessione automatica con backoff in caso di caduta della rete (senza re-login)
+- Coda in uscita: i messaggi scritti mentre la connessione è caduta vengono accodati e inviati automaticamente alla riconnessione (dedup via `cid`, nessun doppione)
 
 ## Fuori scope (v1)
 
@@ -57,7 +58,7 @@ Invio immagini/allegati, reply, eliminazione messaggi, ricevute di lettura, funz
 
 - `chat-cli.js` — entry point: config, login, wiring UI↔connessione, segnali
 - `lib/auth.js` — login HTTP (`POST /chat/login`)
-- `lib/connection.js` — WebSocket, handshake `join`, invio, riconnessione
+- `lib/connection.js` — WebSocket, handshake `join`, invio, coda in uscita (outbox), riconnessione
 - `lib/ui.js` — rendering terminale (input non corrotto dai messaggi in arrivo)
 
 Vedi i contratti in [`specs/001-cli-chat-client/contracts/`](../specs/001-cli-chat-client/contracts/).
