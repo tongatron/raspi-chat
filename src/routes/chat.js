@@ -60,7 +60,7 @@ function attachmentDisplayName(storedName) {
   const m = /^\d+-[a-f0-9]+-(.+)$/.exec(String(storedName || ''));
   return m ? m[1] : '';
 }
-const DB_PATH = path.join(process.cwd(), 'data', 'chat.db');
+const DB_PATH = process.env.CHAT_DB_PATH || path.join(process.cwd(), 'data', 'chat.db');
 const CHAT_USERS_FILE = process.env.CHAT_USERS_FILE || path.join(process.cwd(), 'config', 'chat-users.json');
 const DEFAULT_ADMIN_USERNAME = normalizeUsername(process.env.DEFAULT_ADMIN_USERNAME || 'Giovanni');
 const DEFAULT_ROOM_ID = 'cabras-giovanni';
