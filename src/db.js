@@ -1,6 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const Database = require('better-sqlite3');
+// Drop-in di better-sqlite3 con supporto cifratura (spec 004). app.db resta in
+// chiaro (nessuna chiave applicata): il comportamento e' identico al driver base.
+const Database = require('better-sqlite3-multiple-ciphers');
 const { config } = require('./config');
 
 fs.mkdirSync(path.dirname(config.dbPath), { recursive: true });

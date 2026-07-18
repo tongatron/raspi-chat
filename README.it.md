@@ -173,10 +173,29 @@ Le principali sono gia' documentate in [.env.example](/Users/tonga/Documents/Git
 
 - `HOST`, `PORT`
 - `CHAT_USERS_FILE`
+- `CHAT_DB_PATH`
+- `CHAT_DB_KEY` (cifratura at-rest, vedi sotto)
 - `TOKEN_SECRET`
 - `DEFAULT_ADMIN_USERNAME`
 - `DEFAULT_ROOM_NAME`
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`
+
+### Cifratura at-rest di `chat.db` (opzionale)
+
+Di default `chat.db` è un file SQLite in chiaro. Imposta `CHAT_DB_KEY` per cifrarlo
+a riposo (messaggi, hash password, inviti). È **opt-in**: senza chiave il
+comportamento resta invariato.
+
+```bash
+# genera una chiave forte e mettila nel .env (git-ignorato)
+echo "CHAT_DB_KEY=$(openssl rand -hex 32)" >> .env
+
+# cifra un chat.db in chiaro esistente (crea prima un backup .plain.bak)
+CHAT_DB_KEY=... node ops/encrypt-db.js
+```
+
+⚠️ **Conserva la chiave fuori dal Pi** (gestore password/backup). Se perdi
+`CHAT_DB_KEY`, i dati cifrati sono irrecuperabili. Vedi `specs/004-encrypted-chat-db/`.
 
 ## Deploy tipico
 

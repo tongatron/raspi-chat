@@ -173,10 +173,29 @@ The main ones are documented in `.env.example`:
 
 - `HOST`, `PORT`
 - `CHAT_USERS_FILE`
+- `CHAT_DB_PATH`
+- `CHAT_DB_KEY` (at-rest encryption, see below)
 - `TOKEN_SECRET`
 - `DEFAULT_ADMIN_USERNAME`
 - `DEFAULT_ROOM_NAME`
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`
+
+### At-rest encryption of `chat.db` (optional)
+
+By default `chat.db` is a plaintext SQLite file. Set `CHAT_DB_KEY` to encrypt it
+at rest (messages, password hashes, invites). It is **opt-in**: with no key the
+behaviour is unchanged.
+
+```bash
+# generate a strong key and store it in .env (git-ignored)
+echo "CHAT_DB_KEY=$(openssl rand -hex 32)" >> .env
+
+# encrypt an existing plaintext chat.db (makes a .plain.bak backup first)
+CHAT_DB_KEY=... node ops/encrypt-db.js
+```
+
+⚠️ **Keep the key safe outside the Pi** (password manager/backup). If you lose
+`CHAT_DB_KEY`, the encrypted data is unrecoverable. See `specs/004-encrypted-chat-db/`.
 
 ## Typical deploy
 

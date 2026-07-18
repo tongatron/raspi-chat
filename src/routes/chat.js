@@ -7,7 +7,24 @@ const os = require('node:os');
 const { execFileSync } = require('node:child_process');
 const { pipeline } = require('node:stream/promises');
 const webpush = require('web-push');
-const Database = require('better-sqlite3');
+const Database = require('better-sqlite3-multiple-ciphers');
+
+// Apre chat.db applicando la cifratura at-rest quando `key` è presente (spec 004).
+// Senza chiave il DB resta in chiaro: default di produzione invariato. La stessa
+// funzione è usata dallo script di migrazione ops/encrypt-db.js e dai test.
+function openChatDatabase(dbPath, key, options) {
+  const database = new Database(dbPath, options);
+  const rawKey = String(key || '');
+  if (rawKey) {
+    // Il valore arriva da CHAT_DB_KEY (es. `openssl rand -hex 32`). Le virgolette
+    // singole vengono raddoppiate per non rompere la stringa del PRAGMA.
+    database.pragma(`key='${rawKey.replace(/'/g, "''")}'`);
+    // Forza subito una lettura: con chiave errata/assente su un DB cifrato qui
+    // scatta un errore chiaro invece di fallire più avanti in modo opaco.
+    database.exec('SELECT count(*) FROM sqlite_schema');
+  }
+  return database;
+}
 
 const hasVapidConfig = !!(
   process.env.VAPID_EMAIL &&
@@ -66,7 +83,7 @@ const DEFAULT_ADMIN_USERNAME = normalizeUsername(process.env.DEFAULT_ADMIN_USERN
 const DEFAULT_ROOM_ID = 'cabras-giovanni';
 const DEFAULT_ROOM_NAME = String(process.env.DEFAULT_ROOM_NAME || 'Cabras Giovanni').trim() || 'Cabras Giovanni';
 
-const db = new Database(DB_PATH);
+const db = openChatDatabase(DB_PATH, process.env.CHAT_DB_KEY);
 db.pragma('journal_mode = WAL');
 db.exec(`
   CREATE TABLE IF NOT EXISTS rooms (
@@ -1933,3 +1950,6 @@ async function chatRoutes(app) {
 }
 
 module.exports = chatRoutes;
+// Esposta per lo script di migrazione (ops/encrypt-db.js) e i test, senza alterare
+// l'export principale (Fastify riceve comunque la funzione plugin).
+module.exports.openChatDatabase = openChatDatabase;
