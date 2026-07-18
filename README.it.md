@@ -205,6 +205,46 @@ CHAT_DB_KEY=... node ops/encrypt-uploads.js
 `CHAT_DB_KEY`, i dati cifrati (chat.db e allegati) sono irrecuperabili.
 Vedi `specs/004-encrypted-chat-db/` e `specs/007-encrypted-attachments/`.
 
+### Backup e ripristino di `chat.db`
+
+Solo gli utenti con ruolo `admin` possono scaricare o ripristinare il database.
+
+**Dal pannello web** (icona ingranaggio → *Admin* → sezione *Backup & Restore*):
+- **⬇ Download backup** — scarica `chat.db` così com'e' (chiamata `GET /chat/admin/backup`).
+- **⬆ Restore from file** — carica un file `.db` e sovrascrive il database corrente
+  (chiamata `POST /chat/admin/restore`). Chiede conferma perché **sovrascrive tutti i
+  dati correnti e riavvia il server**.
+
+**Via CLI/curl** (serve un token admin ottenuto con `POST /chat/login`):
+
+```bash
+# scarica il backup
+curl -H "X-Chat-Username: Admin" -H "X-Chat-Token: $TOKEN" \
+  http://127.0.0.1:3000/chat/admin/backup -o chat-backup.db
+
+# ripristina da un backup
+curl -X POST -H "X-Chat-Username: Admin" -H "X-Chat-Token: $TOKEN" \
+  -H "Content-Type: application/octet-stream" \
+  --data-binary @chat-backup.db \
+  http://127.0.0.1:3000/chat/admin/restore
+```
+
+Note importanti:
+- Il **backup** esporta il file `chat.db` così com'e': se `CHAT_DB_KEY` è impostata, il
+  backup scaricato è **cifrato** (spec 004) — conservalo con la stessa cura della chiave.
+- Il **restore** accetta solo un file apribile con la cifratura **attualmente
+  configurata** sul server: backup in chiaro se non c'è `CHAT_DB_KEY`, backup cifrato con
+  la chiave corrente se c'è. Un file con chiave sbagliata, non-SQLite, o senza lo schema
+  chat viene rifiutato con errore 400 (spec 005). Prima di sovrascrivere, il server
+  salva comunque una copia di sicurezza del DB corrente in `chat.db.bak`.
+- Il restore **riavvia il processo** subito dopo la scrittura: su systemd riparte da
+  solo (`Restart=always`); in `npm run dev`/`node --watch` riparte al volo; con `npm
+  start` semplice va riavviato a mano.
+- Il backup copia solo il file principale `chat.db`, non i file `-wal`/`-shm`: se il
+  server è in esecuzione con WAL attivo, per un backup consistente è preferibile farlo
+  a ridosso di un checkpoint (es. subito dopo un riavvio) o fermare temporaneamente il
+  servizio.
+
 ## Deploy tipico
 
 Assetto consigliato su Raspberry:
@@ -426,4 +466,3 @@ allora `raspi-chat` e' una base piu' leggera e piu' adatta a Raspberry/home serv
 ## Prossimi passi consigliati
 
 - creare una modalita' “public room” esplicita
-- documentare backup/ripristino di `chat.db`
