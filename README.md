@@ -22,9 +22,11 @@ The project includes:
 - Web/PWA frontend with no framework
 - Realtime messages via WebSocket
 - Local SQLite
-- Image upload
+- Image and attachment upload
 - Link preview
 - Web Push notifications
+- Optional at-rest encryption (chat.db + attachments, via `CHAT_DB_KEY`)
+- Terminal CLI client
 
 Live reference URL:
 
@@ -57,6 +59,7 @@ It does not contain:
 
 ```text
 raspi-chat/
+├── cli/                         Terminal chat client
 ├── config/                      User configuration examples
 ├── ops/                         Raspberry deploy examples
 ├── public/                      Frontend, PWA
@@ -353,7 +356,7 @@ npm run cli                                   # defaults to http://localhost:300
 node cli/chat-cli.js --url http://pi.local:3000 --room cabras-giovanni
 ```
 
-Credentials are prompted interactively (or read from `RASPI_CHAT_USER` / `RASPI_CHAT_PASS`); the server URL comes from `--url` or `RASPI_CHAT_URL`. Supports realtime messages, online users, room selection and automatic reconnection. See [cli/README.md](cli/README.md).
+Credentials are prompted interactively (or read from `RASPI_CHAT_USER` / `RASPI_CHAT_PASS`); the server URL comes from `--url` or `RASPI_CHAT_URL`. Supports realtime messages, online users, room selection, automatic reconnection, and an outbound message queue (messages written while disconnected are sent automatically on reconnect). See [cli/README.md](cli/README.md).
 
 ## Useful endpoints
 
