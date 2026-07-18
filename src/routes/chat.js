@@ -26,6 +26,35 @@ function openChatDatabase(dbPath, key, options) {
   return database;
 }
 
+// Valida un file di backup prima del restore (spec 005). Il vecchio controllo sui
+// magic byte "SQLite format 3" rifiutava i backup cifrati (un DB cifrato non ha
+// header in chiaro), rompendo il ciclo backup->restore quando CHAT_DB_KEY è attiva.
+// Qui validiamo aprendo davvero il file con la configurazione di cifratura ATTUALE:
+// deve essere apribile (in chiaro senza chiave, oppure cifrato con QUELLA chiave) e
+// contenere lo schema chat (tabella `messages`). Restituisce { ok, error }.
+function validateRestorePayload(data, key) {
+  if (!data || data.length < 1024) return { ok: false, error: 'Invalid file' };
+  const tmpPath = path.join(os.tmpdir(), `raspi-chat-restore-${crypto.randomBytes(6).toString('hex')}.db`);
+  try {
+    fs.writeFileSync(tmpPath, data);
+    const probe = openChatDatabase(tmpPath, key);
+    try {
+      const table = probe
+        .prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name='messages'")
+        .get();
+      if (!table) return { ok: false, error: 'Not a valid chat database' };
+      return { ok: true };
+    } finally {
+      probe.close();
+    }
+  } catch (err) {
+    // Chiave mancante/errata su un backup cifrato, oppure file non-SQLite/corrotto.
+    return { ok: false, error: 'Not a valid database (wrong key or corrupt file)' };
+  } finally {
+    for (const suffix of ['', '-wal', '-shm']) fs.rmSync(tmpPath + suffix, { force: true });
+  }
+}
+
 const hasVapidConfig = !!(
   process.env.VAPID_EMAIL &&
   process.env.VAPID_PUBLIC_KEY &&
@@ -1588,13 +1617,15 @@ async function chatRoutes(app) {
     const user = requireAuthUser(request, reply);
     if (!user || user.role !== 'admin') return reply.code(403).send({ error: 'Forbidden' });
     const data = request.body;   // Buffer, parsed by addContentTypeParser above
-    if (!data || data.length < 1024) return reply.code(400).send({ error: 'Invalid file' });
-    // Check SQLite magic bytes
-    const magic = data.slice(0, 16).toString('utf8');
-    if (!magic.startsWith('SQLite format 3')) return reply.code(400).send({ error: 'Not a valid SQLite database' });
+    // Il file deve essere apribile con la cifratura attuale e avere lo schema chat
+    // (spec 005): così accettiamo i backup cifrati e rifiutiamo quelli irrecuperabili.
+    const check = validateRestorePayload(data, process.env.CHAT_DB_KEY);
+    if (!check.ok) return reply.code(400).send({ error: check.error });
     const backupPath = DB_PATH + '.bak';
     fs.copyFileSync(DB_PATH, backupPath);
     fs.writeFileSync(DB_PATH, data);
+    // Rimuovi WAL/SHM del vecchio DB: riferiscono pagine non più valide dopo lo swap.
+    for (const suffix of ['-wal', '-shm']) fs.rmSync(DB_PATH + suffix, { force: true });
     reply.send({ ok: true, message: 'Database restored. Restarting...' });
     setTimeout(() => process.exit(0), 500);
   });
@@ -1953,3 +1984,4 @@ module.exports = chatRoutes;
 // Esposta per lo script di migrazione (ops/encrypt-db.js) e i test, senza alterare
 // l'export principale (Fastify riceve comunque la funzione plugin).
 module.exports.openChatDatabase = openChatDatabase;
+module.exports.validateRestorePayload = validateRestorePayload;
