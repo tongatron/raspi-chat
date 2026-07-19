@@ -1,19 +1,19 @@
-# Client CLI
+# CLI client
 
-Un client chat da terminale che usa lo stesso backend (login HTTP + WebSocket), senza browser:
+A terminal chat client that uses the same backend (HTTP login + WebSocket), no browser needed:
 
 ```bash
-npm run cli                                   # default http://localhost:3000
+npm run cli                                   # defaults to http://localhost:3000
 node cli/chat-cli.js --url http://pi.local:3000 --room cabras-giovanni
 ```
 
-Le credenziali sono richieste in modo interattivo, oppure lette da `RASPI_CHAT_USER` / `RASPI_CHAT_PASS`. L'URL del server viene da `--url` o `RASPI_CHAT_URL`.
+Credentials are requested interactively, or read from `RASPI_CHAT_USER` / `RASPI_CHAT_PASS`. The server URL comes from `--url` or `RASPI_CHAT_URL`.
 
-Supporta:
-- messaggi in tempo reale
-- utenti online
-- selezione room
-- riconnessione automatica con backoff
-- coda dei messaggi in uscita (outbox): i messaggi scritti da disconnesso partono da soli alla riconnessione, senza duplicati
+Supports:
+- realtime messaging
+- online users
+- room selection
+- automatic reconnection with backoff
+- outbox queue: messages written while disconnected are sent automatically on reconnect, without duplicates
 
-Dettagli aggiuntivi in [`cli/README.md`](https://github.com/tongatron/raspi-chat/blob/main/cli/README.md) e [`cli/COMANDI.md`](https://github.com/tongatron/raspi-chat/blob/main/cli/COMANDI.md) nel repository.
+More details in [`cli/README.md`](https://github.com/tongatron/raspi-chat/blob/main/cli/README.md) and [`cli/COMANDI.md`](https://github.com/tongatron/raspi-chat/blob/main/cli/COMANDI.md) in the repository.

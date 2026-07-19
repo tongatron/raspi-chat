@@ -1,8 +1,8 @@
-# Sviluppo
+# Development
 
-## Endpoint utili
+## Useful endpoints
 
-Pubblici:
+Public:
 - `GET /chat`
 - `POST /chat/login`
 - `GET /chat/ws`
@@ -13,7 +13,7 @@ Pubblici:
 - `GET /health`
 - `GET /version`
 
-Privati (richiedono autenticazione):
+Private (require authentication):
 - `GET /chat/messages`
 - `POST /chat/upload`
 - `GET /chat/images/:filename`
@@ -21,7 +21,7 @@ Privati (richiedono autenticazione):
 - `GET /chat/console/data`
 - `GET /chat/favorites`
 
-## Verifica veloce
+## Quick check
 
 ```bash
 curl http://127.0.0.1:3000/health
@@ -34,12 +34,12 @@ curl -X POST \
 npm run check
 ```
 
-## Test
+## Tests
 
-La suite usa il runner nativo di Node (`node --test`, nessuna dipendenza aggiuntiva) e verifica il layer HTTP con `app.inject()`, senza avviare un server né toccare i database di produzione (i test girano isolati in una directory temporanea):
+The test suite uses Node's built-in test runner (`node --test`, no extra dependency) and exercises the HTTP layer with `app.inject()`, without starting a server or touching production databases (tests run isolated in a temporary directory):
 
 ```bash
 npm test
 ```
 
-Gli stessi controlli (`npm run check` + `npm test`) girano automaticamente in CI su ogni push e pull request tramite GitHub Actions. Ogni nuova feature deve arrivare con i propri test.
+The same checks (`npm run check` + `npm test`) run automatically in CI on every push and pull request via GitHub Actions. Every new feature must ship with its own tests.

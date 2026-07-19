@@ -1,37 +1,37 @@
 # Deploy
 
-## Assetto tipico
+## Typical setup
 
-Su Raspberry Pi:
+On Raspberry Pi:
 
-- app Node in ascolto su `127.0.0.1:3000`
-- `systemd` per il processo
-- `nginx` davanti
-- opzionale tunnel Cloudflare o DNS pubblico
+- Node app listening on `127.0.0.1:3000`
+- `systemd` for the process
+- `nginx` in front
+- optional Cloudflare tunnel or public DNS
 
-Percorso consigliato: `/srv/apps/raspi-chat`
+Recommended path: `/srv/apps/raspi-chat`
 
 ## Cloudflare Tunnel
 
-Se vuoi esporre la chat su Internet senza aprire porte sulla Raspberry, il modo più pratico è **Cloudflare Tunnel** con `cloudflared`.
+If you want to expose the chat to the Internet without opening ports on the Raspberry, the most practical way is **Cloudflare Tunnel** with `cloudflared`.
 
-Scenario tipico: app Node su `127.0.0.1:3000`, `cloudflared` sulla Raspberry, hostname pubblico tipo `chat.example.com`, nessun port forwarding diretto verso casa.
+Typical scenario: Node app on `127.0.0.1:3000`, `cloudflared` on the Raspberry, a public hostname like `chat.example.com`, no direct port forwarding from home.
 
-### Prerequisiti
+### Prerequisites
 
-- un account Cloudflare
-- un dominio gestito da Cloudflare
-- il progetto già funzionante in locale su `http://127.0.0.1:3000/chat`
+- a Cloudflare account
+- a domain managed by Cloudflare
+- the project already working locally at `http://127.0.0.1:3000/chat`
 
-### Flusso
+### Flow
 
-1. aggiungi il dominio a Cloudflare se non c'è già
-2. installa `cloudflared` sulla Raspberry (guida ufficiale)
-3. autentica `cloudflared` con il tuo account
-4. crea un tunnel dedicato, es. `raspi-chat`
-5. collega un hostname pubblico al tunnel, es. `chat.example.com`
-6. configura l'ingress del tunnel verso `http://127.0.0.1:3000`
-7. installa `cloudflared` come servizio systemd
+1. add the domain to Cloudflare if it isn't there yet
+2. install `cloudflared` on the Raspberry (official guide)
+3. authenticate `cloudflared` with your account
+4. create a dedicated tunnel, e.g. `raspi-chat`
+5. link a public hostname to the tunnel, e.g. `chat.example.com`
+6. configure the tunnel's ingress to `http://127.0.0.1:3000`
+7. install `cloudflared` as a systemd service
 
 ```bash
 cloudflared tunnel login
@@ -39,7 +39,7 @@ cloudflared tunnel create raspi-chat
 cloudflared tunnel route dns raspi-chat chat.example.com
 ```
 
-Config di esempio in `/etc/cloudflared/config.yml`:
+Example config at `/etc/cloudflared/config.yml`:
 
 ```yaml
 tunnel: <TUNNEL_ID>
@@ -57,17 +57,17 @@ sudo systemctl enable --now cloudflared
 sudo systemctl status cloudflared
 ```
 
-Se usi il wizard di setup, trovi già una base pronta in `data/setup-generated/cloudflared.config.yml`.
+If you used the setup wizard, you already have a ready-made base at `data/setup-generated/cloudflared.config.yml`.
 
-### Cloudflare e nginx
+### Cloudflare and nginx
 
-Due opzioni sensate: tunnel diretto verso `http://127.0.0.1:3000`, oppure tunnel verso `nginx` se lo usi anche per altre regole locali. Se usi solo la chat, il tunnel diretto verso Fastify è spesso la scelta più semplice.
+Two sensible options: tunnel directly to `http://127.0.0.1:3000`, or tunnel to `nginx` if you also use it for other local rules. If you only run the chat, tunneling straight to Fastify is often the simplest choice.
 
 ### WebSocket
 
-La chat usa WebSocket su `/chat/ws`. Con Cloudflare Tunnel non serve configurazione speciale: il tunnel inoltra HTTP/WebSocket verso il servizio locale.
+The chat uses WebSocket at `/chat/ws`. With Cloudflare Tunnel, no special configuration is needed: the tunnel forwards HTTP/WebSocket traffic to the configured local service.
 
-### Verifica
+### Verification
 
 ```bash
 curl http://127.0.0.1:3000/health
@@ -81,7 +81,7 @@ journalctl -u cloudflared -f
 journalctl -u raspi-chat -f
 ```
 
-### Note pratiche
+### Practical notes
 
-- se usi PWA e notifiche, un dominio pubblico stabile è importante
-- per protezione extra puoi aggiungere una policy Cloudflare Access davanti al dominio, ma per una chat privata di solito non serve
+- if you use the PWA and notifications, a stable public domain matters
+- for extra protection you can add a Cloudflare Access policy in front of the domain, but for a private chat it's usually not needed

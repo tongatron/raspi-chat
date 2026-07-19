@@ -1,8 +1,8 @@
 # Roadmap
 
-Prossimi passi consigliati, in ordine sparso:
+Recommended next steps, in no particular order:
 
-- Quando un utente viene aggiunto a una stanza: mandargli una notifica e mostrare un messaggio di sistema centrato in chat tipo "*Utente è entrato nella chat*".
-- Mostrare un separatore di data centrato ogni volta che cambia il giorno all'interno di una chat (una sola volta al giorno), incluso quando entra un amministratore.
-- Nel menu Impostazioni, spostare la voce **Chat** prima di **Media** (quando Chat è la vista attiva di default).
-- *(Da valutare/prototipare)* Trascrizione vocale in tempo reale sul Raspberry Pi: confrontare **Vosk** (molto fluido in tempo reale) e **whisper.cpp** con modelli `tiny`/`base` (funziona ma con qualche secondo di latenza).
+- When a user is added to a room: send them a notification and show a centered system message in chat like "*User joined the chat*".
+- Show a centered date separator whenever the day changes within a chat (once per day), including when an admin joins.
+- In the Settings menu, move the **Chat** entry before **Media** (when Chat is the default active view).
+- *(To evaluate/prototype)* Real-time voice transcription on the Raspberry Pi: compare **Vosk** (very smooth in real time) and **whisper.cpp** with `tiny`/`base` models (works, but with a few seconds of latency).

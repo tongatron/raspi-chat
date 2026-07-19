@@ -1,9 +1,9 @@
 # Table of contents
 
-* [Introduzione](README.md)
-* [Installazione](installazione.md)
-* [Funzionalità](funzionalita.md)
-* [Client CLI](cli.md)
+* [Introduction](README.md)
+* [Installation](installation.md)
+* [Features](features.md)
+* [CLI client](cli.md)
 * [Deploy](deploy.md)
-* [Sviluppo](sviluppo.md)
+* [Development](development.md)
 * [Roadmap](roadmap.md)

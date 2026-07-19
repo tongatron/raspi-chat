@@ -1,39 +1,39 @@
 # raspi-chat
 
-Chat web self-hosted pensata per Raspberry Pi e piccoli server domestici.
+Self-hosted web chat built for Raspberry Pi and small home servers.
 
-Il progetto include:
-- backend Node.js/Fastify
-- frontend web/PWA senza framework
-- messaggi realtime via WebSocket
-- SQLite locale
-- upload immagini e allegati, con anteprima link
-- notifiche Web Push
-- cifratura at-rest opzionale (chat.db + allegati)
-- client CLI da terminale
-- app Android via TWA (sideload, senza Play Store)
+The project includes:
+- Node.js/Fastify backend
+- framework-free web/PWA frontend
+- realtime messaging via WebSocket
+- local SQLite storage
+- image and attachment uploads, with link previews
+- Web Push notifications
+- optional at-rest encryption (chat.db + attachments)
+- terminal CLI client
+- Android app via TWA (sideload, no Play Store)
 
-URL live di riferimento: `https://chat.tongatron.org/chat`
+Live reference URL: `https://chat.tongatron.org/chat`
 
-## A chi serve
+## Who it's for
 
-Questo progetto ha senso se vuoi:
-- una chat semplice da self-hostare
-- qualcosa di più leggero di Matrix, Rocket.Chat o simili
-- un'app che giri bene anche su Raspberry vecchie
-- una base chiara da adattare a chat privata, di famiglia o di piccola community
+This project makes sense if you want:
+- a simple chat you can self-host
+- something lighter than Matrix, Rocket.Chat, or similar
+- an app that runs well even on older Raspberry Pi boards
+- a clear base to adapt into a private, family, or small-community chat
 
-Non è pensato come alternativa enterprise a Slack/Discord: è una codebase pragmatica, piccola e modificabile.
+It's not meant as an enterprise alternative to Slack/Discord: it's a pragmatic, small, and easy-to-modify codebase.
 
-Se vuoi una chat molto strutturata e federata, esistono opzioni più grandi come Matrix o Snikket. Se invece vuoi poca dipendenza esterna, deploy semplice, storage locale e facilità di modifica, `raspi-chat` è una base più leggera e più adatta a Raspberry/home server.
+If you want a heavily structured, federated chat, bigger options exist like Matrix or Snikket. If instead you want few external dependencies, simple deployment, local storage, and ease of modification, `raspi-chat` is a lighter base better suited to Raspberry/home servers.
 
-## Da dove iniziare
+## Where to start
 
-- [Installazione](installazione.md) — come mettere in piedi il progetto in locale o su Raspberry Pi
-- [Funzionalità](funzionalita.md) — cosa sa fare la chat: stanze, allegati, cifratura, preferiti, notifiche
-- [Client CLI](cli.md) — usare la chat da terminale
+- [Installation](installation.md) — how to set up the project locally or on a Raspberry Pi
+- [Features](features.md) — what the chat can do: rooms, attachments, encryption, favorites, notifications
+- [CLI client](cli.md) — using the chat from a terminal
 - [Deploy](deploy.md) — systemd, nginx, Cloudflare Tunnel
-- [Sviluppo](sviluppo.md) — API, test, verifica
-- [Roadmap](roadmap.md) — prossimi passi in programma
+- [Development](development.md) — API, tests, checks
+- [Roadmap](roadmap.md) — what's planned next
 
-Il codice sorgente è su [GitHub](https://github.com/tongatron/raspi-chat).
+Source code is on [GitHub](https://github.com/tongatron/raspi-chat).
