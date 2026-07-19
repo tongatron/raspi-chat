@@ -40,6 +40,7 @@
       --muted-soft: #6f6f6f;
       --primary: #e6e6e6;
       --primary-strong: #ffffff;
+      --primary-ink: #0a0a0a;
       --primary-soft: rgba(255,255,255,.14);
       --accent: #f09c75;
       --success: #6fe0a8;
@@ -62,6 +63,7 @@
       --muted-soft: #78818f;
       --primary: #2f6fe0;
       --primary-strong: #1f57bd;
+      --primary-ink: #ffffff;
       --primary-soft: rgba(47,111,224,.12);
       --accent: #c96a3e;
       --success: #1f9d63;
@@ -248,7 +250,8 @@
     body:not(.theme-light) .admin-card,
     body:not(.theme-light) .admin-list,
     body:not(.theme-light) .console-topbar,
-    body:not(.theme-light) .console-card {
+    body:not(.theme-light) .console-card,
+    body:not(.theme-light) .stats-card {
       border-color: rgba(229,239,252,.18);
       box-shadow: 0 18px 42px rgba(0,0,0,.34);
     }
@@ -260,7 +263,8 @@
     body.theme-light .admin-card,
     body.theme-light .admin-list,
     body.theme-light .console-topbar,
-    body.theme-light .console-card {
+    body.theme-light .console-card,
+    body.theme-light .stats-card {
       border-color: rgba(23,29,38,.10);
       box-shadow: 0 18px 42px rgba(23,29,38,.10);
     }
@@ -665,7 +669,7 @@
       width: 100%;
       padding: 14px;
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-      color: white;
+      color: var(--primary-ink);
       border: none;
       border-radius: 5px;
       font-size: 1rem;
@@ -1221,7 +1225,7 @@
     #attach-btn:hover { transform: translateY(-1px); background: var(--primary-soft); color: var(--primary); }
     #send-btn {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-      color: white;
+      color: var(--primary-ink);
       font-size: 1.1rem;
       box-shadow: 0 14px 24px rgba(31,111,210,.22);
     }
@@ -1486,7 +1490,7 @@
     #private-upload-btn,
     #private-submit-btn {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-      color: white;
+      color: var(--primary-ink);
       box-shadow: 0 14px 24px rgba(31,111,210,.18);
     }
     #private-save-note-btn {
@@ -1768,7 +1772,7 @@
     .room-open-btn,
     #room-create-btn {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-      color: white;
+      color: var(--primary-ink);
       box-shadow: 0 14px 24px rgba(31,111,210,.18);
     }
     #room-rename-btn {
@@ -2299,7 +2303,7 @@
     }
     #admin-broadcast-btn {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-      color: white;
+      color: var(--primary-ink);
       box-shadow: 0 14px 24px rgba(31,111,210,.18);
     }
     #admin-broadcast-btn:disabled {
@@ -2317,12 +2321,12 @@
     }
     .btn-like {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-      color: white;
+      color: var(--primary-ink);
       box-shadow: 0 14px 24px rgba(31,111,210,.18);
     }
     #admin-invite-btn {
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-      color: white;
+      color: var(--primary-ink);
       box-shadow: 0 14px 24px rgba(31,111,210,.18);
     }
     #admin-copy-invite-btn {
@@ -2424,7 +2428,7 @@
       font: inherit;
       font-weight: 700;
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-      color: white;
+      color: var(--primary-ink);
       cursor: pointer;
     }
     #new-room-cancel-btn {
@@ -2482,7 +2486,7 @@
       font: inherit;
       font-weight: 700;
       background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-      color: white;
+      color: var(--primary-ink);
       cursor: pointer;
     }
     .public-room-row button:disabled {
