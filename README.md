@@ -478,5 +478,15 @@ then `raspi-chat` is a lighter base better suited to Raspberry/home server use.
 
 ## Suggested next steps
 
-None right now: the earlier suggestions (explicit public room, more automated guided
-setup, backup/restore documentation) have all been implemented.
+- Replace the attachment "clip" icon with a **+** button that opens a choice menu:
+  *Attach file* (current behavior unchanged, already tested), *Send location*, and
+  evaluate *Add message to favorites* (bookmark/star a message) as a related feature.
+- When a user is added to a room: send them a notification and show a centered system
+  message in the chat like "*User joined the chat*".
+- Show a centered date separator whenever the day changes within a chat (once per
+  day), including when an admin logs in.
+- In the Settings menu, move the **Chat** entry before **Media** (when Chat is the
+  default active view).
+- *(To evaluate/prototype)* Real-time speech-to-text on the Raspberry Pi: compare
+  **Vosk** (very smooth in real time) and **whisper.cpp** with `tiny`/`base` models
+  (works, but with a few seconds of latency).
