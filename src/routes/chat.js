@@ -1911,6 +1911,11 @@ async function chatRoutes(app) {
       .header('Cache-Control', 'no-store')
       .send(fs.readFileSync(path.join(process.cwd(), 'public', 'theme-lab.html'), 'utf8')));
 
+  app.get('/chat/notify-test', async (request, reply) =>
+    reply.type('text/html')
+      .header('Cache-Control', 'no-store')
+      .send(fs.readFileSync(path.join(process.cwd(), 'public', 'notify-test.html'), 'utf8')));
+
   app.get('/chat/images/:filename', async (request, reply) => {
     const username = requireAuth(request, reply);
     if (!username) return;
