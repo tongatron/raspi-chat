@@ -480,10 +480,6 @@ allora `raspi-chat` e' una base piu' leggera e piu' adatta a Raspberry/home serv
 
 ## Prossimi passi consigliati
 
-- Sostituire l'icona "clip" di allegato con un pulsante **+** che apre un menu di
-  scelte: *Allega file* (comportamento attuale invariato, già testato), *Invia
-  posizione*, e valutare *Aggiungi messaggio ai preferiti* (bookmark/star di un
-  messaggio) come funzione collegata.
 - Quando un utente viene aggiunto a una stanza: mandargli una notifica e mostrare un
   messaggio di sistema centrato in chat tipo "*Utente è entrato nella chat*".
 - Mostrare un separatore di data centrato ogni volta che cambia il giorno all'interno

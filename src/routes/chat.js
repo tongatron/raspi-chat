@@ -144,6 +144,11 @@ db.exec(`
     username TEXT NOT NULL,
     PRIMARY KEY (message_id, username)
   );
+  CREATE TABLE IF NOT EXISTS message_favorites (
+    message_id TEXT NOT NULL,
+    username TEXT NOT NULL,
+    PRIMARY KEY (message_id, username)
+  );
   CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
     hash TEXT NOT NULL,
@@ -490,6 +495,17 @@ const stmts = {
   insertRead:    db.prepare('INSERT OR IGNORE INTO message_reads (message_id, username) VALUES (?, ?)'),
   deleteMessage: db.prepare('DELETE FROM messages WHERE id = ? AND room_id = ? AND username = ?'),
   deleteReads:   db.prepare('DELETE FROM message_reads WHERE message_id = ?'),
+  insertFavorite:    db.prepare('INSERT OR IGNORE INTO message_favorites (message_id, username) VALUES (?, ?)'),
+  deleteFavorite:    db.prepare('DELETE FROM message_favorites WHERE message_id = ? AND username = ?'),
+  deleteFavoritesForMessage: db.prepare('DELETE FROM message_favorites WHERE message_id = ?'),
+  listFavoriteIdsForUser: db.prepare('SELECT message_id AS messageId FROM message_favorites WHERE username = ?'),
+  listRoomFavorites: db.prepare(`
+    SELECT m.id, m.username, m.text, m.image_url AS imageUrl, m.timestamp
+    FROM message_favorites f
+    JOIN messages m ON m.id = f.message_id
+    WHERE f.username = ? AND m.room_id = ?
+    ORDER BY m.timestamp DESC
+  `),
   getUser:       db.prepare('SELECT hash, role FROM users WHERE username = ?'),
   getAuthUser:   db.prepare('SELECT username, role FROM users WHERE username = ?'),
   getById:       db.prepare('SELECT id, room_id AS roomId, username, text, image_url AS imageUrl FROM messages WHERE id = ? AND room_id = ?'),
@@ -627,7 +643,7 @@ const seedDefaultRoom = db.transaction(() => {
 });
 seedDefaultRoom();
 
-function formatRow(row) {
+function formatRow(row, favoriteIds) {
   return {
     type: 'message',
     id: row.id,
@@ -637,6 +653,7 @@ function formatRow(row) {
     imageUrl: row.imageUrl || null,
     timestamp: row.timestamp,
     readBy: row.readBy ? row.readBy.split(',') : [],
+    favorite: favoriteIds ? favoriteIds.has(row.id) : false,
     replyTo: row.replyToId ? {
       id: row.replyToId,
       username: row.replyUsername || '',
@@ -668,8 +685,13 @@ function loadRoomsForUser(username) {
   return stmts.listRoomsForUser.all(username).map((row) => formatRoom(row, username));
 }
 
-function loadHistory(roomId) {
-  return stmts.getHistory.all(roomId).reverse().map(formatRow);
+function favoriteIdSet(username) {
+  return new Set(stmts.listFavoriteIdsForUser.all(username).map((r) => r.messageId));
+}
+
+function loadHistory(roomId, username) {
+  const favoriteIds = favoriteIdSet(username);
+  return stmts.getHistory.all(roomId).reverse().map((row) => formatRow(row, favoriteIds));
 }
 
 function formatUser(row) {
@@ -1206,6 +1228,18 @@ async function chatRoutes(app) {
     return { images };
   });
 
+  app.get('/chat/favorites', async (request, reply) => {
+    const user = requireAuthUser(request, reply);
+    if (!user) return;
+    const roomId = String(request.query?.roomId || DEFAULT_ROOM_ID);
+    if (!stmts.getRoomMember.get(roomId, user.username)) {
+      return reply.code(403).send({ error: 'Not a member of this room' });
+    }
+    const messages = stmts.listRoomFavorites.all(user.username, roomId)
+      .map(row => ({ id: row.id, username: row.username, text: row.text || '', imageUrl: row.imageUrl || null, timestamp: row.timestamp }));
+    return { messages };
+  });
+
   app.post('/chat/my-rooms', async (request, reply) => {
     const user = requireAuthUser(request, reply);
     if (!user) return;
@@ -1584,7 +1618,8 @@ async function chatRoutes(app) {
     if (!before) return reply.code(400).send({ error: 'before is required' });
     const limit = Math.min(parseInt(request.query.limit) || 50, 100);
     const rows = stmts.getPage.all(roomId, before, limit);
-    return rows.reverse().map(formatRow);
+    const favoriteIds = favoriteIdSet(user.username);
+    return rows.reverse().map((row) => formatRow(row, favoriteIds));
   });
 
   app.post('/chat/push-subscribe', async (request, reply) => {
@@ -1979,7 +2014,7 @@ async function chatRoutes(app) {
           type: 'history',
           roomId,
           roomName: room.name,
-          messages: loadHistory(roomId),
+          messages: loadHistory(roomId, username),
         }));
         if (previousRoomId && previousRoomId !== roomId) broadcastOnline(previousRoomId);
         broadcastOnline(roomId);
@@ -2004,8 +2039,19 @@ async function chatRoutes(app) {
         const result = stmts.deleteMessage.run(msgId, client.roomId, client.username);
         if (result.changes > 0) {
           stmts.deleteReads.run(msgId);
+          stmts.deleteFavoritesForMessage.run(msgId);
           broadcastToRoom(client.roomId, { type: 'deleted', id: msgId, roomId: client.roomId });
         }
+        return;
+      }
+
+      if (msg.type === 'favorite' || msg.type === 'unfavorite') {
+        const msgId = msg.id ? String(msg.id).slice(0, 36) : null;
+        if (!msgId) return;
+        const favorite = msg.type === 'favorite';
+        if (favorite) stmts.insertFavorite.run(msgId, client.username);
+        else stmts.deleteFavorite.run(msgId, client.username);
+        try { socket.send(JSON.stringify({ type: 'favorite', id: msgId, favorite })); } catch {}
         return;
       }
 

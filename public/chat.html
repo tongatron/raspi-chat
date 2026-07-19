@@ -863,7 +863,7 @@
       margin-left: auto;
       box-shadow: 0 0 0 3px rgba(229,62,62,.18);
     }
-    #settings-menu, #user-rooms-menu {
+    #settings-menu, #user-rooms-menu, #compose-menu {
       display: none;
       position: absolute;
       top: calc(100% + 6px);
@@ -881,16 +881,25 @@
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
     }
+    #compose-menu {
+      top: auto;
+      bottom: calc(100% + 6px);
+      right: auto;
+      left: 0;
+    }
     body.theme-light #settings-menu,
-    body.theme-light #user-rooms-menu {
+    body.theme-light #user-rooms-menu,
+    body.theme-light #compose-menu {
       --menu-bg: #ffffff;
       --menu-border: rgba(23,29,38,.14);
       --menu-shadow: 0 8px 24px rgba(23,29,38,.16);
     }
     #settings-menu.open,
-    #user-rooms-menu.open { display: flex; }
+    #user-rooms-menu.open,
+    #compose-menu.open { display: flex; }
     #settings-menu button,
-    #user-rooms-menu button {
+    #user-rooms-menu button,
+    #compose-menu button {
       background: transparent;
       border: none;
       text-align: left;
@@ -904,11 +913,14 @@
       width: 100%;
     }
     body.theme-light #settings-menu button,
-    body.theme-light #user-rooms-menu button { --menu-text: #1d2a39; }
+    body.theme-light #user-rooms-menu button,
+    body.theme-light #compose-menu button { --menu-text: #1d2a39; }
     #settings-menu button:hover,
-    #user-rooms-menu button:hover { background: rgba(255,255,255,.08); }
+    #user-rooms-menu button:hover,
+    #compose-menu button:hover { background: rgba(255,255,255,.08); }
     body.theme-light #settings-menu button:hover,
-    body.theme-light #user-rooms-menu button:hover { background: rgba(15,34,59,.08); }
+    body.theme-light #user-rooms-menu button:hover,
+    body.theme-light #compose-menu button:hover { background: rgba(15,34,59,.08); }
     /* Voce "Dark theme": interruttore a levetta stile Google (colori tema invariati). */
     #theme-toggle-btn {
       display: flex !important;
@@ -1091,6 +1103,26 @@
     .me .reply-btn { background: rgba(255,255,255,.16); color: white; }
     .me .reply-btn:hover { background: rgba(255,255,255,.24); }
     @media (hover: none) { .reply-btn { opacity: .82; } }
+
+    .fav-btn {
+      background: rgba(15,34,59,.06);
+      border: none;
+      font-size: .88rem;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 4px 8px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity .15s ease, background .15s ease, color .15s ease;
+      line-height: 1.4;
+    }
+    .msg-wrap:hover .fav-btn { opacity: 1; }
+    .fav-btn:hover { background: var(--primary-soft); color: var(--primary); }
+    .me .fav-btn { background: rgba(255,255,255,.16); color: white; }
+    .me .fav-btn:hover { background: rgba(255,255,255,.24); }
+    .fav-btn.active { opacity: 1; color: #e0a72e; }
+    .me .fav-btn.active { color: #ffd873; }
+    @media (hover: none) { .fav-btn { opacity: .82; } }
 
     .delete-btn {
       background: rgba(15,34,59,.06);
@@ -1310,7 +1342,7 @@
       flex: 1;
       overflow: hidden;
     }
-    #media-view {
+    #media-view, #favorites-view {
       display: none;
       flex-direction: column;
       gap: 14px;
@@ -1323,6 +1355,20 @@
       box-shadow: var(--shadow-soft);
       padding: 18px;
     }
+    .favorites-list { display: flex; flex-direction: column; gap: 8px; }
+    .favorites-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 10px 12px;
+      border-radius: 5px;
+      background: rgba(15,34,59,.04);
+      cursor: pointer;
+      transition: background .15s ease;
+    }
+    .favorites-item:hover { background: var(--primary-soft); }
+    .favorites-item-name { font-size: .78rem; font-weight: 700; color: var(--muted); }
+    .favorites-item-text { font-size: .92rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .media-topbar {
       display: flex;
       align-items: flex-end;
@@ -1424,7 +1470,8 @@
     body.subpage-view #console-view,
     body.subpage-view #admin-view,
     body.subpage-view #stats-view,
-    body.subpage-view #media-view {
+    body.subpage-view #media-view,
+    body.subpage-view #favorites-view {
       flex: none;
       min-height: auto;
       overflow: visible;
@@ -2838,6 +2885,7 @@
         <button id="settings-btn" class="toolbar-btn" type="button" title="Settings" aria-label="Settings">&#x2699;</button>
         <div id="settings-menu" role="menu">
           <button type="button" data-view="media" role="menuitem">Media</button>
+          <button type="button" data-view="favorites" role="menuitem">Favorites</button>
           <button type="button" data-view="chat" role="menuitem" class="manage-users-only" style="display:none">Chat</button>
           <button type="button" data-view="admin" role="menuitem" id="admin-menu-btn" class="admin-access-only" style="display:none">Users</button>
           <button type="button" data-view="rooms" role="menuitem" class="manage-users-only" style="display:none">Rooms</button>
@@ -2863,7 +2911,11 @@
     <button id="reply-cancel" onclick="cancelReply()">&#x2715;</button>
   </div>
   <div id="input-area">
-    <button class="icon-btn" id="attach-btn" title="Attach image">&#x1f4ce;</button>
+    <button class="icon-btn" id="attach-btn" type="button" title="Add" aria-label="Add" aria-expanded="false">+</button>
+    <div id="compose-menu" role="menu">
+      <button type="button" id="compose-attach-btn" role="menuitem">&#x1f4ce; Attach file</button>
+      <button type="button" id="compose-location-btn" role="menuitem">&#x1f4cd; Send location</button>
+    </div>
     <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mov,.mp4,.webm,.m4v,.mp3,.wav,.ogg,.m4a,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip" />
     <textarea id="msg-input" rows="1" placeholder="Write a message..."></textarea>
     <button class="icon-btn" id="emoji-btn" type="button" title="Emoji" aria-label="Emoji" aria-expanded="false">&#x1F642;</button>
@@ -2937,6 +2989,17 @@
     </div>
     <div id="media-status">Loading…</div>
     <div id="media-grid" class="media-grid" hidden></div>
+  </section>
+  <section id="favorites-view">
+    <div class="media-topbar">
+      <div>
+        <div class="eyebrow">Starred</div>
+        <h3 id="favorites-title">Favorites</h3>
+        <div class="rooms-copy">Messages you starred in this room.</div>
+      </div>
+    </div>
+    <div id="favorites-status">Loading…</div>
+    <div id="favorites-list" class="favorites-list" hidden></div>
   </section>
   <section id="console-view">
     <div class="console-topbar">
@@ -3315,7 +3378,7 @@ window.addEventListener('focus', clearUnread);
 function startReply(msg) {
   replyTo = msg;
   document.getElementById('reply-bar-name').textContent = msg.username;
-  document.getElementById('reply-bar-text').textContent = (msg.imageUrl && !msg.text) ? '📎 Image' : maskSpoilers(msg.text);
+  document.getElementById('reply-bar-text').textContent = (msg.imageUrl && !msg.text) ? '📎 Image' : (parseGeoText(msg.text) ? '📍 Location' : maskSpoilers(msg.text));
   document.getElementById('reply-bar').style.display = 'flex';
   document.getElementById('msg-input').focus();
 }
@@ -4089,6 +4152,13 @@ function handleMsg(msg) {
     updateUnreadBadge();
     renderUserRoomsMenu();
   }
+  else if (msg.type === 'favorite') {
+    var favEntry = msgElements[msg.id];
+    if (favEntry && favEntry.favBtn) {
+      favEntry.favBtn.classList.toggle('active', !!msg.favorite);
+      favEntry.favBtn.textContent = msg.favorite ? '★' : '☆';
+    }
+  }
   else if (msg.type === 'deleted') {
     var entry = msgElements[msg.id];
     if (entry && entry.wrap) {
@@ -4135,6 +4205,19 @@ function renderText(text) {
 }
 // Per anteprime/citazioni: sostituisce il contenuto spoiler con un placeholder
 function maskSpoilers(text) { return (text || '').replace(/\|\|[\s\S]+?\|\|/g, '███'); }
+
+// Messaggi "posizione": testo nel formato geo:<lat>,<lng> (vedi sendLocation()).
+var GEO_RE = /^geo:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/;
+function parseGeoText(text) {
+  var m = GEO_RE.exec(String(text || '').trim());
+  return m ? { lat: m[1], lng: m[2] } : null;
+}
+function renderLocationCard(geo) {
+  var link = document.createElement('a'); link.className = 'msg-file'; link.target = '_blank'; link.rel = 'noopener';
+  link.href = 'https://www.openstreetmap.org/?mlat=' + geo.lat + '&mlon=' + geo.lng + '#map=16/' + geo.lat + '/' + geo.lng;
+  link.textContent = '\u{1F4CD} Location (' + geo.lat + ', ' + geo.lng + ')';
+  return link;
+}
 
 async function attachLinkPreviews(bubble, urls) {
   try {
@@ -4184,12 +4267,17 @@ function buildMessage(msg) {
     (function(rid) { rq.onclick = function() { scrollToMessage(rid); }; })(msg.replyTo.id);
     var rqName = document.createElement('div'); rqName.className = 'rq-name'; rqName.textContent = msg.replyTo.username; rq.appendChild(rqName);
     var rqText = document.createElement('div'); rqText.className = 'rq-text';
-    rqText.textContent = (msg.replyTo.imageUrl && !msg.replyTo.text) ? '📎 Image' : maskSpoilers(msg.replyTo.text);
+    rqText.textContent = (msg.replyTo.imageUrl && !msg.replyTo.text) ? '📎 Image' : (parseGeoText(msg.replyTo.text) ? '📍 Location' : maskSpoilers(msg.replyTo.text));
     rq.appendChild(rqText); bubble.appendChild(rq);
   }
 
   if (msg.imageUrl) { bubble.appendChild(renderAttachment(msg.imageUrl)); }
-  if (msg.text) { var p = document.createElement('p'); p.appendChild(renderText(msg.text)); bubble.appendChild(p); var urls = extractUrls(msg.text); if (urls.length) attachLinkPreviews(bubble, urls); }
+  var geo = msg.text ? parseGeoText(msg.text) : null;
+  if (geo) {
+    bubble.appendChild(renderLocationCard(geo));
+  } else if (msg.text) {
+    var p = document.createElement('p'); p.appendChild(renderText(msg.text)); bubble.appendChild(p); var urls = extractUrls(msg.text); if (urls.length) attachLinkPreviews(bubble, urls);
+  }
   if (msg.imageUrl && !msg.text && !msg.replyTo) bubble.classList.add('image-only');
   wrap.appendChild(bubble);
 
@@ -4200,6 +4288,24 @@ function buildMessage(msg) {
   var replyBtn = document.createElement('button'); replyBtn.className = 'reply-btn'; replyBtn.textContent = '↩'; replyBtn.title = 'Reply';
   (function(m) { replyBtn.onclick = function(e) { e.stopPropagation(); startReply(m); }; })(msg);
   meta.appendChild(replyBtn);
+
+  // Favorite button (star)
+  var favBtn = null;
+  if (msg.id) {
+    favBtn = document.createElement('button'); favBtn.className = 'fav-btn'; favBtn.title = 'Favorite';
+    favBtn.textContent = msg.favorite ? '★' : '☆';
+    favBtn.classList.toggle('active', !!msg.favorite);
+    (function(mid, btn) {
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        var next = !btn.classList.contains('active');
+        btn.classList.toggle('active', next);
+        btn.textContent = next ? '★' : '☆';
+        ws.send(JSON.stringify({ type: next ? 'favorite' : 'unfavorite', id: mid }));
+      };
+    })(msg.id, favBtn);
+    meta.appendChild(favBtn);
+  }
 
   var time = document.createElement('span');
   time.textContent = new Date(msg.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
@@ -4216,7 +4322,7 @@ function buildMessage(msg) {
   wrap.appendChild(meta);
 
   // Track for read receipts, reply scrolling, status updates
-  if (msg.id) msgElements[msg.id] = { wrap: wrap, statusEl: statusEl };
+  if (msg.id) msgElements[msg.id] = { wrap: wrap, statusEl: statusEl, favBtn: favBtn };
 
   return wrap;
 }
@@ -4258,6 +4364,23 @@ function sendMessage() {
   clearImagePreview(); cancelReply();
 }
 
+// Invia la posizione corrente come messaggio testuale "geo:<lat>,<lng>",
+// riconosciuto e renderizzato come card mappa da renderMessageText().
+function sendLocation() {
+  if (!navigator.geolocation) { alert('Location: not supported by this browser.'); return; }
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    var lat = pos.coords.latitude.toFixed(6);
+    var lng = pos.coords.longitude.toFixed(6);
+    var payload = { type: 'message', cid: newCid(), text: 'geo:' + lat + ',' + lng, imageUrl: null };
+    if (replyTo) { payload.replyToId = replyTo.id; }
+    outbox.push(payload);
+    trySend(payload);
+    cancelReply();
+  }, function(err) {
+    alert('Location: ' + (err && err.message ? err.message : 'permission denied or unavailable'));
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
 // Invia un payload sul socket se aperto; altrimenti (o su errore) forza la
 // riconnessione. Non rimuove nulla dall'outbox: ci pensa la conferma del server.
 function trySend(payload) {
@@ -4285,9 +4408,26 @@ function confirmSent(cid) {
   }
 }
 
+// Compose menu ("+"): Attach file / Send location
+var composeMenu = document.getElementById('compose-menu');
+var composeMenuBtn = document.getElementById('attach-btn');
+function closeComposeMenu() { composeMenu.classList.remove('open'); composeMenuBtn.setAttribute('aria-expanded', 'false'); }
+composeMenuBtn.onclick = function(e) {
+  e.stopPropagation();
+  var willOpen = !composeMenu.classList.contains('open');
+  composeMenu.classList.toggle('open', willOpen);
+  composeMenuBtn.setAttribute('aria-expanded', String(willOpen));
+};
+document.addEventListener('click', function(e) {
+  if (e.target.closest('#compose-menu') || e.target === composeMenuBtn) return;
+  closeComposeMenu();
+});
+
+document.getElementById('compose-location-btn').onclick = function() { closeComposeMenu(); sendLocation(); };
+
 // File upload
 var fileInput = document.getElementById('file-input');
-document.getElementById('attach-btn').onclick = function() { fileInput.click(); };
+document.getElementById('compose-attach-btn').onclick = function() { closeComposeMenu(); fileInput.click(); };
 fileInput.onchange = async function() { var f = fileInput.files[0]; if (!f) return; fileInput.value = ''; await uploadImage(f, f.name); };
 document.getElementById('remove-img').onclick = clearImagePreview;
 function clearImagePreview() { pendingImageUrl = null; document.getElementById('image-preview').style.display = 'none'; }
@@ -4366,6 +4506,7 @@ function setView(view) {
   if (view === 'admin' && (canManageUsers || canCreateInvites)) nextView = 'admin';
   if (view === 'stats' && canUseConsole) nextView = 'stats';
   if (view === 'media' && currentRoomId) nextView = 'media';
+  if (view === 'favorites' && currentRoomId) nextView = 'favorites';
   if (nextView !== 'console') stopConsoleAutoRefresh();
   currentView = nextView;
   document.body.classList.toggle('subpage-view', nextView !== 'chat');
@@ -4375,6 +4516,7 @@ function setView(view) {
   document.getElementById('admin-view').style.display = nextView === 'admin' ? 'flex' : 'none';
   document.getElementById('stats-view').style.display = nextView === 'stats' ? 'flex' : 'none';
   document.getElementById('media-view').style.display = nextView === 'media' ? 'flex' : 'none';
+  document.getElementById('favorites-view').style.display = nextView === 'favorites' ? 'flex' : 'none';
   var consoleBtn = document.getElementById('console-btn');
   if (consoleBtn) {
     consoleBtn.classList.toggle('active', nextView === 'console');
@@ -4388,6 +4530,7 @@ function setView(view) {
   if (nextView === 'console') startConsoleAutoRefresh();
   if (nextView === 'stats') loadStats();
   if (nextView === 'media') loadMedia();
+  if (nextView === 'favorites') loadFavorites();
 }
 
 var mediaItems = [];
@@ -4410,6 +4553,55 @@ async function loadMedia() {
     statusEl.textContent = 'Failed to load media: ' + e.message;
     gridEl.hidden = true;
   }
+}
+
+async function loadFavorites() {
+  var titleEl = document.getElementById('favorites-title');
+  var statusEl = document.getElementById('favorites-status');
+  var listEl = document.getElementById('favorites-list');
+  if (titleEl) titleEl.textContent = 'Favorites • ' + (currentRoomName || 'Chat');
+  statusEl.style.display = '';
+  statusEl.textContent = 'Loading…';
+  listEl.hidden = true;
+  try {
+    var res = await authFetch('/chat/favorites?roomId=' + encodeURIComponent(currentRoomId));
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error');
+    var messages = data.messages || [];
+    if (!messages.length) {
+      statusEl.textContent = 'No favorite messages yet in this room.';
+      listEl.hidden = true;
+      return;
+    }
+    listEl.innerHTML = '';
+    messages.forEach(function(m) {
+      var item = document.createElement('div'); item.className = 'favorites-item';
+      var name = document.createElement('div'); name.className = 'favorites-item-name'; name.textContent = m.username;
+      var text = document.createElement('div'); text.className = 'favorites-item-text';
+      var geo = m.text ? parseGeoText(m.text) : null;
+      text.textContent = geo ? '📍 Location' : ((m.imageUrl && !m.text) ? '📎 Image' : maskSpoilers(m.text));
+      item.appendChild(name); item.appendChild(text);
+      item.onclick = function() { setView('chat'); scrollToMessageOrLoad(m.id); };
+      listEl.appendChild(item);
+    });
+    statusEl.style.display = 'none';
+    listEl.hidden = false;
+  } catch (e) {
+    statusEl.textContent = 'Failed to load favorites: ' + e.message;
+    listEl.hidden = true;
+  }
+}
+
+// Scorre al messaggio se già caricato, altrimenti carica pagine più vecchie
+// finché non lo trova (bound a 20 pagine per evitare loop infiniti).
+async function scrollToMessageOrLoad(id) {
+  if (msgElements[id]) { scrollToMessage(id); return; }
+  var attempts = 0;
+  while (!msgElements[id] && hasMore && attempts < 20) {
+    await loadMoreMessages();
+    attempts++;
+  }
+  if (msgElements[id]) scrollToMessage(id);
 }
 
 function populateMediaFilter() {
