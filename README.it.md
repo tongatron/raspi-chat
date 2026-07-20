@@ -220,6 +220,12 @@ CHAT_DB_KEY=... node ops/encrypt-uploads.js
 `CHAT_DB_KEY`, i dati cifrati (chat.db e allegati) sono irrecuperabili.
 Vedi `specs/004-encrypted-chat-db/` e `specs/007-encrypted-attachments/`.
 
+**Stato sul deploy di riferimento (`raspi4`)**: la cifratura è attiva in produzione
+dal 2026-07-20 — `chat.db` e tutti gli allegati in `data/uploads/` sono cifrati, la
+chiave vive solo nel `.env` del Pi e nel password manager dell'operatore (non in
+questa repo), e i backup in chiaro pre-migrazione sono stati cancellati dopo aver
+verificato che l'app funzionasse correttamente end-to-end.
+
 ### Backup e ripristino di `chat.db`
 
 Solo gli utenti con ruolo `admin` possono scaricare o ripristinare il database.

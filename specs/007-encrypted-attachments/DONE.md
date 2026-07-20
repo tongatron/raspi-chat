@@ -41,3 +41,15 @@ baseline.
 - Rotazione della chiave; streaming cifrato (i file sono bufferizzati in RAM fino a 50 MB).
 - Cifratura di `DB_PATH` (solo tabella demo `items`, valore trascurabile — scartata dopo
   verifica del contenuto).
+
+## Attivazione in produzione — 2026-07-20
+Attivata insieme alla spec 004 (stessa `CHAT_DB_KEY`), nella stessa sessione operativa:
+1. `raspi-chat.service` fermo, `node ops/encrypt-uploads.js` eseguito su
+   `data/uploads/`: 975 file su 975 cifrati (0 già cifrati), backup di ognuno in
+   `data/uploads.plain.bak/` prima della conversione.
+2. Servizio riavviato con `CHAT_DB_KEY` in `.env`; operatore ha aperto in chat un
+   vecchio allegato e confermato che viene servito correttamente decifrato.
+3. Backup in chiaro (`data/uploads.plain.bak/`, ~637 MB) cancellato dopo la verifica.
+
+Vedi anche [specs/004-encrypted-chat-db/DONE.md](../004-encrypted-chat-db/DONE.md) per
+il dettaglio dell'attivazione lato `chat.db`.

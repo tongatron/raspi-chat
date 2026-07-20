@@ -42,3 +42,20 @@ CHAT_DB_KEY=... node ops/encrypt-db.js
 
 ## Fuori scope
 - Cifratura di `DB_PATH` (app.db/mail) e degli allegati in `data/uploads/`.
+
+## Attivazione in produzione — 2026-07-20
+La feature era pronta dal 18/07 ma non attiva su `raspi4` (`.env` senza `CHAT_DB_KEY`).
+Attivata oggi:
+1. Chiave generata sul Pi (`openssl rand -hex 32`), consegnata all'operatore per il
+   password manager — non conservata altrove nella repo o nei log.
+2. `raspi-chat.service` fermato, `node ops/encrypt-db.js` eseguito: backup automatico
+   `chat.db.plain.bak`, poi `PRAGMA rekey` in-place. Verifica conteggi ok (6 utenti,
+   7506 messaggi, invariati prima/dopo).
+3. `CHAT_DB_KEY` aggiunta a `.env`, servizio riavviato: log puliti, nessun errore di
+   apertura DB, traffico reale servito subito dopo il riavvio.
+4. Operatore ha verificato manualmente login e apertura di un vecchio allegato:
+   confermato funzionante.
+5. Backup in chiaro (`chat.db.plain.bak`) cancellato dopo la verifica.
+
+Vedi anche [specs/007-encrypted-attachments/DONE.md](../007-encrypted-attachments/DONE.md)
+per l'attivazione della cifratura degli allegati, fatta nella stessa sessione.
