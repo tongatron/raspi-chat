@@ -477,14 +477,3 @@ Se invece vuoi:
 - facilità di modifica
 
 allora `raspi-chat` e' una base piu' leggera e piu' adatta a Raspberry/home server.
-
-## Prossimi passi consigliati
-
-- *(Da valutare/prototipare)* Trascrizione vocale in tempo reale sul Raspberry Pi:
-  confrontare **Vosk** (molto fluido in tempo reale) e **whisper.cpp** con modelli
-  `tiny`/`base` (funziona ma con qualche secondo di latenza).
-- Attivare la cifratura at-rest di `chat.db` in produzione (funzione già pronta, spec
-  004): su `raspi4` `.env` **non ha `CHAT_DB_KEY`**, quindi al momento il DB gira in
-  chiaro — non è una chiave persa, è che la cifratura non è mai stata accesa. Da fare:
-  generare la chiave, girare `ops/encrypt-db.js` e (se servono anche gli allegati)
-  `ops/encrypt-uploads.js`, salvare la chiave fuori dal Pi, riavviare il servizio.

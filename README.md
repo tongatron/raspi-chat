@@ -475,14 +475,3 @@ If instead you want:
 - ease of modification
 
 then `raspi-chat` is a lighter base better suited to Raspberry/home server use.
-
-## Suggested next steps
-
-- *(To evaluate/prototype)* Real-time speech-to-text on the Raspberry Pi: compare
-  **Vosk** (very smooth in real time) and **whisper.cpp** with `tiny`/`base` models
-  (works, but with a few seconds of latency).
-- Turn on at-rest encryption of `chat.db` in production (feature already built, spec
-  004): on `raspi4`, `.env` **has no `CHAT_DB_KEY`**, so the DB currently runs
-  unencrypted — it's not a lost key, encryption was simply never turned on. To do:
-  generate a key, run `ops/encrypt-db.js` (and `ops/encrypt-uploads.js` if attachments
-  should be encrypted too), keep the key safe outside the Pi, restart the service.
