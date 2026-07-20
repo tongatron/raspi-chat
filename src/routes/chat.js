@@ -167,6 +167,7 @@ db.exec(`
 try { db.exec('ALTER TABLE messages ADD COLUMN reply_to_id TEXT'); } catch(e) {}
 try { db.exec('ALTER TABLE rooms ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0'); } catch(e) {}
 try { db.exec(`ALTER TABLE messages ADD COLUMN room_id TEXT NOT NULL DEFAULT '${DEFAULT_ROOM_ID}'`); } catch(e) {}
+try { db.exec("ALTER TABLE messages ADD COLUMN kind TEXT NOT NULL DEFAULT 'text'"); } catch(e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"); } catch(e) {}
 try { db.exec("ALTER TABLE invites ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"); } catch(e) {}
 try { db.exec("ALTER TABLE invites ADD COLUMN created_at TEXT"); } catch(e) {}
@@ -478,20 +479,19 @@ function clearSessionCookie(reply) {
 }
 
 const HISTORY_SQL = `
-  SELECT m.id, m.room_id AS roomId, m.username, m.text, m.image_url AS imageUrl, m.timestamp, m.reply_to_id AS replyToId,
+  SELECT m.id, m.room_id AS roomId, m.username, m.text, m.image_url AS imageUrl, m.timestamp, m.reply_to_id AS replyToId, m.kind,
          rm.username AS replyUsername, rm.text AS replyText, rm.image_url AS replyImageUrl,
          GROUP_CONCAT(r.username) AS readBy
   FROM messages m
   LEFT JOIN message_reads r ON r.message_id = m.id
   LEFT JOIN messages rm ON rm.id = m.reply_to_id
   WHERE m.room_id = ?
-  GROUP BY m.id
 `;
 
 const stmts = {
-  insertMessage: db.prepare('INSERT INTO messages (id, room_id, username, text, image_url, timestamp, reply_to_id) VALUES (?, ?, ?, ?, ?, ?, ?)'),
-  getHistory:    db.prepare(HISTORY_SQL + ' ORDER BY m.timestamp DESC LIMIT 100'),
-  getPage:       db.prepare(HISTORY_SQL + ' AND m.timestamp < ? ORDER BY m.timestamp DESC LIMIT ?'),
+  insertMessage: db.prepare('INSERT INTO messages (id, room_id, username, text, image_url, timestamp, reply_to_id, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
+  getHistory:    db.prepare(HISTORY_SQL + ' GROUP BY m.id ORDER BY m.timestamp DESC LIMIT 100'),
+  getPage:       db.prepare(HISTORY_SQL + ' AND m.timestamp < ? GROUP BY m.id ORDER BY m.timestamp DESC LIMIT ?'),
   insertRead:    db.prepare('INSERT OR IGNORE INTO message_reads (message_id, username) VALUES (?, ?)'),
   deleteMessage: db.prepare('DELETE FROM messages WHERE id = ? AND room_id = ? AND username = ?'),
   deleteReads:   db.prepare('DELETE FROM message_reads WHERE message_id = ?'),
@@ -652,6 +652,7 @@ function formatRow(row, favoriteIds) {
     text: row.text || '',
     imageUrl: row.imageUrl || null,
     timestamp: row.timestamp,
+    kind: row.kind || 'text',
     readBy: row.readBy ? row.readBy.split(',') : [],
     favorite: favoriteIds ? favoriteIds.has(row.id) : false,
     replyTo: row.replyToId ? {
@@ -740,6 +741,15 @@ async function sendWebPushToUser(username, payload) {
     }
   }
   return sent;
+}
+
+function insertSystemMessage(roomId, username, text) {
+  const id = crypto.randomUUID();
+  const timestamp = new Date().toISOString();
+  stmts.insertMessage.run(id, roomId, username, text, null, timestamp, null, 'system');
+  const msg = formatRow({ id, roomId, username, text, imageUrl: null, timestamp, readBy: null, replyToId: null, kind: 'system' });
+  broadcastToRoom(roomId, msg);
+  return msg;
 }
 
 function createInitialRoomForUser(username, createdBy, now) {
@@ -1267,6 +1277,16 @@ async function chatRoutes(app) {
     });
     createRoom();
 
+    for (const username of memberSet) {
+      if (username === user.username) continue;
+      insertSystemMessage(roomId, username, `${username} joined the chat.`);
+      await sendWebPushToUser(username, {
+        title: 'Raspi Chat',
+        body: `You were added to ${name}.`,
+        url: '/chat',
+      });
+    }
+
     return {
       ok: true,
       room: loadRoomsForUser(user.username).find((room) => room.id === roomId) || null,
@@ -1292,6 +1312,7 @@ async function chatRoutes(app) {
 
     if (!stmts.getRoomMember.get(roomId, user.username)) {
       stmts.addRoomMember.run(roomId, user.username, user.username, new Date().toISOString());
+      insertSystemMessage(roomId, user.username, `${user.username} joined the chat.`);
     }
 
     return {
@@ -1336,6 +1357,16 @@ async function chatRoutes(app) {
       }
     });
     createRoom();
+
+    for (const username of memberSet) {
+      if (username === user.username) continue;
+      insertSystemMessage(roomId, username, `${username} joined the chat.`);
+      await sendWebPushToUser(username, {
+        title: 'Raspi Chat',
+        body: `You were added to ${name}.`,
+        url: '/chat',
+      });
+    }
 
     return {
       ok: true,
@@ -1405,6 +1436,12 @@ async function chatRoutes(app) {
     const joinedAt = new Date().toISOString();
     for (const username of normalized) {
       stmts.addRoomMember.run(roomId, username, user.username, joinedAt);
+      insertSystemMessage(roomId, username, `${username} joined the chat.`);
+      await sendWebPushToUser(username, {
+        title: 'Raspi Chat',
+        body: `You were added to ${access.room.name}.`,
+        url: '/chat',
+      });
     }
 
     return {
@@ -1738,7 +1775,7 @@ async function chatRoutes(app) {
         replyTo: null,
         broadcast: true,
       };
-      stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, null);
+      stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, null, 'text');
       broadcastToRoom(room.id, out);
       count++;
     }
@@ -2078,7 +2115,7 @@ async function chatRoutes(app) {
           if (replied) replyTo = { id: replied.id, username: replied.username, text: replied.text || '', imageUrl: replied.imageUrl || null };
         }
         const out = { type: 'message', cid, id: crypto.randomUUID(), roomId: client.roomId, username: client.username, text, imageUrl, timestamp: new Date().toISOString(), readBy: [], replyTo };
-        stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, replyToId);
+        stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, replyToId, 'text');
         if (cid) recentCids.set(cid, Date.now());
         broadcastToRoom(client.roomId, out);
         const roomRow = stmts.getRoomById.get(client.roomId);

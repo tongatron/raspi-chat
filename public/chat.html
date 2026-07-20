@@ -751,6 +751,30 @@
       flex-shrink: 0;
       background: rgba(255,255,255,.2);
     }
+    .msg-system, .date-sep {
+      display: flex;
+      justify-content: center;
+      margin: 2px 0;
+    }
+    .msg-system span {
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: rgba(255,255,255,.06);
+      padding: 4px 12px;
+      border-radius: 999px;
+    }
+    .date-sep {
+      margin: 6px 0;
+    }
+    .date-sep span {
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--muted);
+      background: rgba(255,255,255,.06);
+      padding: 3px 12px;
+      border-radius: 999px;
+    }
     .member-chip.online .member-chip-dot {
       background: var(--success);
       box-shadow: 0 0 0 3px rgba(38,162,105,.18);
@@ -3426,10 +3450,10 @@ async function loadMoreMessages() {
     var oldHeight = container.scrollHeight;
     // prepend in order (messages already sorted oldest-first by server)
     messages.forEach(function(m) {
-      var el = buildMessage(m);
-      container.insertBefore(el, sentinel);
+      insertMessageEl(container, sentinel, m);
       trackTimestamp(m.timestamp);
     });
+    refreshDateSeparators(container);
     container.scrollTop += container.scrollHeight - oldHeight;
     if (messages.length < 50) {
       hasMore = false;
@@ -4129,11 +4153,12 @@ function handleMsg(msg) {
     hasMore = true;
     var unreadIds = [];
     msg.messages.forEach(function(m) {
-      document.getElementById('messages').appendChild(buildMessage(m));
+      insertMessageEl(containerEl, null, m);
       trackTimestamp(m.timestamp);
-      if (m.username !== myName && (!m.readBy || m.readBy.indexOf(myName) === -1)) unreadIds.push(m.id);
+      if (m.kind !== 'system' && m.username !== myName && (!m.readBy || m.readBy.indexOf(myName) === -1)) unreadIds.push(m.id);
     });
     hasMore = msg.messages.length >= 100;
+    refreshDateSeparators(containerEl);
     scrollBottom();
     if (unreadIds.length && ws.readyState === 1) ws.send(JSON.stringify({ type: 'read', ids: unreadIds }));
   }
@@ -4149,10 +4174,12 @@ function handleMsg(msg) {
   else if (msg.type === 'message') {
     if (msg.cid && msg.username === myName) confirmSent(msg.cid);
     if (msg.id && msgElements[msg.id]) return;
-    document.getElementById('messages').appendChild(buildMessage(msg));
+    var messagesContainer = document.getElementById('messages');
+    insertMessageEl(messagesContainer, null, msg);
     trackTimestamp(msg.timestamp);
+    refreshDateSeparators(messagesContainer);
     scrollBottom();
-    if (msg.username !== myName) {
+    if (msg.kind !== 'system' && msg.username !== myName) {
       playNotifSound();
       if (document.hidden) incrementUnread();
       if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'read', ids: [msg.id] }));
@@ -4342,6 +4369,64 @@ function buildMessage(msg) {
   if (msg.id) msgElements[msg.id] = { wrap: wrap, statusEl: statusEl, favBtn: favBtn };
 
   return wrap;
+}
+
+// Centered system announcement (e.g. "X joined the chat.")
+function buildSystemMessage(msg) {
+  var wrap = document.createElement('div'); wrap.className = 'msg-system';
+  var pill = document.createElement('span'); pill.textContent = msg.text || '';
+  wrap.appendChild(pill);
+  return wrap;
+}
+
+function renderMessageEl(msg) {
+  return msg.kind === 'system' ? buildSystemMessage(msg) : buildMessage(msg);
+}
+
+// Date separator ("Today" / "Yesterday" / full date)
+function dayKey(ts) {
+  var d = new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function formatDayLabel(day) {
+  var p = day.split('-').map(Number);
+  var d = new Date(p[0], p[1] - 1, p[2]);
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  if (d.getTime() === today.getTime()) return 'Today';
+  if (d.getTime() === yesterday.getTime()) return 'Yesterday';
+  var opts = { month: 'long', day: 'numeric' };
+  if (d.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString('en-US', opts);
+}
+function buildDateSeparator(day) {
+  var el = document.createElement('div'); el.className = 'date-sep';
+  var pill = document.createElement('span'); pill.textContent = formatDayLabel(day);
+  el.appendChild(pill);
+  return el;
+}
+
+// Insert a message (or system announcement) and tag it with its calendar day
+function insertMessageEl(container, beforeNode, msg) {
+  var el = renderMessageEl(msg);
+  el.dataset.day = dayKey(msg.timestamp);
+  if (beforeNode) container.insertBefore(el, beforeNode); else container.appendChild(el);
+  return el;
+}
+
+// Recompute date separators from scratch across all currently loaded messages.
+// Safer than incremental placement: pagination inserts older batches before the
+// #typing-indicator sentinel, which can end up sandwiched mid-history.
+function refreshDateSeparators(container) {
+  var old = container.querySelectorAll('.date-sep');
+  for (var i = 0; i < old.length; i++) old[i].remove();
+  var kids = Array.prototype.slice.call(container.children);
+  var lastDay = null;
+  kids.forEach(function(child) {
+    var day = child.dataset.day;
+    if (!day) return;
+    if (day !== lastDay) { container.insertBefore(buildDateSeparator(day), child); lastDay = day; }
+  });
 }
 
 function updateOnline(users, members) {
