@@ -1,84 +1,76 @@
+<div align="center">
+
+<img src="public/assets/logo-v4.png" alt="raspi-chat" width="120" />
+
 # raspi-chat
 
-<p align="center">
-  <img src="public/assets/raspinew-home.png" alt="Raspi Chat" width="320" />
-</p>
+**Chat web self-hosted pensata per Raspberry Pi e piccoli home server.**
 
-<p align="center">
-  <a href="README.md">🇬🇧 Read in English</a>
-</p>
+Realtime, PWA, senza framework — leggera abbastanza per un vecchio Pi, hackerabile abbastanza da renderla tua.
 
-Chat web self-hosted pensata per Raspberry Pi e piccoli server domestici.
+[![CI](https://github.com/tongatron/raspi-chat/actions/workflows/ci.yml/badge.svg)](https://github.com/tongatron/raspi-chat/actions/workflows/ci.yml)
+![Node](https://img.shields.io/badge/node-%3E%3D20-3C873A.svg?logo=node.js&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8.svg)
+![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-ready-C51A4A.svg?logo=raspberrypi&logoColor=white)
+![License](https://img.shields.io/badge/license-ISC-blue.svg)
 
-<p align="center">
-  <img src="public/assets/screenshot-desktop.png" alt="Raspi Chat desktop" width="600" />
-</p>
-<p align="center">
-  <img src="public/assets/screenshot-mobile.png" alt="Raspi Chat mobile" width="300" />
-</p>
+[**Demo live**](https://chat.tongatron.org/chat) · [Documentazione](#-documentazione) · [🇬🇧 Read in English](README.md)
 
-Il progetto include:
-- backend Node.js/Fastify
-- frontend web/PWA senza framework
-- messaggi realtime via WebSocket
-- SQLite locale
-- upload immagini e allegati
-- preview link
-- notifiche Web Push
-- cifratura at-rest opzionale (chat.db + allegati, via `CHAT_DB_KEY`)
-- client CLI da terminale
+<br />
 
-URL live di riferimento:
+<img src="public/assets/screenshot-desktop.png" alt="raspi-chat su desktop" width="620" />
+<br />
+<img src="public/assets/screenshot-mobile.png" alt="raspi-chat su mobile" width="260" />
 
-`https://chat.tongatron.org/chat`
+</div>
 
-## A chi serve
+---
 
-Questo progetto ha senso se vuoi:
-- una chat semplice da self-hostare
-- qualcosa di piu' leggero di Matrix, Rocket.Chat o simili
-- un'app che possa girare bene anche su Raspberry vecchie
-- una base chiara da adattare a chat privata, di famiglia o di piccola community
+## Indice
 
-Non e' pensato come alternativa enterprise a Slack/Discord. E' una codebase pragmatica, piccola e modificabile.
+- [Perché raspi-chat](#perché-raspi-chat)
+- [Funzionalità](#-funzionalità)
+- [Avvio rapido](#-avvio-rapido)
+- [Documentazione](#-documentazione)
+- [Stack tecnologico](#-stack-tecnologico)
+- [Struttura del progetto](#-struttura-del-progetto)
+- [Sicurezza](#-sicurezza)
+- [Test & CI](#-test--ci)
+- [Roadmap](#-roadmap)
+- [Licenza](#-licenza)
 
-## Stato attuale
+## Perché raspi-chat
 
-La repo e' la source of truth della chat.
+`raspi-chat` ha senso se vuoi:
 
-Contiene:
-- web app e backend
-- asset pubblici
-- documentazione di deploy
+- una **chat semplice da self-hostare** per famiglia, amici o una piccola comunità
+- qualcosa di **più leggero di** Matrix, Rocket.Chat o Slack/Discord
+- un'app che **gira bene anche su Raspberry Pi datati**
+- un **codebase chiaro e senza framework**, che puoi davvero leggere e adattare
 
-Non contiene:
-- `.env`
-- `config/chat-users.json`
+Non è un messenger enterprise. È un codebase pragmatico, piccolo e facile da modificare — con poche dipendenze esterne, storage locale e un deploy semplice.
 
-## Struttura
+## ✨ Funzionalità
 
-```text
-raspi-chat/
-├── cli/                         Client chat da terminale
-├── config/                      Esempi configurazione utenti
-├── ops/                         Esempi deploy Raspberry
-├── public/                      Frontend, PWA
-├── src/                         Backend Fastify
-├── .env.example
-├── package.json
-└── server.js
-```
+- 💬 **Messaggi in tempo reale** via WebSocket (`/chat/ws`), con lista utenti online
+- 🔒 **Stanze private e pubbliche** — stanze a membership chiusa di default, più stanze pubbliche che chiunque può scoprire e a cui unirsi da solo
+- 📎 **Allegati e posizione** — un menu `+` per caricare immagini, video, audio, PDF, documenti Office, testo e zip (renderizzati inline), o condividere la posizione come card OpenStreetMap
+- 🔗 **Anteprima dei link** per gli URL incollati in chat
+- ⭐ **Messaggi preferiti** — segnalibri privati per utente, con una vista Preferiti dedicata
+- 📅 **Avvisi di ingresso e separatori di data** — messaggio di sistema centrato "utente entrato" e divisori di data una volta al giorno
+- 🔔 **Notifiche Web Push** — push VAPID standard, dal browser e dall'app Android
+- 📱 **PWA + app Android** — PWA installabile e APK TWA in sideload (senza Play Store)
+- 🖥️ **Client CLI da terminale** — chatta dalla shell, con riconnessione automatica e coda di invio offline
+- 🔐 **Cifratura at-rest (opt-in)** — cifra `chat.db` e gli allegati caricati con un'unica `CHAT_DB_KEY`
+- 💾 **Backup e ripristino admin** — scarica e ripristina il database dal pannello web o via `curl`, consapevole della cifratura
+- 🧙 **Setup guidato via web** — un wizard `/setup` che scrive la configurazione e genera i file per systemd, nginx e Cloudflare
+- 👥 **Ruoli** — `admin`, `superuser` e `user`
 
-## Requisiti minimi
+> Vedi la [**guida alle funzionalità**](docs/features.md) per il dettaglio di ciascuna.
 
-- Node.js 20+
-- npm
-- Linux o Raspberry Pi OS
-- reverse proxy opzionale ma consigliato
+## 🚀 Avvio rapido
 
-## Installazione rapida
-
-### Locale
+### In locale
 
 ```bash
 git clone https://github.com/tongatron/raspi-chat.git
@@ -88,15 +80,10 @@ npm run check
 npm start
 ```
 
-Se non hai ancora configurato il progetto, apri:
+- Non ancora configurato? Apri **`http://127.0.0.1:3000/setup`** e segui il wizard.
+- Hai già `.env` e `config/chat-users.json`? La chat è su **`http://127.0.0.1:3000/chat`**.
 
-`http://127.0.0.1:3000/setup`
-
-Se invece hai gia' `.env` e `config/chat-users.json`, la chat sara' disponibile su:
-
-`http://127.0.0.1:3000/chat`
-
-### Raspberry Pi
+### Su Raspberry Pi
 
 ```bash
 git clone https://github.com/tongatron/raspi-chat.git /srv/apps/raspi-chat
@@ -104,382 +91,86 @@ cd /srv/apps/raspi-chat
 bash ops/install-rpi.sh
 ```
 
-Poi:
-1. avvia una volta l'app con `npm start`
-2. apri il wizard su `http://raspi4.local:3000/setup` oppure `http://IP-DELLA-RASPBERRY:3000/setup`
-3. completa i passaggi web
-4. usa i file generati in `data/setup-generated/`
-5. abilita `systemd`
+Poi avvia l'app una volta (`npm start`), apri `/setup`, completa i passaggi ed esegui
+`sudo bash data/setup-generated/finish-setup.sh` per installare e abilitare il servizio systemd.
 
-Comandi utili:
+> Procedura completa — wizard guidato, utenti e variabili d'ambiente — nella [**guida all'installazione**](docs/installation.md).
 
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now raspi-chat
-sudo systemctl status raspi-chat
-journalctl -u raspi-chat -f
+## 📖 Documentazione
+
+La documentazione dettagliata è in [`docs/`](docs/) (in inglese). Parti da qui:
+
+| Guida | Cosa contiene |
+|-------|---------------|
+| 📥 [Installation](docs/installation.md) | Setup locale e su Raspberry Pi, wizard web guidato, utenti, variabili d'ambiente |
+| ✨ [Features](docs/features.md) | Stanze, allegati, preferiti, cifratura, backup/ripristino, notifiche, app Android |
+| 🖥️ [CLI client](docs/cli.md) | Usare la chat da terminale |
+| 🚀 [Deploy](docs/deploy.md) | systemd, nginx, Cloudflare Tunnel |
+| 🛠️ [Development](docs/development.md) | Endpoint API, test, verifiche rapide |
+| 🗺️ [Roadmap](docs/roadmap.md) | Prossimi passi previsti |
+
+La cartella `docs/` è strutturata anche come indice [GitBook](docs/SUMMARY.md).
+
+## 🧱 Stack tecnologico
+
+- **Backend** — [Node.js](https://nodejs.org/) 20+ · [Fastify 5](https://fastify.dev/) · WebSocket [`ws`](https://github.com/websockets/ws)
+- **Storage** — SQLite locale via [`better-sqlite3-multiple-ciphers`](https://github.com/m4heshd/better-sqlite3-multiple-ciphers) (cifratura at-rest trasparente)
+- **Frontend** — HTML/CSS/JS senza framework, **PWA** installabile con service worker
+- **Notifiche** — [Web Push](https://developer.mozilla.org/docs/Web/API/Push_API) con VAPID ([`web-push`](https://github.com/web-push-libs/web-push))
+- **Android** — TWA generata con [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) che incapsula la PWA
+- **Tooling** — nessun framework di test: runner integrato `node --test` + CI su GitHub Actions
+
+## 🗂️ Struttura del progetto
+
+```text
+raspi-chat/
+├── cli/            Client chat da terminale
+├── config/         Esempi di configurazione utenti e asset-link
+├── docs/           Documentazione (GitBook)
+├── ops/            Script di deploy Raspberry e strumenti di cifratura
+├── public/         Frontend, asset PWA, service worker
+├── specs/          Specifiche delle feature (una cartella per feature)
+├── src/            Backend Fastify (route, servizi)
+├── tests/          Suite node --test
+├── .env.example
+├── package.json
+└── server.js
 ```
 
-## Setup guidato via web
+> La repo è la source of truth dell'app. **Non** contiene il tuo `.env` né `config/chat-users.json`: vengono creati in locale o dal wizard di setup.
 
-Il percorso pensato per chi installa il progetto per la prima volta e':
+## 🔐 Sicurezza
 
-1. `bash ops/install-rpi.sh`
-2. `npm start`
-3. apri `/setup`
-4. compila i passaggi
-5. esegui `sudo bash data/setup-generated/finish-setup.sh`
-
-Lo wizard `/setup` fa queste cose:
-
-- controlla che la cartella sia scrivibile
-- raccoglie nome chat, host, porta e modalita' rete
-- crea l'utente admin iniziale e gli utenti base
-- genera automaticamente le chiavi VAPID per le Web Push
-- scrive `.env`
-- scrive `config/chat-users.json`
-- crea `data/setup-complete.json`
-- genera:
-  - `data/setup-generated/raspi-chat.service`
-  - `data/setup-generated/nginx.chat.conf`
-  - `data/setup-generated/cloudflared.config.yml`
-  - `data/setup-generated/finish-setup.sh` (script eseguibile che copia il service file, fa `systemctl daemon-reload` + `enable --now`, e se la modalita' rete e' `nginx` copia/abilita anche il vhost)
-
-Quando il setup e' completato, `/setup` si disattiva e la app torna a mostrare la chat normale. Con la modalita' `cloudflare` va comunque completato a mano `cloudflared.config.yml` (serve il tunnel ID) e avviato `cloudflared` separatamente: il wizard non puo' automatizzare quella parte.
-
-Nota pratica:
-
-- di default `/setup` e' accessibile solo da rete locale
-- se vuoi forzarlo da remoto, puoi esportare `SETUP_ALLOW_REMOTE=1`
-
-## Configurazione
-
-### Utenti
-
-Il file utenti e' esterno al codice:
-
-`config/chat-users.json`
-
-Esempio:
-
-```json
-[
-  { "username": "Giovanni", "password": "change-me-giovanni", "role": "admin" },
-  { "username": "Operatore", "password": "change-me-operatore", "role": "superuser" },
-  { "username": "Cabras", "password": "change-me-cabras", "role": "user" }
-]
-```
-
-### Stanze pubbliche
-
-Oltre alle room private (membership a invito, gestita dal creatore o da un admin), un
-utente qualsiasi puo' creare una **room pubblica**: chiunque sia autenticato la puo'
-scoprire e unirsi da solo, senza bisogno di essere invitato.
-
-- Dal client web: menu **Rooms → + New room...**, spunta "Public room (anyone can find
-  and join it)".
-- Per scoprirle e unirsi: menu **Rooms → ⌘ Browse public rooms...** elenca tutte le
-  room pubbliche con il numero di membri; il pulsante **Join** aggiunge l'utente come
-  membro immediatamente (nessuna approvazione richiesta).
-- Via API: `POST /chat/my-rooms` accetta `{ name, members, isPublic: true }`;
-  `GET /chat/public-rooms` elenca le room pubbliche; `POST /chat/public-rooms/:roomId/join`
-  esegue il join. Vedi `specs/009-explicit-public-room/`.
-
-### Variabili ambiente
-
-Le principali sono gia' documentate in [.env.example](/Users/tonga/Documents/GitHub/raspi-chat/.env.example):
-
-- `HOST`, `PORT`
-- `CHAT_USERS_FILE`
-- `CHAT_DB_PATH`
-- `CHAT_DB_KEY` (cifratura at-rest, vedi sotto)
-- `TOKEN_SECRET`
-- `DEFAULT_ADMIN_USERNAME`
-- `DEFAULT_ROOM_NAME`
-- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`
-
-### Cifratura at-rest di `chat.db` (opzionale)
-
-Di default `chat.db` è un file SQLite in chiaro. Imposta `CHAT_DB_KEY` per cifrarlo
-a riposo (messaggi, hash password, inviti). La **stessa chiave** cifra anche gli
-allegati in `data/uploads/` (spec 007). È **opt-in**: senza chiave il comportamento
-resta invariato.
+`chat.db` e gli allegati caricati possono essere cifrati **a riposo** con un'unica chiave opt-in:
 
 ```bash
 # genera una chiave forte e mettila nel .env (git-ignorato)
 echo "CHAT_DB_KEY=$(openssl rand -hex 32)" >> .env
 
-# cifra un chat.db in chiaro esistente (crea prima un backup .plain.bak)
+# cifra database e allegati in chiaro esistenti (ognuno crea prima un backup)
 CHAT_DB_KEY=... node ops/encrypt-db.js
-
-# cifra gli allegati in chiaro esistenti (opzionale; backup in uploads.plain.bak/)
 CHAT_DB_KEY=... node ops/encrypt-uploads.js
 ```
 
-⚠️ **Conserva la chiave fuori dal Pi** (gestore password/backup). Se perdi
-`CHAT_DB_KEY`, i dati cifrati (chat.db e allegati) sono irrecuperabili.
-Vedi `specs/004-encrypted-chat-db/` e `specs/007-encrypted-attachments/`.
+Senza chiave il comportamento resta invariato (in chiaro, baseline). **Conserva `CHAT_DB_KEY` fuori dal Pi**: se la perdi, i dati cifrati sono irrecuperabili. Dettagli e backup/ripristino admin nella [guida alle funzionalità](docs/features.md#encryption-and-backups).
 
-**Stato sul deploy di riferimento (`raspi4`)**: la cifratura è attiva in produzione
-dal 2026-07-20 — `chat.db` e tutti gli allegati in `data/uploads/` sono cifrati, la
-chiave vive solo nel `.env` del Pi e nel password manager dell'operatore (non in
-questa repo), e i backup in chiaro pre-migrazione sono stati cancellati dopo aver
-verificato che l'app funzionasse correttamente end-to-end.
+> Sul deploy di riferimento (`raspi4`), la cifratura at-rest di `chat.db` e di tutti gli allegati è **attiva in produzione dal 2026-07-20**.
 
-### Backup e ripristino di `chat.db`
+## 🧪 Test & CI
 
-Solo gli utenti con ruolo `admin` possono scaricare o ripristinare il database.
-
-**Dal pannello web** (icona ingranaggio → *Admin* → sezione *Backup & Restore*):
-- **⬇ Download backup** — scarica `chat.db` così com'e' (chiamata `GET /chat/admin/backup`).
-- **⬆ Restore from file** — carica un file `.db` e sovrascrive il database corrente
-  (chiamata `POST /chat/admin/restore`). Chiede conferma perché **sovrascrive tutti i
-  dati correnti e riavvia il server**.
-
-**Via CLI/curl** (serve un token admin ottenuto con `POST /chat/login`):
+La suite usa il runner integrato di Node (nessuna dipendenza extra) ed esercita il livello HTTP con `app.inject()` in una directory temporanea isolata — non avvia mai un server né tocca i dati di produzione.
 
 ```bash
-# scarica il backup
-curl -H "X-Chat-Username: Admin" -H "X-Chat-Token: $TOKEN" \
-  http://127.0.0.1:3000/chat/admin/backup -o chat-backup.db
-
-# ripristina da un backup
-curl -X POST -H "X-Chat-Username: Admin" -H "X-Chat-Token: $TOKEN" \
-  -H "Content-Type: application/octet-stream" \
-  --data-binary @chat-backup.db \
-  http://127.0.0.1:3000/chat/admin/restore
+npm run check   # controllo sintattico di ogni file sorgente
+npm test        # esegue la suite di test
 ```
 
-Note importanti:
-- Il **backup** esporta il file `chat.db` così com'e': se `CHAT_DB_KEY` è impostata, il
-  backup scaricato è **cifrato** (spec 004) — conservalo con la stessa cura della chiave.
-- Il **restore** accetta solo un file apribile con la cifratura **attualmente
-  configurata** sul server: backup in chiaro se non c'è `CHAT_DB_KEY`, backup cifrato con
-  la chiave corrente se c'è. Un file con chiave sbagliata, non-SQLite, o senza lo schema
-  chat viene rifiutato con errore 400 (spec 005). Prima di sovrascrivere, il server
-  salva comunque una copia di sicurezza del DB corrente in `chat.db.bak`.
-- Il restore **riavvia il processo** subito dopo la scrittura: su systemd riparte da
-  solo (`Restart=always`); in `npm run dev`/`node --watch` riparte al volo; con `npm
-  start` semplice va riavviato a mano.
-- Il backup copia solo il file principale `chat.db`, non i file `-wal`/`-shm`: se il
-  server è in esecuzione con WAL attivo, per un backup consistente è preferibile farlo
-  a ridosso di un checkpoint (es. subito dopo un riavvio) o fermare temporaneamente il
-  servizio.
+Le stesse verifiche girano automaticamente a ogni push e pull request via [GitHub Actions](.github/workflows/ci.yml). Dalla v1.1 in poi, ogni nuova feature arriva con i propri test.
 
-## Deploy tipico
+## 🗺️ Roadmap
 
-Assetto consigliato su Raspberry:
+I prossimi passi previsti sono tracciati in [`docs/roadmap.md`](docs/roadmap.md).
 
-- app Node in ascolto su `127.0.0.1:3000`
-- `systemd` per il processo
-- `nginx` davanti
-- opzionale tunnel Cloudflare o DNS pubblico
+## 📄 Licenza
 
-Percorso consigliato:
-
-`/srv/apps/raspi-chat`
-
-## Cloudflare
-
-Se vuoi esporre la chat su Internet senza aprire direttamente porte sulla Raspberry, il modo piu' pratico e' usare Cloudflare Tunnel con `cloudflared`.
-
-Scenario tipico:
-
-- app Node su `127.0.0.1:3000`
-- `cloudflared` sulla Raspberry
-- hostname pubblico tipo `chat.example.com`
-- nessun port forwarding diretto verso casa
-
-### Cosa ti serve prima
-
-- un account Cloudflare
-- un dominio gestito da Cloudflare
-- il progetto gia' funzionante in locale su `http://127.0.0.1:3000/chat`
-
-### Flusso consigliato
-
-1. aggiungi il dominio a Cloudflare se non e' gia' li'
-2. installa `cloudflared` sulla Raspberry seguendo la guida ufficiale
-3. autentica `cloudflared` con il tuo account Cloudflare
-4. crea un tunnel dedicato, per esempio `raspi-chat`
-5. collega un hostname pubblico al tunnel, per esempio `chat.example.com`
-6. configura l'ingress del tunnel verso `http://127.0.0.1:3000`
-7. installa `cloudflared` come servizio systemd
-
-### Comandi tipici
-
-Dopo aver installato `cloudflared`:
-
-```bash
-cloudflared tunnel login
-cloudflared tunnel create raspi-chat
-cloudflared tunnel route dns raspi-chat chat.example.com
-```
-
-Config di esempio in `/etc/cloudflared/config.yml`:
-
-```yaml
-tunnel: <TUNNEL_ID>
-credentials-file: /home/giovanni/.cloudflared/<TUNNEL_ID>.json
-
-ingress:
-  - hostname: chat.example.com
-    service: http://127.0.0.1:3000
-  - service: http_status:404
-```
-
-Poi:
-
-```bash
-sudo cloudflared service install
-sudo systemctl enable --now cloudflared
-sudo systemctl status cloudflared
-```
-
-Se usi il wizard, trovi gia' una base pronta in:
-
-`data/setup-generated/cloudflared.config.yml`
-
-### Cloudflare e nginx
-
-Hai due opzioni sensate:
-
-- tunnel diretto verso `http://127.0.0.1:3000`
-- tunnel verso `nginx`, se vuoi usare nginx anche per altre regole locali
-
-Se usi solo la chat, il tunnel diretto verso Fastify e' spesso la scelta piu' semplice.
-
-### DNS e hostname
-
-Con il comando `cloudflared tunnel route dns` Cloudflare crea il record DNS necessario per l'hostname pubblico associato al tunnel.
-
-Esempio:
-
-- hostname pubblico: `chat.example.com`
-- servizio locale: `http://127.0.0.1:3000`
-
-### WebSocket e chat realtime
-
-La chat usa WebSocket su `/chat/ws`. Con Cloudflare Tunnel non serve una configurazione speciale aggiuntiva lato app: il tunnel inoltra il traffico HTTP/WebSocket verso il servizio locale configurato.
-
-### Verifica finale
-
-Prima controlla in locale:
-
-```bash
-curl http://127.0.0.1:3000/health
-```
-
-Poi verifica dal dominio pubblico:
-
-```bash
-curl -I https://chat.example.com/chat
-```
-
-Controlli utili:
-
-- `sudo systemctl status raspi-chat`
-- `sudo systemctl status cloudflared`
-- `journalctl -u cloudflared -f`
-- `journalctl -u raspi-chat -f`
-
-### Note pratiche
-
-- se usi PWA e notifiche, il dominio pubblico stabile e' importante
-- se vuoi protezione extra, puoi aggiungere in Cloudflare Access una policy davanti al dominio, ma per una chat pubblica di solito non serve
-
-## App Android (APK)
-
-Oltre alla PWA, la chat è disponibile come app Android nativa tramite **TWA** (Trusted Web Activity): un APK che incapsula la PWA, pensato per installazione personale tramite sideload, senza Play Store. Le notifiche restano basate su Web Push/VAPID, ma l'app installata è più difficile da sospendere in background.
-
-**Installazione sul telefono:** apri nel browser `https://<tuo-dominio>/chat/app.apk`, scarica e installa (serve abilitare "Installa app sconosciute"), poi concedi il permesso notifiche. Per notifiche affidabili, imposta l'app su batteria **"Senza restrizioni"**.
-
-L'APK va posizionato sul server in `data/app.apk` e l'associazione APK↔dominio è servita da `config/assetlinks.json` (impronta SHA-256 del certificato di firma).
-
-**Rigenerare l'APK** (necessario solo se cambiano icona, nome o colori; il progetto TWA è generato con [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap)):
-
-```bash
-cd raspi-chat-android
-BUBBLEWRAP_KEYSTORE_PASSWORD="$(cat signing-password.txt)" \
-BUBBLEWRAP_KEY_PASSWORD="$(cat signing-password.txt)" \
-  bubblewrap build
-scp app-release-signed.apk giovanni@raspi4.local:/srv/apps/raspi-chat/data/app.apk
-```
-
-> ⚠️ Conserva con cura `android.keystore` e la relativa password: senza non è più possibile pubblicare aggiornamenti installabili sopra l'app esistente (resterebbe solo disinstalla + reinstalla).
-
-## Client CLI
-
-Un client chat da terminale che usa lo stesso backend (login HTTP + WebSocket), senza browser:
-
-```bash
-npm run cli                                   # default http://localhost:3000
-node cli/chat-cli.js --url http://pi.local:3000 --room cabras-giovanni
-```
-
-Le credenziali sono richieste in modo interattivo (oppure lette da `RASPI_CHAT_USER` / `RASPI_CHAT_PASS`); l'URL del server viene da `--url` o `RASPI_CHAT_URL`. Supporta messaggi in tempo reale, utenti online, selezione room, riconnessione automatica e coda dei messaggi in uscita (i messaggi scritti da disconnesso partono da soli alla riconnessione). Vedi [cli/README.md](cli/README.md).
-
-## Endpoint utili
-
-Pubblici:
-- `GET /chat`
-- `POST /chat/login`
-- `GET /chat/ws`
-- `GET /chat/manifest.json`
-- `GET /chat/app.apk`
-- `GET /.well-known/assetlinks.json`
-- `GET /sw.js`
-- `GET /health`
-- `GET /version`
-
-Privati:
-- `GET /chat/messages`
-- `POST /chat/upload`
-- `GET /chat/images/:filename`
-- `GET /chat/preview`
-- `GET /chat/console/data`
-
-## Verifica veloce
-
-```bash
-curl http://127.0.0.1:3000/health
-```
-
-```bash
-curl -X POST \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"Test","password":"..."}' \
-  http://127.0.0.1:3000/chat/login
-```
-
-```bash
-npm run check
-```
-
-## Test
-
-La suite di test usa il runner nativo di Node (`node --test`, nessuna dipendenza
-aggiuntiva) e verifica il layer HTTP con `app.inject()`, senza avviare un server
-né toccare i database di produzione (i test girano isolati in una directory
-temporanea):
-
-```bash
-npm test
-```
-
-Gli stessi controlli (`npm run check` + `npm test`) girano automaticamente in CI
-su ogni push e pull request tramite GitHub Actions (`.github/workflows/ci.yml`).
-Dalla v1.1 ogni nuova feature deve arrivare con i propri test (vedi la
-constitution del progetto, Principio III).
-
-## Posizionamento rispetto ad altri progetti
-
-Se vuoi una chat molto strutturata e federata, esistono opzioni piu' grandi come Matrix o Snikket.
-
-Se invece vuoi:
-- poca dipendenza esterna
-- deploy semplice
-- storage locale
-- facilità di modifica
-
-allora `raspi-chat` e' una base piu' leggera e piu' adatta a Raspberry/home server.
+Rilasciato con licenza **ISC** (vedi `package.json`).
