@@ -1254,6 +1254,7 @@
       font-size: .97rem;
       resize: none;
       outline: none;
+      overflow-y: hidden;
       max-height: 120px;
       line-height: 1.45;
       transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
@@ -2943,7 +2944,7 @@
       <button type="button" id="compose-location-btn" role="menuitem">&#x1f4cd; Send location</button>
     </div>
     <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mov,.mp4,.webm,.m4v,.mp3,.wav,.ogg,.m4a,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip" />
-    <textarea id="msg-input" rows="1" placeholder="Write a message..."></textarea>
+    <textarea id="msg-input" rows="1" placeholder="Message"></textarea>
     <button class="icon-btn" id="emoji-btn" type="button" title="Emoji" aria-label="Emoji" aria-expanded="false">&#x1F642;</button>
     <button class="icon-btn" id="send-btn" title="Send">&#x27A4;</button>
     <div id="emoji-panel" role="listbox" aria-label="Emoji picker" hidden></div>
