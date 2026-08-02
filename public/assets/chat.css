@@ -2425,6 +2425,8 @@ body:not(.theme-light) .admin-field select:focus {
 .me .link-preview { border-color: rgba(255,255,255,.22); background: rgba(255,255,255,.16); box-shadow: none; }
 .link-read-more {
   display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   margin-top: 8px;
   padding: 5px 12px;
   border-radius: 5px;

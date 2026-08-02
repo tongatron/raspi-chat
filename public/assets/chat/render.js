@@ -57,6 +57,20 @@ function renderLocationCard(geo) {
   return link;
 }
 
+// Etichetta leggibile per un link senza metadati: dominio + percorso, senza
+// protocollo né "www.", accorciata se troppo lunga.
+function readableLinkLabel(url) {
+  var label = url;
+  try {
+    var u = new URL(url);
+    label = u.hostname.replace(/^www\./, '') + u.pathname.replace(/\/$/, '') + u.search;
+    try { label = decodeURI(label); } catch (e) {}
+  } catch (e) {
+    label = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+  }
+  return label.length > 60 ? label.slice(0, 59) + '…' : label;
+}
+
 async function attachLinkPreviews(bubble, urls) {
   try {
     var res = await authFetch('/chat/preview?url=' + encodeURIComponent(urls[0]));
@@ -68,11 +82,12 @@ async function attachLinkPreviews(bubble, urls) {
     });
 
     if (!data.title && !data.image) {
-      // No metadata available: fall back to a compact styled link
+      // No metadata available: fall back to a compact styled link showing the
+      // link's own name (title/site if known, otherwise the readable URL).
       var fb = document.createElement('a');
       fb.href = urls[0]; fb.target = '_blank'; fb.rel = 'noopener';
       fb.className = 'link-read-more';
-      fb.textContent = 'Leggi articolo →';
+      fb.textContent = data.title || data.siteName || readableLinkLabel(urls[0]);
       bubble.appendChild(fb);
       return;
     }
