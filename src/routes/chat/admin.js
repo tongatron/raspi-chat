@@ -23,6 +23,7 @@ const {
 const { formatInvite, formatUser } = require('../../chat/serializers');
 const { broadcastToRoom, onlineUsers } = require('../../chat/presence');
 const { pushSubs } = require('../../chat/push');
+const { deleteSelfRoom, ensureSelfRoom } = require('../../chat/rooms');
 
 const { readDiskUsage, readTemperatureC } = require('../../chat/system-stats');
 
@@ -55,6 +56,7 @@ async function adminRoutes(app) {
 
     const hash = password ? hashPassword(password) : existing?.hash || null;
     stmts.upsertAdminUser.run(username, hash, role);
+    ensureSelfRoom(username);
 
     return {
       ok: true,
@@ -77,8 +79,14 @@ async function adminRoutes(app) {
       return reply.code(400).send({ error: 'At least one admin must remain' });
     }
 
-    stmts.deleteRoomMembershipsByUser.run(username);
-    stmts.deleteUser.run(username);
+    // La stanza personale se ne va con l'utente: se domani viene creato un
+    // omonimo non deve ritrovarsi gli appunti di qualcun altro.
+    const removeUser = db.transaction(() => {
+      deleteSelfRoom(username);
+      stmts.deleteRoomMembershipsByUser.run(username);
+      stmts.deleteUser.run(username);
+    });
+    removeUser();
     return {
       ok: true,
       users: stmts.listUsers.all().map(formatUser),

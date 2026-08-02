@@ -8,6 +8,7 @@ const fs = require('node:fs');
 
 const { UPLOADS_DIR } = require('../../chat/attachments');
 const { openChatDatabase, validateRestorePayload } = require('../../chat/database');
+const { ensureSelfRoomsForAllUsers } = require('../../chat/rooms');
 
 const routeGroups = [
   require('./pwa'),
@@ -22,6 +23,11 @@ const routeGroups = [
 
 async function chatRoutes(app) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+  // Chi era già registrato prima che le stanze personali esistessero (o è stato
+  // sincronizzato da config/chat-users.json) riceve la sua qui.
+  const created = ensureSelfRoomsForAllUsers();
+  if (created) app.log.info(`[Rooms] Created ${created} personal rooms`);
 
   // Raw binary bodies, needed by the database restore endpoint. Registered here
   // so it is in scope for every group registered below.
