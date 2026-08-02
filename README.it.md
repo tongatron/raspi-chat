@@ -124,14 +124,28 @@ La cartella `docs/` è strutturata anche come indice [GitBook](docs/SUMMARY.md).
 
 ```text
 raspi-chat/
-├── cli/            Client chat da terminale
-├── config/         Esempi di configurazione utenti e asset-link
-├── docs/           Documentazione (GitBook)
-├── ops/            Script di deploy Raspberry e strumenti di cifratura
-├── public/         Frontend, asset PWA, service worker
-├── specs/          Specifiche delle feature (una cartella per feature)
-├── src/            Backend Fastify (route, servizi)
-├── tests/          Suite node --test
+├── src/
+│   ├── app.js        Istanza Fastify e registrazione dei plugin
+│   ├── chat/         La feature chat, un modulo per responsabilità
+│   │                   database · auth · serializers · presence · push
+│   │                   attachments · rooms · link-preview · system-stats
+│   ├── lib/          Helper condivisi tra le route
+│   ├── routes/
+│   │   ├── chat/     Rotte chat per gruppo — sottili, delegano a src/chat/
+│   │   │               pwa · session · rooms · messages · push · admin
+│   │   │               pages · ws
+│   │   └── ...       Landing page e wizard di setup
+│   └── attachment-crypto.js   Cifratura at-rest degli allegati
+├── public/           Pagine HTML — solo markup, nessun CSS o JS inline
+│   └── assets/
+│       ├── chat/     Il client della chat, un file per responsabilità
+│       └── *.css/js  Stili e script delle altre pagine
+├── cli/              Client chat da terminale
+├── ops/              Script di deploy, migrazioni di cifratura, syntax check
+├── config/           Esempi di configurazione utenti e asset-link
+├── docs/             Documentazione (GitBook)
+├── specs/            Specifiche delle feature (una cartella per feature)
+├── tests/            Suite node --test
 ├── .env.example
 ├── package.json
 └── server.js
@@ -161,7 +175,8 @@ Senza chiave il comportamento resta invariato (in chiaro, baseline). **Conserva 
 La suite usa il runner integrato di Node (nessuna dipendenza extra) ed esercita il livello HTTP con `app.inject()` in una directory temporanea isolata — non avvia mai un server né tocca i dati di produzione.
 
 ```bash
-npm run check   # controllo sintattico di ogni file sorgente
+npm run lint    # ESLint — binding inutilizzati, global accidentali, codice morto
+npm run check   # controllo sintattico di ogni file sorgente, senza dipendenze
 npm test        # esegue la suite di test
 ```
 
@@ -173,4 +188,4 @@ I prossimi passi previsti sono tracciati in [`docs/roadmap.md`](docs/roadmap.md)
 
 ## 📄 Licenza
 
-Rilasciato con licenza **ISC** (vedi `package.json`).
+Rilasciato con licenza **ISC** — vedi [`LICENSE`](LICENSE).

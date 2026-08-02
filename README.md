@@ -106,6 +106,7 @@ Detailed docs live in [`docs/`](docs/). Start here:
 | ✨ [Features](docs/features.md) | Rooms, attachments, favorites, encryption, backup/restore, notifications, Android app |
 | 🖥️ [CLI client](docs/cli.md) | Using the chat from a terminal |
 | 🚀 [Deploy](docs/deploy.md) | systemd, nginx, Cloudflare Tunnel |
+| ⚙️ [Server optimization](docs/server-optimization.md) | Caching, SQLite tuning, hardening, backups on the Pi |
 | 🛠️ [Development](docs/development.md) | API endpoints, tests, quick checks |
 | 🗺️ [Roadmap](docs/roadmap.md) | Planned next steps |
 
@@ -124,18 +125,35 @@ The `docs/` folder is also structured as a [GitBook](docs/SUMMARY.md) table of c
 
 ```text
 raspi-chat/
-├── cli/            Terminal chat client
-├── config/         User & asset-link configuration examples
-├── docs/           Documentation (GitBook)
-├── ops/            Raspberry deploy scripts & encryption tools
-├── public/         Frontend, PWA assets, service worker
-├── specs/          Feature specifications (one folder per feature)
-├── src/            Fastify backend (routes, services)
-├── tests/          Node --test suites
+├── src/
+│   ├── app.js        Fastify instance & plugin registration
+│   ├── chat/         The chat feature, one concern per module
+│   │                   database · auth · serializers · presence · push
+│   │                   attachments · rooms · link-preview · system-stats
+│   ├── lib/          Helpers shared across routes
+│   ├── routes/
+│   │   ├── chat/     Chat routes by group — thin, they delegate to src/chat/
+│   │   │               pwa · session · rooms · messages · push · admin
+│   │   │               pages · ws
+│   │   └── ...       Landing pages and the setup wizard
+│   └── attachment-crypto.js   At-rest encryption for uploads
+├── public/           HTML pages — markup only, no inline CSS or JS
+│   └── assets/
+│       ├── chat/     The chat client, one file per concern
+│       └── *.css/js  Styles and scripts for the other pages
+├── cli/              Terminal chat client
+├── ops/              Deploy scripts, encryption migrations, syntax check
+├── config/           User & asset-link configuration examples
+├── docs/             Documentation (GitBook)
+├── specs/            Feature specifications (one folder per feature)
+├── tests/            Node --test suites
 ├── .env.example
 ├── package.json
 └── server.js
 ```
+
+> New to the codebase? [`CONTRIBUTING.md`](CONTRIBUTING.md) explains what lives
+> in each module and the conventions the project follows.
 
 > The repo is the source of truth for the app. It does **not** contain your `.env` or `config/chat-users.json` — those are created locally or by the setup wizard.
 
@@ -154,6 +172,8 @@ CHAT_DB_KEY=... node ops/encrypt-uploads.js
 
 Without a key, behaviour is unchanged (plaintext, baseline). **Keep `CHAT_DB_KEY` safe outside the Pi** — if you lose it, encrypted data is unrecoverable. Details and admin backup/restore in the [Features guide](docs/features.md#encryption-and-backups).
 
+The full threat model — what this protects against and what it does not, including the session-token design — is written out in [`SECURITY.md`](SECURITY.md), which is also where to report a vulnerability.
+
 > On the reference deployment (`raspi4`), at-rest encryption of `chat.db` and all attachments has been **active in production since 2026-07-20**.
 
 ## 🧪 Tests & CI
@@ -161,11 +181,12 @@ Without a key, behaviour is unchanged (plaintext, baseline). **Keep `CHAT_DB_KEY
 The suite uses Node's built-in runner (no extra dependencies) and exercises the HTTP layer with `app.inject()` in an isolated temporary directory — it never starts a server or touches production data.
 
 ```bash
-npm run check   # syntax check of every source file
+npm run lint    # ESLint — unused bindings, accidental globals, dead code
+npm run check   # dependency-free syntax check of every source file
 npm test        # run the test suite
 ```
 
-The same checks run automatically on every push and pull request via [GitHub Actions](.github/workflows/ci.yml). From v1.1 onward, every new feature ships with its own tests.
+All three run automatically on every push and pull request via [GitHub Actions](.github/workflows/ci.yml). From v1.1 onward, every new feature ships with its own tests. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full workflow.
 
 ## 🗺️ Roadmap
 
@@ -173,4 +194,4 @@ Planned next steps are tracked in [`docs/roadmap.md`](docs/roadmap.md).
 
 ## 📄 License
 
-Released under the **ISC** license (see `package.json`).
+Released under the **ISC** license — see [`LICENSE`](LICENSE).

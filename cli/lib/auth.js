@@ -1,14 +1,14 @@
 'use strict';
 
-// Autenticazione HTTP verso il backend raspi-chat.
-// Contratto: contracts/login.md → POST {baseUrl}/chat/login { username, password }
-// Risposta 200 { token, username, ... }; 400/401 con { error }.
+// HTTP authentication against the raspi-chat backend.
+// Contract: contracts/login.md — POST {baseUrl}/chat/login { username, password }
+// Replies 200 { token, username, ... }, or 400/401 with { error }.
 
 class AuthError extends Error {
   constructor(message, { recoverable = true } = {}) {
     super(message);
     this.name = 'AuthError';
-    this.recoverable = recoverable; // true ⇒ ha senso ritentare con altre credenziali
+    this.recoverable = recoverable; // true means retrying with other credentials makes sense
   }
 }
 

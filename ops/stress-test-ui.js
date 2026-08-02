@@ -13,12 +13,11 @@ const http = require('http');
 const https = require('https');
 const { EventEmitter } = require('events');
 const { execFile } = require('child_process');
-const path = require('path');
 
 const args = process.argv.slice(2);
 const getArg = (name, def) => { const i = args.indexOf(name); return i !== -1 && args[i+1] ? args[i+1] : def; };
 const PORT   = parseInt(getArg('--port', '4242'));
-const TARGET = getArg('--target', 'https://chat.tongatron.org');
+const TARGET = getArg('--target', 'http://raspberrypi.local:3000');
 
 // ── SSE broker ─────────────────────────────────────────────────────────────
 const broker = new EventEmitter();
@@ -219,7 +218,7 @@ async function spawnWorker(idx, { adminUser, adminPass, testPass, roomId, ratePe
     ratePerMin,
   };
 
-  worker.ws = openWs(worker.username, token, roomId || 'cabras-giovanni', msg => {
+  worker.ws = openWs(worker.username, token, roomId || 'general', msg => {
     if (msg.type === 'message' && typeof msg.text === 'string') {
       const match = msg.text.match(/^\[stress:([^\]]+)\]/);
       if (!match) return;
@@ -490,11 +489,11 @@ const HTML = `<!DOCTYPE html>
         </div>
         <div class="field">
           <label>Room ID</label>
-          <input type="text" id="cfg-room" value="cabras-giovanni" />
+          <input type="text" id="cfg-room" value="general" />
         </div>
         <div class="field">
           <label>Admin username (for login)</label>
-          <input type="text" id="cfg-user" value="giovanni" />
+          <input type="text" id="cfg-user" value="admin" />
         </div>
         <div class="field">
           <label>Admin password</label>
@@ -674,7 +673,7 @@ function startTest() {
     users:      parseInt(document.getElementById('cfg-users').value),
     ratePerMin: parseInt(document.getElementById('cfg-rate').value),
     duration:   document.getElementById('cfg-no-timeout').checked ? 0 : parseInt(document.getElementById('cfg-duration').value),
-    roomId:     roomInput && roomInput.value ? roomInput.value : 'cabras-giovanni',
+    roomId:     roomInput && roomInput.value ? roomInput.value : 'general',
     adminUser:  document.getElementById('cfg-user').value,
     adminPass:  document.getElementById('cfg-pass').value,
     ramp:       document.getElementById('cfg-ramp').checked,

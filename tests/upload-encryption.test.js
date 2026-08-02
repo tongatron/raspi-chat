@@ -26,7 +26,6 @@ const KEY = 'c'.repeat(64);
 process.env.CHAT_DB_KEY = KEY;
 process.env.CHAT_USERS_FILE = path.join(tmpRoot, 'chat-users.json');
 process.env.CHAT_DB_PATH = path.join(tmpRoot, 'data', 'chat.db');
-process.env.DB_PATH = path.join(tmpRoot, 'data', 'app.db');
 process.chdir(tmpRoot);
 
 const { buildApp } = require(path.join(originalCwd, 'src', 'app'));

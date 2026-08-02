@@ -1,6 +1,7 @@
 node_modules/
 .env
 .claude/settings.local.json
+.claude/launch.json
 npm-debug.log*
 data/
 .DS_Store
@@ -25,3 +26,4 @@ bot/
 
 # Coordinate server di produzione (non versionare)
 SERVERraspi4.md
+.claude/skills/

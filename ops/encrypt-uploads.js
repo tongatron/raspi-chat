@@ -1,16 +1,16 @@
 'use strict';
 
-// Migrazione one-shot: cifra gli allegati in chiaro esistenti (spec 007).
+// One-shot migration: encrypts existing plaintext attachments.
 //
-// Uso:
-//   CHAT_DB_KEY=<chiave> node ops/encrypt-uploads.js [percorso/data/uploads]
+// Usage:
+//   CHAT_DB_KEY=<key> node ops/encrypt-uploads.js [path/to/data/uploads]
 //
-// - Richiede CHAT_DB_KEY (la stessa del .env dell'app / di chat.db, spec 004).
-// - Idempotente: i file già cifrati (con header RCEA1) vengono saltati.
-// - Prima di cifrare ogni file lo copia in data/uploads.plain.bak/ (backup).
-// - Serve solo per convertire gli allegati caricati PRIMA di attivare la chiave:
-//   grazie al passthrough, quelli in chiaro restano comunque serviti, quindi la
-//   migrazione è opzionale.
+// - Requires CHAT_DB_KEY, the same key used by the app's .env and by chat.db.
+// - Idempotent: files that already carry the RCEA1 header are skipped.
+// - Every file is copied to data/uploads.plain.bak/ before being encrypted.
+// - Only needed for attachments uploaded BEFORE the key was enabled. Plaintext
+//   files keep being served thanks to the passthrough in decryptBuffer, so this
+//   migration is optional.
 
 const fs = require('node:fs');
 const path = require('node:path');

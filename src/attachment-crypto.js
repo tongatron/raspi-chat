@@ -1,28 +1,29 @@
 'use strict';
 
-// Cifratura at-rest degli allegati (spec 007). Riusa la chiave CHAT_DB_KEY del DB
-// cifrato (spec 004): quando è impostata, i file in data/uploads/ sono cifrati con
-// AES-256-GCM; altrimenti restano in chiaro (baseline invariata, opt-in).
+// At-rest encryption for attachments. Reuses CHAT_DB_KEY, the same key that
+// encrypts chat.db: when it is set, files under data/uploads/ are written with
+// AES-256-GCM; otherwise they stay in plaintext. Encryption is opt-in and the
+// plaintext behaviour is unchanged.
 //
-// Layout del file cifrato su disco:
+// On-disk layout of an encrypted file:
 //   MAGIC(6) || IV(12) || TAG(16) || ciphertext
-// GCM fornisce riservatezza e integrità: una decifratura con chiave errata o su un
-// file manomesso lancia invece di restituire dati corrotti.
+// GCM gives both confidentiality and integrity: decrypting with the wrong key,
+// or a tampered file, throws instead of returning corrupt data.
 
 const crypto = require('node:crypto');
 
-const MAGIC = Buffer.from('RCEA1\n'); // Raspi-Chat Encrypted Attachment v1 (6 byte)
+const MAGIC = Buffer.from('RCEA1\n'); // Raspi-Chat Encrypted Attachment v1 (6 bytes)
 const IV_LEN = 12;
 const TAG_LEN = 16;
 const HEADER_LEN = MAGIC.length + IV_LEN + TAG_LEN;
 
-// CHAT_DB_KEY è ad alta entropia (openssl rand -hex 32); SHA-256 la normalizza a
-// 32 byte a prescindere dal formato della stringa.
+// CHAT_DB_KEY is already high-entropy (openssl rand -hex 32); SHA-256 only
+// normalises it to the 32 bytes AES-256 needs, whatever the string looks like.
 function deriveKey(rawKey) {
   return crypto.createHash('sha256').update(String(rawKey || '')).digest();
 }
 
-// True se il buffer inizia col MAGIC di un allegato cifrato da questo modulo.
+// True when the buffer starts with the MAGIC of an attachment this module wrote.
 function isEncrypted(buf) {
   return (
     Buffer.isBuffer(buf) &&
@@ -31,7 +32,7 @@ function isEncrypted(buf) {
   );
 }
 
-// Cifra un buffer in chiaro; ritorna il buffer con header + ciphertext.
+// Encrypts a plaintext buffer; returns header + ciphertext.
 function encryptBuffer(plain, rawKey) {
   const key = deriveKey(rawKey);
   const iv = crypto.randomBytes(IV_LEN);
@@ -41,10 +42,10 @@ function encryptBuffer(plain, rawKey) {
   return Buffer.concat([MAGIC, iv, tag, enc]);
 }
 
-// Decifra un buffer prodotto da encryptBuffer. Se il buffer non è cifrato (nessun
-// MAGIC) viene restituito tal quale: passthrough per gli allegati in chiaro legacy
-// serviti quando la chiave è stata attivata dopo (spec 007 DK-003). Lancia se il
-// buffer è cifrato ma la chiave è errata o i dati sono manomessi (tag GCM).
+// Decrypts a buffer produced by encryptBuffer. A buffer without the MAGIC is
+// returned unchanged: that passthrough is what keeps legacy plaintext
+// attachments readable on an install where the key was enabled later. Throws if
+// the buffer is encrypted but the key is wrong or the data was tampered with.
 function decryptBuffer(stored, rawKey) {
   if (!isEncrypted(stored)) return stored;
   const key = deriveKey(rawKey);

@@ -1,16 +1,13 @@
+'use strict';
+
+// Public pages and service metadata: the landing page, the invite entry point,
+// and the health/version/status endpoints used by monitoring and the CI smoke
+// tests.
+
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-
-function formatUptimeSeconds(totalSeconds) {
-  const value = Math.max(Math.floor(totalSeconds || 0), 0);
-  const days = Math.floor(value / 86400);
-  const hours = Math.floor((value % 86400) / 3600);
-  const minutes = Math.floor((value % 3600) / 60);
-  if (days) return `${days}g ${hours}h ${minutes}m`;
-  if (hours) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
+const { formatUptimeSeconds } = require('../lib/format');
 
 async function rootRoutes(app, options) {
   const { config } = options;
@@ -37,7 +34,7 @@ async function rootRoutes(app, options) {
       docs: {
         health: '/health',
         version: '/version',
-        items: `${config.apiPrefix}/items`,
+        chat: '/chat',
         setup: '/setup',
       },
     };

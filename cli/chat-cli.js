@@ -2,7 +2,7 @@
 'use strict';
 
 // raspi-chat CLI — client interattivo da terminale.
-// Uso:  npm run cli   oppure   node cli/chat-cli.js [--url http://host:port] [--room <id>]
+// Usage:  npm run cli   or   node cli/chat-cli.js [--url http://host:port] [--room <id>]
 // Env:  RASPI_CHAT_URL, RASPI_CHAT_USER, RASPI_CHAT_PASS
 
 const readline = require('node:readline');
@@ -11,7 +11,7 @@ const { ChatConnection } = require('./lib/connection');
 const ui = require('./lib/ui');
 
 const DEFAULT_URL = 'http://localhost:3000';
-const DEFAULT_ROOM = 'cabras-giovanni';
+const DEFAULT_ROOM = process.env.RASPI_CHAT_ROOM || '';
 
 function parseArgs(argv) {
   const opts = {};
@@ -40,7 +40,7 @@ function printHelp() {
       '',
       'Opzioni:',
       '  --url <url>    URL del server (default da RASPI_CHAT_URL o ' + DEFAULT_URL + ')',
-      '  --room <id>    Room a cui unirsi (default ' + DEFAULT_ROOM + ')',
+      '  --room <id>    Room to join (default ' + DEFAULT_ROOM + ')',
       '  -h, --help     Mostra questo aiuto',
       '',
       'Variabili d\'ambiente: RASPI_CHAT_URL, RASPI_CHAT_USER, RASPI_CHAT_PASS',
@@ -49,7 +49,7 @@ function printHelp() {
   );
 }
 
-// Domanda singola su stdin (per credenziali), con mascheramento opzionale.
+// Reads a single answer from stdin, optionally masking it (for passwords).
 function ask(question, { mask = false } = {}) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -90,26 +90,27 @@ async function authenticate(baseUrl) {
         password = '';
         continue; // FR-010: ritenta
       }
-      // Non recuperabile (server down, ecc.) → propaga
+      // Not recoverable (server down, etc.): propagate
       throw err;
     }
   }
 }
 
-// Risolve la room: rispetta --room se passato; altrimenti interroga le room
-// dell'utente (GET /chat/my-rooms) e ne sceglie una — auto se unica, prompt se multiple.
+// Resolves the room: honours --room when given, otherwise queries the user's
+// rooms (GET /chat/my-rooms) and picks one - automatically if there is only
+// one, with a prompt when there are several.
 async function resolveRoom({ baseUrl, session, requested }) {
   if (requested) return requested;
   const rooms = await listRooms({ baseUrl, username: session.username, token: session.token });
   if (rooms.length === 0) {
-    process.stdout.write(`Nessuna room trovata, uso il default "${DEFAULT_ROOM}".\n`);
+    process.stdout.write(`No rooms found; letting the server pick its default room.\n`);
     return DEFAULT_ROOM;
   }
   if (rooms.length === 1) {
     process.stdout.write(`Room: ${rooms[0].name} (${rooms[0].id})\n`);
     return rooms[0].id;
   }
-  process.stdout.write('\nLe tue room:\n');
+  process.stdout.write('\nYour rooms:\n');
   rooms.forEach((r, i) => {
     process.stdout.write(`  ${i + 1}) ${r.name}  ${ui.colors.dim('(' + r.id + ')')}\n`);
   });
@@ -118,7 +119,7 @@ async function resolveRoom({ baseUrl, session, requested }) {
     if (answer === '') return rooms[0].id;
     const n = Number(answer);
     if (Number.isInteger(n) && n >= 1 && n <= rooms.length) return rooms[n - 1].id;
-    process.stdout.write('Scelta non valida.\n');
+    process.stdout.write('Invalid choice.\n');
   }
 }
 
@@ -148,12 +149,12 @@ async function main() {
     return 1;
   }
 
-  process.stdout.write(`✓ Autenticato come ${session.username}.\n`);
+  process.stdout.write(`✓ Authenticated as ${session.username}.\n`);
 
-  // Selezione room: --room esplicito oppure scelta dalle room dell'utente.
+  // Room selection: an explicit --room, or a choice among the user's rooms.
   const roomId = await resolveRoom({ baseUrl, session, requested: opts.room });
 
-  process.stdout.write('Connessione in corso...\n');
+  process.stdout.write('Connecting...\n');
 
   const conn = new ChatConnection({
     wsUrl,
@@ -196,8 +197,8 @@ async function main() {
       if (text.trim() === '/quit' || text.trim() === '/exit') return shutdown(0);
       if (text.trim() === '/online') return; // l'ultimo stato online è già stato stampato
       const res = conn.sendMessage(text);
-      // 'empty' → silenzioso (FR-006). Altrimenti il messaggio è sempre accodato:
-      // avvisa se troncato e/o messo in coda per invio differito (spec 006).
+      // 'empty' stays silent. Otherwise the message is always queued: warn when
+      // it was truncated and/or parked for deferred delivery.
       if (res.sent) {
         if (res.truncated) ui.warn('⚠ Messaggio troncato a 2000 caratteri.');
         if (res.queued) ui.warn('⚠ Non connesso: messaggio in coda, verrà inviato alla riconnessione.');

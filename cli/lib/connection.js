@@ -1,15 +1,15 @@
 'use strict';
 
-// Trasporto realtime verso il backend raspi-chat.
-// Contratto: contracts/ws-protocol.md
-// Gestisce: handshake `join`, ricezione (history/message/online/...),
-// invio messaggi di testo, riconnessione automatica con backoff (research R5).
+// Realtime transport to the raspi-chat backend.
+// Contract: contracts/ws-protocol.md
+// Handles the `join` handshake, inbound frames (history/message/online/...),
+// sending text messages, and automatic reconnection with backoff.
 
 const EventEmitter = require('node:events');
 const crypto = require('node:crypto');
 const WebSocket = require('ws');
 
-const MAX_TEXT_LENGTH = 2000; // allineato a chat.js lato server (FR-007)
+const MAX_TEXT_LENGTH = 2000; // matches the server-side limit in src/routes/chat.js
 
 class ChatConnection extends EventEmitter {
   constructor({ wsUrl, token, username, roomId }) {

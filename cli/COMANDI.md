@@ -1,19 +1,20 @@
 # Comandi CLI — pronti da copiare
 
-Guida rapida per usare la chat dal terminale. Per i dettagli completi vedi [README.md](README.md).
+Guida rapida per usare la chat dal terminale. Per i dettagli completi vedi
+[README.md](README.md).
 
 ---
 
-## 1. Dal tuo Mac → chat pubblica (consigliato)
+## 1. Dal tuo computer → chat remota
 
-Non serve avviare niente: il server gira già sulla Raspberry.
+Non serve avviare niente: il server gira già sulla Raspberry (o dove l'hai
+messo). Sostituisci l'URL con il tuo.
 
 ```bash
-cd /Users/tonga/Documents/GitHub/raspi-chat
-node cli/chat-cli.js --url https://chat.tongatron.org
+node cli/chat-cli.js --url https://chat.example.com
 ```
 
-Poi inserisci **username** e **password** del tuo account reale.
+Poi inserisci **username** e **password** del tuo account.
 Se ometti `--room`, la CLI ti elenca le tue room e te le fa scegliere.
 
 ---
@@ -21,7 +22,7 @@ Se ometti `--room`, la CLI ti elenca le tue room e te le fa scegliere.
 ## 2. Direttamente sulla Raspberry (in locale)
 
 ```bash
-ssh giovanni@raspi4.local
+ssh pi@raspberrypi.local
 cd /srv/apps/raspi-chat
 npm run cli
 ```
@@ -30,24 +31,23 @@ npm run cli
 
 ---
 
-## 3. Server locale di sviluppo (sul Mac)
+## 3. Server locale di sviluppo
 
 Serve solo se vuoi testare un backend locale. Richiede **due terminali**.
 
 **Terminale A — avvia il backend (lascialo aperto):**
 ```bash
-cd /Users/tonga/Documents/GitHub/raspi-chat
 npm start
 ```
 
 **Terminale B — avvia la CLI:**
 ```bash
-cd /Users/tonga/Documents/GitHub/raspi-chat
 npm run cli
 ```
 
-> ⚠️ Il DB locale (`data/chat.db`) è separato da quello della Pi: gli utenti
-> vanno creati a parte in `config/chat-users.json` (vedi `config/chat-users.example.json`).
+> ⚠️ Il DB locale (`data/chat.db`) è separato da quello del server: gli utenti
+> vanno creati a parte in `config/chat-users.json` (vedi
+> `config/chat-users.example.json`).
 
 ---
 
@@ -64,11 +64,12 @@ npm run cli
 ### Credenziali senza prompt (variabili d'ambiente)
 
 ```bash
-RASPI_CHAT_USER="Giovanni" RASPI_CHAT_PASS="laTuaPassword" \
-  node cli/chat-cli.js --url https://chat.tongatron.org
+RASPI_CHAT_USER="alice" RASPI_CHAT_PASS="your-password" \
+  node cli/chat-cli.js --url https://chat.example.com
 ```
 
-Altre variabili: `RASPI_CHAT_URL` (al posto di `--url`).
+Altre variabili: `RASPI_CHAT_URL` (al posto di `--url`), `RASPI_CHAT_ROOM`
+(al posto di `--room`).
 
 ---
 
@@ -78,4 +79,5 @@ Altre variabili: `RASPI_CHAT_URL` (al posto di `--url`).
 - `/quit` oppure `/exit` per uscire
 - **Ctrl+C** per uscire in qualsiasi momento
 
-La CLI si **riconnette da sola** se la rete cade, senza richiedere di nuovo le credenziali.
+La CLI si **riconnette da sola** se la rete cade, senza richiedere di nuovo le
+credenziali.

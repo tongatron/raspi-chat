@@ -23,7 +23,6 @@ fs.mkdirSync(path.join(tmpRoot, 'data'), { recursive: true });
 // File utenti inesistente = nessun utente configurato: sufficiente per i
 // percorsi di rifiuto del login testati qui.
 process.env.CHAT_USERS_FILE = path.join(tmpRoot, 'chat-users.json');
-process.env.DB_PATH = path.join(tmpRoot, 'data', 'app.db');
 process.chdir(tmpRoot);
 
 const { buildApp } = require(path.join(originalCwd, 'src', 'app'));

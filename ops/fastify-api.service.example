@@ -4,11 +4,11 @@ After=network.target
 
 [Service]
 Type=simple
-User=giovanni
-WorkingDirectory=/srv/apps/cabras-chat
+User=pi
+WorkingDirectory=/srv/apps/raspi-chat
 Environment=HOST=127.0.0.1
 Environment=PORT=3000
-ExecStart=/usr/bin/node /srv/apps/cabras-chat/server.js
+ExecStart=/usr/bin/node /srv/apps/raspi-chat/server.js
 Restart=always
 RestartSec=3
 

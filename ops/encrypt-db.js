@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 'use strict';
 
-// Migrazione one-shot: cifra un chat.db in chiaro esistente (spec 004).
+// One-shot migration: encrypts an existing plaintext chat.db.
 //
-// Uso:
-//   CHAT_DB_KEY=<chiave> node ops/encrypt-db.js [percorso/chat.db]
+// Usage:
+//   CHAT_DB_KEY=<key> node ops/encrypt-db.js [path/to/chat.db]
 //
-// - Richiede CHAT_DB_KEY (la stessa che poi metterai nel .env dell'app).
-// - Fa un backup del file in chiaro (<db>.plain.bak) PRIMA di convertire.
-// - È idempotente: se il DB è già cifrato, non tocca nulla.
-// - Va eseguito con l'app FERMA (nessun processo che scrive sul DB).
+// - Requires CHAT_DB_KEY, the same key you will put in the app's .env.
+// - Backs the plaintext file up to <db>.plain.bak BEFORE converting.
+// - Idempotent: an already-encrypted database is left untouched.
+// - Run it with the app STOPPED: no other process may be writing to the DB.
 
 const fs = require('node:fs');
 const path = require('node:path');

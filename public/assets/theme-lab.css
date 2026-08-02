@@ -1,0 +1,155 @@
+/*
+ * raspi-chat - A development page for previewing the chat theme.
+ *
+ * Extracted from public/theme-lab.html.
+ */
+
+  :root {
+    --bg-top: #0d1119;
+    --bg-bottom: #070a10;
+    --surface: rgba(16,22,32,.9);
+    --border: rgba(230,235,244,.14);
+    --ink: #f1f4f9;
+    --muted: #9aa5b4;
+    --primary: #5b8def;
+    --radius: 10px;
+    --font: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --shape: rounded;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    font-family: var(--font);
+    background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+    color: var(--ink);
+    transition: background .25s ease, color .25s ease;
+    padding: 18px;
+  }
+  h1 { font-size: 1.2rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: .86rem; margin-bottom: 18px; }
+  .lab-layout { display: grid; grid-template-columns: 260px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 780px) { .lab-layout { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .panel + .panel { margin-top: 14px; }
+  .panel h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 12px; }
+  fieldset { border: none; padding: 0; margin: 0 0 16px; }
+  fieldset:last-child { margin-bottom: 0; }
+  legend { font-size: .78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+  .swatch-btn {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.04);
+    color: var(--ink);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font: inherit;
+    font-size: .82rem;
+    cursor: pointer;
+  }
+  .swatch-btn.active { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .swatch-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,.2); }
+  select, input[type=range] { width: 100%; font: inherit; }
+  select {
+    background: rgba(255,255,255,.05);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .82rem; color: var(--muted); margin-bottom: 6px; }
+
+  /* --- Preview: mimics the real chat surfaces --- */
+  .preview-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 14px;
+  }
+  .preview-header .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-dot { width: 34px; height: 34px; border-radius: 8px; background: var(--primary); flex-shrink: 0; }
+  .preview-header h3 { margin: 0; font-size: 1rem; }
+  .preview-header .presence { font-size: .74rem; color: var(--muted); }
+  .header-btn {
+    width: 36px; height: 36px; border-radius: 6px; border: none;
+    background: rgba(255,255,255,.06); color: var(--ink); font-size: 1rem; cursor: pointer;
+  }
+  .messages {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    min-height: 220px;
+    margin-bottom: 14px;
+  }
+  .bubble-row { display: flex; }
+  .bubble-row.me { justify-content: flex-end; }
+  .bubble {
+    max-width: 70%;
+    padding: 10px 13px;
+    border-radius: var(--radius);
+    font-size: .9rem;
+    line-height: 1.4;
+    border: 1px solid var(--border);
+  }
+  .bubble-row.other .bubble { background: rgba(255,255,255,.04); }
+  .bubble-row.me .bubble { background: var(--primary); color: #fff; border-color: transparent; }
+  .bubble .meta { display: block; font-size: .68rem; opacity: .65; margin-top: 4px; }
+  .input-row {
+    display: flex; gap: 10px; align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
+  .input-row input {
+    flex: 1; border: none; background: transparent; color: var(--ink); font: inherit; outline: none;
+  }
+  .pill-btn {
+    border: none; border-radius: 999px; padding: 9px 16px; font: inherit; font-weight: 700; font-size: .84rem;
+    background: var(--primary); color: #fff; cursor: pointer;
+  }
+  .cards-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 10px; }
+  .mini-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+  }
+  .mini-card .label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .mini-card .value { font-size: 1.1rem; font-weight: 700; margin-top: 4px; }
+
+  /* shape variants */
+  body[data-shape="sharp"] .panel,
+  body[data-shape="sharp"] .preview-header,
+  body[data-shape="sharp"] .messages,
+  body[data-shape="sharp"] .input-row,
+  body[data-shape="sharp"] .mini-card,
+  body[data-shape="sharp"] .bubble { border-radius: 3px !important; }
+  body[data-shape="pill"] .panel,
+  body[data-shape="pill"] .preview-header,
+  body[data-shape="pill"] .messages,
+  body[data-shape="pill"] .input-row,
+  body[data-shape="pill"] .mini-card { border-radius: 20px !important; }
+  body[data-shape="pill"] .bubble { border-radius: 18px !important; }
+  body[data-shape="outline"] .panel,
+  body[data-shape="outline"] .preview-header,
+  body[data-shape="outline"] .messages,
+  body[data-shape="outline"] .input-row,
+  body[data-shape="outline"] .mini-card {
+    background: transparent !important;
+    border-width: 1.5px !important;
+  }
+
+  .footer-note { margin-top: 20px; font-size: .76rem; color: var(--muted); }
+  .footer-note a { color: var(--primary); }

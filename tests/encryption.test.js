@@ -21,7 +21,6 @@ fs.mkdirSync(path.join(tmpRoot, 'data'), { recursive: true });
 // Puntiamo il DB globale del modulo a una tempdir prima del require, così il solo
 // import di chat.js non tocca i dati di produzione.
 process.env.CHAT_DB_PATH = path.join(tmpRoot, 'data', 'module.db');
-process.env.DB_PATH = path.join(tmpRoot, 'data', 'app.db');
 process.env.CHAT_USERS_FILE = path.join(tmpRoot, 'no-users.json');
 process.chdir(tmpRoot);
 

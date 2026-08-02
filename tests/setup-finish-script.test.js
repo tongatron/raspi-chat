@@ -16,7 +16,6 @@ fs.mkdirSync(path.join(tmpRoot, 'data'), { recursive: true });
 
 process.env.CHAT_USERS_FILE = path.join(tmpRoot, 'config', 'chat-users.json');
 process.env.CHAT_DB_PATH = path.join(tmpRoot, 'data', 'chat.db');
-process.env.DB_PATH = path.join(tmpRoot, 'data', 'app.db');
 process.env.SETUP_STATE_FILE = path.join(tmpRoot, 'data', 'setup-complete.json');
 process.env.FORCE_SETUP_MODE = '1';
 process.chdir(tmpRoot);
@@ -86,6 +85,6 @@ test('con networkMode nginx lo script include anche i comandi nginx', async () =
   assert.strictEqual(res.statusCode, 200);
   const body = res.json();
   const content = fs.readFileSync(body.generated.finishScript, 'utf8');
-  assert.match(content, /sites-available\/cabras-chat\.conf/);
+  assert.match(content, /sites-available\/raspi-chat\.conf/);
   assert.match(content, /nginx -t && systemctl reload nginx/);
 });

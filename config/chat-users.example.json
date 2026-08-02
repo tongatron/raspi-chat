@@ -1,6 +1,5 @@
 [
-  { "username": "Giovanni", "password": "change-me-giovanni", "role": "admin" },
-  { "username": "Operator", "password": "change-me-operator", "role": "superuser" },
-  { "username": "Cabras", "password": "change-me-cabras", "role": "user" },
-  { "username": "Test", "password": "change-me-test", "role": "user" }
+  { "username": "admin", "password": "change-me-admin", "role": "admin" },
+  { "username": "alice", "password": "change-me-alice", "role": "superuser" },
+  { "username": "bob", "password": "change-me-bob", "role": "user" }
 ]

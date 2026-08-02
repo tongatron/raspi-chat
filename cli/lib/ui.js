@@ -1,13 +1,14 @@
 'use strict';
 
-// Rendering del terminale per la CLI chat.
-// Obiettivo chiave (FR-015): stampare messaggi in arrivo senza corrompere
-// la riga che l'utente sta digitando. La tecnica: cancellare la riga corrente,
-// stampare il messaggio, poi lasciare che readline ridisegni il prompt + input.
+// Terminal rendering for the chat CLI.
+//
+// The key requirement is printing incoming messages without corrupting the line
+// the user is typing. The technique: clear the current line, print the message,
+// then let readline redraw the prompt and the partial input.
 
 const readline = require('node:readline');
 
-// Colori ANSI minimi (disattivati se stdout non è un TTY).
+// Minimal ANSI colours, disabled when stdout is not a TTY.
 const useColor = process.stdout.isTTY;
 const c = (code, s) => (useColor ? `[${code}m${s}[0m` : String(s));
 const dim = (s) => c('2', s);

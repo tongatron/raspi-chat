@@ -11,11 +11,11 @@ Client interattivo da terminale per raspi-chat: usa la chat senza browser, riusa
 ## Avvio
 
 ```bash
-# default: RASPI_CHAT_URL=http://localhost:3000, room cabras-giovanni
+# default: RASPI_CHAT_URL=http://localhost:3000; senza --room, scelta interattiva
 npm run cli
 
 # server e room espliciti
-node cli/chat-cli.js --url http://192.168.1.50:3000 --room cabras-giovanni
+node cli/chat-cli.js --url http://192.168.1.50:3000 --room general
 ```
 
 Le credenziali vengono chieste in modo interattivo, oppure lette da `RASPI_CHAT_USER` / `RASPI_CHAT_PASS`.

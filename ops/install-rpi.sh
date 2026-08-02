@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/srv/apps/cabras-chat}"
+APP_DIR="${APP_DIR:-/srv/apps/raspi-chat}"
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SETUP_URL="${SETUP_URL:-http://127.0.0.1:3000/setup}"
 
