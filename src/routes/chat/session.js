@@ -69,6 +69,15 @@ async function sessionRoutes(app) {
   app.get('/chat/me', async (request, reply) => {
     const user = requireAuthUser(request, reply);
     if (!user) return;
+    // Sliding session: the cookie lasts 30 days and was only ever set at login,
+    // while the client stays signed in indefinitely with the token in
+    // localStorage. Once the cookie expired, every request carrying the
+    // `x-chat-*` headers kept working but plain browser loads did not — an
+    // attachment reaches the server as a bare <img>/<video>/<a> GET, so it
+    // 401'd and images silently stopped appearing. /chat/me runs on every
+    // sign-in and every app start, so refreshing the cookie here keeps it
+    // alive for as long as the chat is in use (and restores it if it was lost).
+    setSessionCookie(reply, user.username, generateToken(user.username));
     const rooms = loadRoomsForUser(user.username);
     return {
       username: user.username,
