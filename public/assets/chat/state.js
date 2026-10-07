@@ -6,8 +6,8 @@
 // declared here is visible to the others. Each sibling declares what it uses
 // in its own /* global */ header.
 
-/* global authFetch, insertMessageEl, maskSpoilers, parseGeoText,
-         refreshDateSeparators */
+/* global authFetch, insertMessageEl, keepBottom, maskSpoilers, parseGeoText,
+         refreshDateSeparators, trackPinned */
 /* exported ONBOARDING_KEY, WS_URL, adminUsersCache, adminUsersLoading,
            canCreateInvites, canManageUsers, canUseConsole, cancelReply,
            consoleAutoRefresh, consoleHistory, consoleLoading, currentRoomName,
@@ -145,8 +145,14 @@ function initScrollListener() {
   scrollListenerBound = true;
   messagesEl = document.getElementById('messages');
   messagesEl.addEventListener('scroll', function() {
+    trackPinned();
     if (messagesEl.scrollTop < 80 && hasMore && !loadingMore) loadMoreMessages();
   });
+  // Media finishing to load, the keyboard opening or the chat view coming back
+  // all change the layout without a scroll event: re-pin to the last message.
+  messagesEl.addEventListener('load', keepBottom, true);
+  messagesEl.addEventListener('loadedmetadata', keepBottom, true);
+  if (window.ResizeObserver) new window.ResizeObserver(keepBottom).observe(messagesEl);
 }
 
 function trackTimestamp(ts) {

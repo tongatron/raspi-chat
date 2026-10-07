@@ -6,7 +6,7 @@
 // URL linkify
 /* global authFetch, msgElements, myName, renderAttachment, scrollToMessage,
          startReply, ws */
-/* exported insertMessageEl, refreshDateSeparators, scrollBottom, updateOnline */
+/* exported insertMessageEl, keepBottom, refreshDateSeparators, scrollBottom, trackPinned, updateOnline */
 
 var URL_RE = /(https?:\/\/[^\s<>"']+)/g;
 function linkifyNode(text) {
@@ -103,6 +103,7 @@ async function attachLinkPreviews(bubble, urls) {
     if (data.description) { var d = document.createElement('div'); d.className = 'link-preview-desc'; d.textContent = data.description; body.appendChild(d); }
     a.appendChild(body); bubble.appendChild(a);
   } catch(e){}
+  finally { keepBottom(); }
 }
 
 // Build message DOM element (does NOT append)
@@ -251,5 +252,10 @@ function updateOnline(users, members) {
   }).join('');
 }
 
-function scrollBottom() { var m = document.getElementById('messages'); m.scrollTop = m.scrollHeight; }
+// The list stays pinned to the last message while late content (images, link
+// previews) grows it; scrolling up to read history releases the pin.
+var pinnedToBottom = true;
+function scrollBottom() { var m = document.getElementById('messages'); pinnedToBottom = true; m.scrollTop = m.scrollHeight; }
+function keepBottom() { if (pinnedToBottom) scrollBottom(); }
+function trackPinned() { var m = document.getElementById('messages'); pinnedToBottom = m.scrollHeight - m.scrollTop - m.clientHeight < 80; }
 
