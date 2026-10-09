@@ -2464,6 +2464,9 @@ body:not(.theme-light) .admin-field select:focus {
 #lightbox { display: none; position: fixed; inset: 0; background: rgba(16,20,27,.88); z-index: 100; align-items: center; justify-content: center; cursor: zoom-out; backdrop-filter: blur(10px); }
 #lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 4px; box-shadow: 0 30px 60px rgba(0,0,0,.22); }
 #lightbox.open { display: flex; }
+#lightbox-save { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); right: calc(env(safe-area-inset-right, 0px) + 14px); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.16); color: white; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#lightbox-save:hover { background: rgba(255,255,255,.26); }
+#lightbox-save:disabled { opacity: .5; cursor: default; }
 
 #new-room-dialog {
   display: none;

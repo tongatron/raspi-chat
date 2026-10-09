@@ -4,7 +4,7 @@
 // above, plus the statistics view. Loaded last, when everything it references
 // is already defined.
 
-/* global ONBOARDING_KEY, authFetch, authHeaders, canCreateInvites, canManageUsers,
+/* global ONBOARDING_KEY, attachName, authFetch, authHeaders, canCreateInvites, canManageUsers,
          canUseConsole, clearStoredAuth, copyInviteLink, createInvite, createRoom,
          currentView, deleteAdminUser, deleteRoom, inviteUsersToRoom, isAdmin,
          joinAs, loadAdminUsers, loadConsoleData, loadLoginUsers, loadRoomsData,
@@ -172,8 +172,54 @@ document.getElementById('room-invite-btn').onclick = inviteUsersToRoom;
 document.getElementById('room-remove-btn').onclick = removeUsersFromRoom;
 document.getElementById('room-delete-btn').onclick = deleteRoom;
 
-function openLightbox(src) { document.getElementById('lightbox-img').src = src; document.getElementById('lightbox').classList.add('open'); }
-document.getElementById('lightbox').onclick = function() { document.getElementById('lightbox').classList.remove('open'); };
+var lightboxSrc = '';
+var lightboxBlob = null;
+function openLightbox(src) {
+  lightboxSrc = src;
+  // Fetched up front: on iOS the share sheet must open straight from the tap,
+  // with no network round trip in between.
+  lightboxBlob = canShareImageFile() ? fetch(src, { credentials: 'same-origin' }).then(function(r) { return r.ok ? r.blob() : null; }).catch(function() { return null; }) : null;
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+document.getElementById('lightbox').onclick = function() { document.getElementById('lightbox').classList.remove('open'); lightboxBlob = null; };
+
+// iOS ignores <a download> inside an installed PWA: there the image goes
+// through the share sheet, which offers "Save Image". Everywhere else a plain
+// download does the job.
+function canShareImageFile() {
+  var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return ios && typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && typeof File === 'function';
+}
+function lightboxFileName(src, mime) {
+  var seg = src.split('/').pop().split('?')[0].split('#')[0];
+  try { seg = decodeURIComponent(seg); } catch (e) {}
+  var name = attachName(src) || seg || 'image';
+  if (!/\.[a-z0-9]+$/i.test(name)) name += '.' + ((mime || '').split('/')[1] || 'jpg');
+  return name;
+}
+function downloadLightboxImage(src) {
+  var a = document.createElement('a');
+  a.href = src; a.download = lightboxFileName(src, '');
+  document.body.appendChild(a); a.click(); a.remove();
+}
+document.getElementById('lightbox-save').onclick = function(e) {
+  e.stopPropagation();
+  var src = lightboxSrc;
+  if (!src) return;
+  if (!lightboxBlob) { downloadLightboxImage(src); return; }
+  var btn = this;
+  btn.disabled = true;
+  lightboxBlob.then(function(blob) {
+    if (!blob) { downloadLightboxImage(src); return null; }
+    var file = new File([blob], lightboxFileName(src, blob.type), { type: blob.type });
+    if (!navigator.canShare({ files: [file] })) { downloadLightboxImage(src); return null; }
+    return navigator.share({ files: [file] });
+  }).catch(function(err) {
+    // AbortError: the user closed the share sheet.
+    if (!err || err.name !== 'AbortError') downloadLightboxImage(src);
+  }).then(function() { btn.disabled = false; });
+};
 
 // ── Stats view ─────────────────────────────────────────────────────────────
 function renderBarList(containerId, rows, labelKey, valKey, wide) {
