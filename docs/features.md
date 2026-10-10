@@ -69,6 +69,8 @@ Notes:
 
 The setup wizard automatically generates VAPID keys. Notifications work as standard Web Push, both from the browser and from the Android app.
 
+**Group notifications** (settings menu ⚙, per device): when on, that device gets a single notification per sender and room; further messages from the same person stay silent until you open that room or write in it. Useful on iOS, where every message otherwise shows up as its own notification.
+
 ## Android app (APK)
 
 Besides the PWA, the chat is also available as a native Android app via **TWA** (Trusted Web Activity): an APK that wraps the PWA, meant for personal sideload installation, without the Play Store.

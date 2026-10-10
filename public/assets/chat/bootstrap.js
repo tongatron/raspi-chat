@@ -8,7 +8,7 @@
          canUseConsole, clearStoredAuth, copyInviteLink, createInvite, createRoom,
          currentView, deleteAdminUser, deleteRoom, inviteUsersToRoom, isAdmin,
          joinAs, loadAdminUsers, loadConsoleData, loadLoginUsers, loadRoomsData,
-         onNotifBtnClick, removeUsersFromRoom, renameRoom, renderLoginUsers,
+         onNotifBtnClick, onNotifGroupBtnClick, removeUsersFromRoom, renameRoom, renderLoginUsers,
          resetAdminForm, resetSessionUi, saveAdminUser, savedToken, savedUser,
          selectedAdminUsername, sendLogout, setView, showLogin */
 /* exported loadStats, openLightbox */
@@ -294,6 +294,7 @@ document.getElementById('onboarding-enter-btn').onclick = async function() {
 };
 
 document.getElementById('notif-btn').onclick = onNotifBtnClick;
+document.getElementById('notif-group-btn').onclick = onNotifGroupBtnClick;
 
 document.getElementById('logout-menu-btn').onclick = function() {
   sendLogout();

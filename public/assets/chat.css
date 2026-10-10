@@ -938,6 +938,12 @@ body.theme-light #compose-menu button:hover { background: rgba(15,34,59,.08); }
   justify-content: space-between;
   gap: 12px;
 }
+#notif-group-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 .theme-switch {
   position: relative;
   width: 38px;
@@ -960,8 +966,10 @@ body.theme-light .theme-switch { --menu-switch-off: rgba(23,29,38,.26); }
   box-shadow: 0 1px 3px rgba(0,0,0,.4);
   transition: transform .2s ease, background .2s ease;
 }
-#theme-toggle-btn[aria-checked="true"] .theme-switch { background: #8ab4f8; }
-#theme-toggle-btn[aria-checked="true"] .theme-switch::after { transform: translateX(18px); background: #1a73e8; }
+#theme-toggle-btn[aria-checked="true"] .theme-switch,
+#notif-group-btn[aria-checked="true"] .theme-switch { background: #8ab4f8; }
+#theme-toggle-btn[aria-checked="true"] .theme-switch::after,
+#notif-group-btn[aria-checked="true"] .theme-switch::after { transform: translateX(18px); background: #1a73e8; }
 .menu-sep {
   border: none;
   border-top: 1px solid rgba(255,255,255,.12);

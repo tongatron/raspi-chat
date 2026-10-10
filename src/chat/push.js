@@ -37,6 +37,18 @@ for (const row of stmts.listPushSubs.all()) {
 const totalSubs = [...pushSubs.values()].reduce((n, m) => n + m.size, 0);
 console.log(`[Push] Loaded ${totalSubs} persisted subscriptions for ${pushSubs.size} users`);
 
+// Grouped notifications: a device that opted in gets a single push per sender
+// and room, then stays quiet until its user looks at that room again (or
+// writes in it). Kept in memory only: after a restart the worst case is one
+// extra notification.
+// groupedPending: Set<"recipient\nroomId\nsender">
+const groupedPending = new Set();
+
+function clearGroupedPending(username, roomId) {
+  const prefix = `${username}\n${roomId}\n`;
+  for (const key of groupedPending) if (key.startsWith(prefix)) groupedPending.delete(key);
+}
+
 async function sendWebPushToUser(username, payload) {
   const devices = pushSubs.get(username);
   if (!devices || devices.size === 0) return false;
@@ -69,7 +81,12 @@ async function sendWebPush(msg, senderUsername, roomId) {
   for (const [username, devices] of pushSubs) {
     if (username === senderUsername) continue;
     if (!members.has(username)) continue;
+    const groupKey = `${username}\n${roomId}\n${senderUsername}`;
+    const alreadyNotified = groupedPending.has(groupKey);
+    // Marked before sending: two messages in a row must not both get through.
+    if (!alreadyNotified && [...devices.values()].some(sub => sub.grouped)) groupedPending.add(groupKey);
     for (const [endpoint, sub] of devices) {
+      if (sub.grouped && alreadyNotified) continue;
       try {
         await webpush.sendNotification(sub, payload);
         console.log(`[Push] WebPush sent to ${username} for room ${roomId}`);
@@ -89,6 +106,7 @@ async function sendAllPush(msg, senderUsername, roomId) {
 }
 
 module.exports = {
+  clearGroupedPending,
   hasVapidConfig,
   pushSubs,
   sendAllPush,

@@ -15,11 +15,13 @@ async function pushRoutes(app) {
   app.post('/chat/push-subscribe', async (request, reply) => {
     const username = requireAuth(request, reply);
     if (!username) return;
-    const { subscription } = request.body || {};
+    const { subscription, grouped } = request.body || {};
     if (!subscription || !subscription.endpoint) return reply.code(400).send({ error: 'Missing data' });
+    // `grouped` is a per-device preference, stored alongside the subscription.
+    const stored = { ...subscription, grouped: grouped === true };
     if (!pushSubs.has(username)) pushSubs.set(username, new Map());
-    pushSubs.get(username).set(subscription.endpoint, subscription);
-    stmts.upsertPushSub.run(username, subscription.endpoint, JSON.stringify(subscription), new Date().toISOString());
+    pushSubs.get(username).set(stored.endpoint, stored);
+    stmts.upsertPushSub.run(username, stored.endpoint, JSON.stringify(stored), new Date().toISOString());
     return { ok: true };
   });
   app.delete('/chat/push-unsubscribe', async (request, reply) => {

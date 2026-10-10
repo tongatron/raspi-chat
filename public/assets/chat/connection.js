@@ -7,6 +7,13 @@
 /* global WS_URL, clearStoredAuth, confirmSent, currentRoomId:writable, flushOutbox, hasMore:writable, heartbeatTimer:writable, incrementUnread, insertMessageEl, lastPong:writable, msgElements:writable, myName, myToken, oldestTimestamp:writable, playNotifSound, reconnectTimer:writable, refreshDateSeparators, renderUserRoomsMenu, scrollBottom, sendLogout, trackTimestamp, unreadRooms, updateOnline, updateUnreadBadge, ws:writable */
 /* exported connect, hasMore, oldestTimestamp */
 
+// Tells the server this room is actually on screen, so that grouped
+// notifications for it can fire again from the next message on.
+function sendSeen() {
+  if (!document.hidden && ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'seen' }));
+}
+document.addEventListener('visibilitychange', sendSeen);
+
 function connect() {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
@@ -87,6 +94,7 @@ function handleMsg(msg) {
     refreshDateSeparators(containerEl);
     scrollBottom();
     if (unreadIds.length && ws.readyState === 1) ws.send(JSON.stringify({ type: 'read', ids: unreadIds }));
+    sendSeen();
   }
   else if (msg.type === 'online') { updateOnline(msg.users, msg.members); }
   else if (msg.type === 'ack') {
@@ -109,6 +117,7 @@ function handleMsg(msg) {
       playNotifSound();
       if (document.hidden) incrementUnread();
       if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'read', ids: [msg.id] }));
+      sendSeen();
     }
   }
   else if (msg.type === 'read') {

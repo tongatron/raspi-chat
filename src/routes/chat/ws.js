@@ -18,7 +18,7 @@ const {
   notifyUnread,
   recentCids,
 } = require('../../chat/presence');
-const { sendAllPush } = require('../../chat/push');
+const { clearGroupedPending, sendAllPush } = require('../../chat/push');
 
 async function websocketRoutes(app) {
   app.get('/chat/ws', { websocket: true }, (socket) => {
@@ -81,6 +81,13 @@ async function websocketRoutes(app) {
 
       if (!client?.username) return;
 
+      // The client is showing this room on screen: grouped notifications for
+      // it may fire again from the next message on.
+      if (msg.type === 'seen') {
+        clearGroupedPending(client.username, client.roomId);
+        return;
+      }
+
       if (msg.type === 'read') {
         const ids = Array.isArray(msg.ids) ? msg.ids : [];
         const insertMany = db.transaction((ids, username) => {
@@ -134,6 +141,7 @@ async function websocketRoutes(app) {
         stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, replyToId, 'text');
         if (cid) recentCids.set(cid, Date.now());
         broadcastToRoom(client.roomId, out);
+        clearGroupedPending(client.username, client.roomId);
         const roomRow = stmts.getRoomById.get(client.roomId);
         notifyUnread(client.roomId, roomRow ? roomRow.name : '', client.username);
         sendAllPush(out, client.username, client.roomId);

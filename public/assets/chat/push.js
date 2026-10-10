@@ -5,7 +5,7 @@
 
 // Push
 /* global authFetch, myName, swReg:writable */
-/* exported initPush, onNotifBtnClick */
+/* exported initPush, onNotifBtnClick, onNotifGroupBtnClick */
 
 function urlBase64ToUint8Array(b64) {
   var pad = '='.repeat((4 - b64.length % 4) % 4);
@@ -51,8 +51,29 @@ async function subscribePush() {
     }
   }
   localStorage.setItem('chat-vapid-key', serverKey);
-  await authFetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON()}) });
+  await authFetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON(), grouped: notifGrouped()}) });
   return sub;
+}
+// "Group notifications": a per-device preference. When on, the server sends
+// this device one notification per sender and room until the room is opened.
+function notifGrouped() {
+  return localStorage.getItem('chat-notif-grouped') === '1';
+}
+function refreshNotifGroupBtn() {
+  var btn = document.getElementById('notif-group-btn');
+  if (!btn) return;
+  btn.style.display = notifSupported() ? '' : 'none';
+  btn.setAttribute('aria-checked', notifGrouped() ? 'true' : 'false');
+}
+async function onNotifGroupBtnClick(e) {
+  e.stopPropagation();
+  if (notifGrouped()) localStorage.removeItem('chat-notif-grouped');
+  else localStorage.setItem('chat-notif-grouped', '1');
+  refreshNotifGroupBtn();
+  // Tell the server right away if this device is already subscribed.
+  try {
+    if (Notification.permission === 'granted' && await currentPushSub()) await subscribePush();
+  } catch(err) {}
 }
 async function unsubscribePush() {
   var sub = await currentPushSub();
@@ -115,6 +136,7 @@ async function onNotifBtnClick() {
 // On load: only (re)subscribe silently if permission is already granted.
 // Requesting permission needs a user gesture (required on iOS), handled by the bell.
 async function initPush() {
+  refreshNotifGroupBtn();
   try {
     if (!notifSupported()) { refreshNotifBtn(); return; }
     await getSwReg();
