@@ -4,8 +4,8 @@
 // notification button in sync with the real browser state.
 
 // Push
-/* global authFetch, myName, swReg:writable */
-/* exported initPush, onNotifBtnClick, onNotifGroupBtnClick */
+/* global authFetch, myName, sendSeen, swReg:writable */
+/* exported initPush, onNotifBtnClick, onNotifGroupBtnClick, pushEndpoint */
 
 function urlBase64ToUint8Array(b64) {
   var pad = '='.repeat((4 - b64.length % 4) % 4);
@@ -15,6 +15,8 @@ function urlBase64ToUint8Array(b64) {
   return arr;
 }
 var pushBusy = false;
+// Endpoint of this device's subscription once the server knows about it.
+var pushEndpoint = null;
 function notifSupported() {
   return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
 }
@@ -52,6 +54,8 @@ async function subscribePush() {
   }
   localStorage.setItem('chat-vapid-key', serverKey);
   await authFetch('/chat/push-subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: myName, subscription: sub.toJSON(), grouped: notifGrouped()}) });
+  pushEndpoint = sub.endpoint;
+  sendSeen();
   return sub;
 }
 // "Group notifications": a per-device preference. When on, the server sends
@@ -83,6 +87,7 @@ async function unsubscribePush() {
     try { await authFetch('/chat/push-unsubscribe', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ endpoint: ep }) }); } catch(e) {}
   }
   localStorage.removeItem('chat-vapid-key');
+  pushEndpoint = null;
 }
 async function refreshNotifBtn() {
   var btn = document.getElementById('notif-btn');

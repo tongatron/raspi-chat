@@ -4,13 +4,14 @@
 // every inbound frame to the right renderer.
 
 // WebSocket
-/* global WS_URL, clearStoredAuth, confirmSent, currentRoomId:writable, flushOutbox, hasMore:writable, heartbeatTimer:writable, incrementUnread, insertMessageEl, lastPong:writable, msgElements:writable, myName, myToken, oldestTimestamp:writable, playNotifSound, reconnectTimer:writable, refreshDateSeparators, renderUserRoomsMenu, scrollBottom, sendLogout, trackTimestamp, unreadRooms, updateOnline, updateUnreadBadge, ws:writable */
-/* exported connect, hasMore, oldestTimestamp */
+/* global WS_URL, clearStoredAuth, confirmSent, currentRoomId:writable, flushOutbox, hasMore:writable, heartbeatTimer:writable, incrementUnread, insertMessageEl, lastPong:writable, msgElements:writable, myName, myToken, oldestTimestamp:writable, playNotifSound, pushEndpoint, reconnectTimer:writable, refreshDateSeparators, renderUserRoomsMenu, scrollBottom, sendLogout, trackTimestamp, unreadRooms, updateOnline, updateUnreadBadge, ws:writable */
+/* exported connect, hasMore, oldestTimestamp, sendSeen */
 
-// Tells the server this room is actually on screen, so that grouped
-// notifications for it can fire again from the next message on.
+// Tells the server this device is actually showing the room, so that its
+// grouped notifications can fire again from the next message on.
 function sendSeen() {
-  if (!document.hidden && ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'seen' }));
+  if (!pushEndpoint || document.hidden || !ws || ws.readyState !== 1) return;
+  ws.send(JSON.stringify({ type: 'seen', endpoint: pushEndpoint }));
 }
 document.addEventListener('visibilitychange', sendSeen);
 

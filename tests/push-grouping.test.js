@@ -1,8 +1,8 @@
 'use strict';
 
 // Test delle notifiche raggruppate: un dispositivo che ha attivato l'opzione
-// riceve una sola push per mittente e stanza, finche' l'utente non guarda di
-// nuovo quella stanza (o ci scrive). Gli altri dispositivi le ricevono tutte.
+// riceve una sola push per mittente e stanza, finche' quello stesso dispositivo
+// non mostra di nuovo la stanza (o ci scrive). Gli altri le ricevono tutte.
 
 const { test, before, after } = require('node:test');
 const assert = require('node:assert');
@@ -138,15 +138,23 @@ test('il solo "read" non riattiva le notifiche: serve che la stanza sia davvero 
   assert.strictEqual(sentTo(GROUPED_ENDPOINT), 1);
 });
 
-test('dopo "seen" il messaggio successivo notifica di nuovo, una volta sola', async () => {
-  bobWs.send(JSON.stringify({ type: 'seen' }));
+test('la stanza vista da un altro dispositivo non riattiva quello raggruppato', async () => {
+  bobWs.send(JSON.stringify({ type: 'seen', endpoint: PLAIN_ENDPOINT }));
+  bobWs.send(JSON.stringify({ type: 'seen', endpoint: 'https://push.example/di-qualcun-altro' }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  await sendAndWait(aliceWs, 'quattro-bis');
+  assert.strictEqual(sentTo(GROUPED_ENDPOINT), 1);
+});
+
+test('dopo "seen" dal dispositivo raggruppato il messaggio successivo notifica di nuovo, una volta sola', async () => {
+  bobWs.send(JSON.stringify({ type: 'seen', endpoint: GROUPED_ENDPOINT }));
   await new Promise((resolve) => setTimeout(resolve, 50));
   await sendAndWait(aliceWs, 'cinque');
   await sendAndWait(aliceWs, 'sei');
   assert.strictEqual(sentTo(GROUPED_ENDPOINT), 2);
 });
 
-test('anche rispondere nella stanza riattiva le notifiche', async () => {
+test('anche rispondere dal dispositivo raggruppato riattiva le notifiche', async () => {
   await sendAndWait(bobWs, 'risposta');
   await sendAndWait(aliceWs, 'sette');
   assert.strictEqual(sentTo(GROUPED_ENDPOINT), 3);

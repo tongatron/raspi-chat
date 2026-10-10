@@ -38,15 +38,19 @@ const totalSubs = [...pushSubs.values()].reduce((n, m) => n + m.size, 0);
 console.log(`[Push] Loaded ${totalSubs} persisted subscriptions for ${pushSubs.size} users`);
 
 // Grouped notifications: a device that opted in gets a single push per sender
-// and room, then stays quiet until its user looks at that room again (or
-// writes in it). Kept in memory only: after a restart the worst case is one
-// extra notification.
-// groupedPending: Set<"recipient\nroomId\nsender">
+// and room, then stays quiet until that same device shows the room again (or
+// writes in it). Reading the room elsewhere does not count: a chat left open
+// on a computer must not make the phone ring at every message. Kept in memory
+// only: after a restart the worst case is one extra notification.
+// groupedPending: Set<"endpoint\nroomId\nsender">
 const groupedPending = new Set();
 
-function clearGroupedPending(username, roomId) {
-  const prefix = `${username}\n${roomId}\n`;
+// Returns false when the endpoint is not one of the user's own devices.
+function clearGroupedPending(username, endpoint, roomId) {
+  if (!endpoint || !pushSubs.get(username)?.has(endpoint)) return false;
+  const prefix = `${endpoint}\n${roomId}\n`;
   for (const key of groupedPending) if (key.startsWith(prefix)) groupedPending.delete(key);
+  return true;
 }
 
 async function sendWebPushToUser(username, payload) {
@@ -81,12 +85,13 @@ async function sendWebPush(msg, senderUsername, roomId) {
   for (const [username, devices] of pushSubs) {
     if (username === senderUsername) continue;
     if (!members.has(username)) continue;
-    const groupKey = `${username}\n${roomId}\n${senderUsername}`;
-    const alreadyNotified = groupedPending.has(groupKey);
-    // Marked before sending: two messages in a row must not both get through.
-    if (!alreadyNotified && [...devices.values()].some(sub => sub.grouped)) groupedPending.add(groupKey);
     for (const [endpoint, sub] of devices) {
-      if (sub.grouped && alreadyNotified) continue;
+      if (sub.grouped) {
+        const groupKey = `${endpoint}\n${roomId}\n${senderUsername}`;
+        if (groupedPending.has(groupKey)) continue;
+        // Marked before sending: two messages in a row must not both get through.
+        groupedPending.add(groupKey);
+      }
       try {
         await webpush.sendNotification(sub, payload);
         console.log(`[Push] WebPush sent to ${username} for room ${roomId}`);

@@ -81,10 +81,11 @@ async function websocketRoutes(app) {
 
       if (!client?.username) return;
 
-      // The client is showing this room on screen: grouped notifications for
-      // it may fire again from the next message on.
+      // This device is showing the room on screen: its grouped notifications
+      // may fire again from the next message on.
       if (msg.type === 'seen') {
-        clearGroupedPending(client.username, client.roomId);
+        const endpoint = String(msg.endpoint || '');
+        if (clearGroupedPending(client.username, endpoint, client.roomId)) client.pushEndpoint = endpoint;
         return;
       }
 
@@ -141,7 +142,7 @@ async function websocketRoutes(app) {
         stmts.insertMessage.run(out.id, out.roomId, out.username, out.text, out.imageUrl, out.timestamp, replyToId, 'text');
         if (cid) recentCids.set(cid, Date.now());
         broadcastToRoom(client.roomId, out);
-        clearGroupedPending(client.username, client.roomId);
+        clearGroupedPending(client.username, client.pushEndpoint, client.roomId);
         const roomRow = stmts.getRoomById.get(client.roomId);
         notifyUnread(client.roomId, roomRow ? roomRow.name : '', client.username);
         sendAllPush(out, client.username, client.roomId);
