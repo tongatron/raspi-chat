@@ -16,6 +16,7 @@ const BOB = 'Bob';
 const PASSWORD = 'secret-pw-123';
 const GROUPED_ENDPOINT = 'https://push.example/grouped';
 const PLAIN_ENDPOINT = 'https://push.example/plain';
+const FLAKY_ENDPOINT = 'https://push.example/flaky';
 
 const originalCwd = process.cwd();
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'raspi-chat-push-grouping-'));
@@ -35,7 +36,16 @@ process.chdir(tmpRoot);
 // Nessuna push reale: si registra solo a quale endpoint sarebbe partita.
 const webpush = require(path.join(originalCwd, 'node_modules', 'web-push'));
 const sent = [];
-webpush.sendNotification = async (sub) => { sent.push(sub.endpoint); };
+let failNextFor = null;
+webpush.sendNotification = async (sub) => {
+  if (sub.endpoint === failNextFor) {
+    failNextFor = null;
+    const error = new Error('temporary push service failure');
+    error.statusCode = 503;
+    throw error;
+  }
+  sent.push(sub.endpoint);
+};
 
 const { buildApp } = require(path.join(originalCwd, 'src', 'app'));
 
@@ -111,6 +121,13 @@ before(async () => {
     });
     assert.strictEqual(res.statusCode, 200);
   }
+  const flaky = await app.inject({
+    method: 'POST',
+    url: '/chat/push-subscribe',
+    headers: bob.headers,
+    payload: { subscription: { endpoint: FLAKY_ENDPOINT, keys: { p256dh: 'x', auth: 'y' } }, grouped: true },
+  });
+  assert.strictEqual(flaky.statusCode, 200);
 
   aliceWs = await connectAndJoin(alice, roomId);
   bobWs = await connectAndJoin(bob, roomId);
@@ -158,4 +175,16 @@ test('anche rispondere dal dispositivo raggruppato riattiva le notifiche', async
   await sendAndWait(bobWs, 'risposta');
   await sendAndWait(aliceWs, 'sette');
   assert.strictEqual(sentTo(GROUPED_ENDPOINT), 3);
+});
+
+test('un errore temporaneo di push non lascia il dispositivo silenziato', async () => {
+  bobWs.send(JSON.stringify({ type: 'seen', endpoint: FLAKY_ENDPOINT }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const before = sentTo(FLAKY_ENDPOINT);
+  failNextFor = FLAKY_ENDPOINT;
+  await sendAndWait(aliceWs, 'errore temporaneo');
+  assert.strictEqual(sentTo(FLAKY_ENDPOINT), before);
+
+  await sendAndWait(aliceWs, 'nuovo tentativo');
+  assert.strictEqual(sentTo(FLAKY_ENDPOINT), before + 1);
 });

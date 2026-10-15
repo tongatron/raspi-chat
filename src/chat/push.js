@@ -96,6 +96,10 @@ async function sendWebPush(msg, senderUsername, roomId) {
         await webpush.sendNotification(sub, payload);
         console.log(`[Push] WebPush sent to ${username} for room ${roomId}`);
       } catch (err) {
+        // Do not leave a grouped notification permanently suppressed when the
+        // push service rejects this attempt. A later message must be allowed
+        // to retry delivery, especially after a transient iOS/APNs failure.
+        if (sub.grouped) groupedPending.delete(`${endpoint}\n${roomId}\n${senderUsername}`);
         console.error(`[Push] WebPush failed for ${username}: ${err.statusCode || err.code || 'unknown'} ${err.message || err}`);
         if (err.statusCode === 410 || err.statusCode === 404) {
           devices.delete(endpoint);
